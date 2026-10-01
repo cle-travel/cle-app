@@ -12,7 +12,7 @@ const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arquivos = execSync("git ls-files --cached --others --exclude-standard", { cwd: RAIZ, encoding: "utf8" }).split("\n").filter(Boolean);
 
 // .env.exemplo pode (é o modelo vazio); qualquer outro .env, nunca
-const CAMINHOS_PROIBIDOS = [/(^|\/)\.env(?!\.exemplo$)/, /(^|\/)node_modules\//, /^servidor-marco\/consumo\//, /^ANALISE/i, /^exemplos\//, /^validacoes\//, /ESPECIFICACAO/i, /ONBOARDING\.md$/, /^seguranca\//, /recovery-codes/i, /^design\//, /\.bak$/];
+const CAMINHOS_PROIBIDOS = [/(^|\/)\.env(?!\.exemplo$)/, /(^|\/)node_modules\//, /^servidor-marco\/consumo\//, /^memoria\//, /^relatorios\//,/^ANALISE/i, /^exemplos\//, /^validacoes\//, /ESPECIFICACAO/i, /ONBOARDING\.md$/, /^seguranca\//, /recovery-codes/i, /^design\//, /\.bak$/];
 const CONTEUDO_PROIBIDO = [
   [/sk-ant-[A-Za-z0-9_-]{8,}/, "chave da Anthropic"],
   [/sbp_[A-Za-z0-9]{20,}/, "token da conta Supabase"],

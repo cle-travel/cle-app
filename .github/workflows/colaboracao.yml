@@ -1,0 +1,78 @@
+# Regra de colaboração (decisão de Wagner, 01/10/2026): colaboradores atuam só no DESIGN.
+# Toda proposta (pull request vinda da cópia do colaborador) passa pela comparação de funcionalidades
+# (prototipo/classificar-mudancas.mjs), sempre com as regras da versão principal:
+#   - só design      → entra na versão principal e o app é publicado;
+#   - muda o funcionamento (lógica, segurança, servidor, rotinas, versão antiga) → NÃO substitui nada:
+#     fica guardada na proposta (sandbox), marcada "análise necessária", e Wagner e o colaborador são avisados.
+# Segurança: roda em pull_request_target (definição sempre da main, nunca da proposta) e o código da proposta
+# nunca é executado, só lido e comparado.
+name: Revisão de colaboração
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+concurrency:
+  group: colaboracao-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  classificar:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      AUTOR: ${{ github.event.pull_request.user.login }}
+    steps:
+      - name: Versão corrente (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: base
+      - name: Proposta (só leitura; nada dela é executado)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: proposta
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Comparação de funcionalidades
+        run: |
+          npm install --silent --prefix "$RUNNER_TEMP/ferr" acorn@8
+          ACORN_DIR="$RUNNER_TEMP/ferr" node base/prototipo/classificar-mudancas.mjs base proposta "$RUNNER_TEMP/relatorio.md"
+      - name: Avisa Wagner e o colaborador (precisa de análise)
+        if: failure()
+        run: |
+          gh label create "análise necessária" --repo "$REPO" --color B42318 --description "Muda o funcionamento: aguarda aprovação do Wagner" --force
+          gh pr edit "$PR" --repo "$REPO" --add-label "análise necessária"
+          {
+            cat "$RUNNER_TEMP/relatorio.md" 2>/dev/null || echo "A comparação não pôde ser concluída; por segurança, a proposta fica aguardando análise."
+            echo
+            echo "@wagnerhiroshi86-coder @$AUTOR: os arquivos ficam guardados nesta proposta e **não substituíram** a versão corrente. Só entram com a aprovação do Wagner."
+          } > "$RUNNER_TEMP/aviso.md"
+          gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/aviso.md"
+
+  publicar:
+    needs: classificar
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Só design → entra na versão principal e publica o app
+        run: |
+          gh pr comment "$PR" --repo "$REPO" --body "✅ **Só design.** A lógica, a segurança e o funcionamento continuam idênticos à versão corrente. Entrando na versão principal e publicando o app."
+          gh pr merge "$PR" --repo "$REPO" --squash
+          gh workflow run pages.yml --repo "$REPO" --ref main
