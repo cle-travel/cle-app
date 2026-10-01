@@ -114,12 +114,14 @@ fs.writeFileSync(path.join(APP, "sw.js"), `// Clé: funciona sem internet depois
 const VERSAO = "cle-${versao}";
 const ARQUIVOS = ${JSON.stringify(arquivos)};
 const FONTES = /^https:\\/\\/fonts\\.(googleapis|gstatic)\\.com\\//;
-self.addEventListener("install", (e) => { e.waitUntil(caches.open(VERSAO).then((c) => c.addAll(ARQUIVOS)).then(() => self.skipWaiting())); });
+// o GitHub Pages manda o navegador guardar cada arquivo por 10 min: a versão nova é baixada direto do servidor
+// (cache: "reload"), senão o app avisaria "versão nova" e continuaria mostrando a antiga (bug de 01/10/2026)
+self.addEventListener("install", (e) => { e.waitUntil(caches.open(VERSAO).then((c) => c.addAll(ARQUIVOS.map((u) => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSAO).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", (e) => {
   const r = e.request;
   if (r.method !== "GET") return;
-  if (r.mode === "navigate") { e.respondWith(fetch(r).then((resp) => { const cp = resp.clone(); caches.open(VERSAO).then((c) => c.put("./index.html", cp)); return resp; }).catch(() => caches.match("./index.html"))); return; }
+  if (r.mode === "navigate") { e.respondWith(fetch(r.url, { cache: "no-cache", credentials: "same-origin" }).then((resp) => { const cp = resp.clone(); caches.open(VERSAO).then((c) => c.put("./index.html", cp)); return resp; }).catch(() => caches.match("./index.html"))); return; }
   if (FONTES.test(r.url)) { e.respondWith(caches.match(r).then((m) => m || fetch(r).then((resp) => { const cp = resp.clone(); caches.open(VERSAO).then((c) => c.put(r, cp)); return resp; }))); return; }
   if (new URL(r.url).origin === location.origin) e.respondWith(caches.match(r).then((m) => m || fetch(r)));
 });
