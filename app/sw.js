@@ -1,5 +1,5 @@
 // Clé: funciona sem internet depois da primeira abertura (gerado por prototipo/montar.mjs)
-const VERSAO = "cle-v1.3.0-1f277ccace";
+const VERSAO = "cle-v1.3.1-2536dc0605";
 const ARQUIVOS = ["./","./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./carteira/lib/qrcode.js","./carteira/lib/jsQR.js","./carteira/icon-192.png"];
 const FONTES = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
 // o GitHub Pages manda o navegador guardar cada arquivo por 10 min: a versão nova é baixada direto do servidor

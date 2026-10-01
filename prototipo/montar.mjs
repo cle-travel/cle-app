@@ -61,6 +61,8 @@ const htmlApp = CABECA + html;
 if (!/<meta name="viewport" content="width=device-width/.test(htmlApp)) throw new Error("app NÃO gerado: falta a meta viewport");
 fs.writeFileSync(path.join(APP, "index.html"), htmlApp);
 fs.writeFileSync(path.join(HERE, "index.html"), html);
+// versão publicada, consultada pelo app (sem cache) para avisar que há versão nova mesmo se o service worker travar
+fs.writeFileSync(path.join(APP, "versao.json"), JSON.stringify({ versao: VERSAO_APP }) + "\n");
 for (const f of ["lib/qrcode.js", "lib/jsQR.js", "lib/LICENCAS.txt", "icon-192.png"]) {
   const de = path.join(HERE, "carteira", f);
   if (fs.existsSync(de)) fs.copyFileSync(de, path.join(APP, "carteira", f));

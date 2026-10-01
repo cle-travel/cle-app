@@ -361,7 +361,7 @@ const I = {
   star: '<path d="M12 4l2.5 5 5.5.8-4 3.9.9 5.5L12 16.6 7.1 19.2 8 13.7 4 9.8 9.5 9z"/>', people: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5a5 5 0 0 1 5 5"/>',
   printer: '<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><rect x="7" y="14" width="10" height="7"/>', globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
   phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/>',
-  upload: '<path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>', plus: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>', importar: '<path d="M12 4v12M7 11l5 5 5-5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>', recarregar: '<path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/>', plus: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
   heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   compass: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>', translate: '<path d="M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M11 5c0 3-3 7-7 8M13 21l4-9 4 9M14.5 18h5"/>',
   send: '<path d="M5 12l14-7-5 15-3-6z"/>', history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
@@ -514,7 +514,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.3.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.3.1"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -1180,7 +1180,8 @@ function telaMais() {
       <div class="btns"><button class="btn sec" data-a="alerta">Alerta urgente</button><button class="btn sec" data-a="notif">Notificação</button></div>
       <div class="small">Marco: ${S.marcoOn ? "ligado" : API ? "desligado" + (S.marcoFaltam.length ? ` (falta ${esc(S.marcoFaltam.join(", "))})` : "") : "chega com o servidor na nuvem"}</div>
       <button class="btn ghost" style="color:var(--bad)" data-a="pedirFechar">Fechar esta viagem neste aparelho</button></div>
-    <p class="small" style="margin:0;text-align:center">Clé v${esc(VERSAO_APP)} · os dados da viagem ficam neste aparelho; exporte o arquivo da viagem de vez em quando.</p>
+    <p class="small" style="margin:0;text-align:center">Os dados da viagem ficam neste aparelho; exporte o arquivo da viagem de vez em quando.</p>
+    ${linhaVersao()}
   </div></main>`;
 }
 
@@ -1689,14 +1690,22 @@ async function juntarArquivo(file) {
   } catch (e) { toast("Este arquivo não é um arquivo de viagem válido."); render(); }
 }
 
+// versão instalada + botão discreto de forçar atualização (e aviso quando já há versão mais nova publicada)
+function linhaVersao() {
+  const nova = S.versaoPublicada && S.versaoPublicada !== VERSAO_APP && VERSAO_APP !== "dev";
+  return `<div class="small" style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:6px">
+    <span>Clé v${esc(VERSAO_APP)}${nova ? ` · <b style="color:var(--accent)">v${esc(S.versaoPublicada)} disponível</b>` : ""}</span>
+    <button data-a="forcarAtualizacao" aria-label="Forçar atualização do app" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:10px;color:var(--accent);font-size:13px">${ic("recarregar", 14)} ${nova ? "Atualizar agora" : "Forçar atualização"}</button></div>`;
+}
 function telaBoasVindas() {
   return `<main id="main"><div class="pad" style="min-height:100%;justify-content:center;padding-top:40px">
     <span class="avatar" style="width:64px;height:64px;border-radius:18px">${ic("compass", 34, 1.6)}</span>
     <div><h1 style="font-size:34px">Clé</h1><p class="sub" style="font-size:17px">Planeje e viva a viagem conversando com o Marco. Tudo fica neste celular e cabe num único arquivo da viagem.</p></div>
-    <label class="btn" for="arqViagem" style="cursor:pointer">Abrir arquivo da viagem</label>
-    <button class="btn sec" data-a="onb">Criar uma viagem nova com o Marco</button>
+    <button class="btn" data-a="onb" style="height:auto;min-height:58px;padding:9px 16px;flex-direction:column;gap:1px"><span>Criar viagem com o Marco</span><span style="font-size:13px;font-weight:500;opacity:.85">seu concierge de viagens com inteligência artificial</span></button>
+    <label class="btn sec" for="arqViagem" style="cursor:pointer">${ic("importar", 18)} Importar arquivo de viagem</label>
     ${LOCAL || AUTH ? "" : `<button class="btn ghost" data-a="ir" data-t="acesso">${ic("lock", 18)} ${S.marcoOn ? `Marco conectado${S.quem ? " · " + esc(S.quem) : ""}` : "Tenho um código de acesso ao Marco"}</button>`}
     <p class="small" style="margin:0;line-height:1.5">O arquivo da viagem (.json ou .pdf) vem de quem organizou a viagem ou de outro celular. Arquivos antigos da Carteira também abrem aqui.</p>
+    ${linhaVersao()}
   </div></main>`;
 }
 function telaArquivo() {
@@ -1910,7 +1919,15 @@ const A = {
   // onboarding: o que você fala entra na ficha; ao terminar, o Marco preenche os campos
   ditar(ds) { if (S.onb && ds.alvo === "onb-fala") { S.onb.porVoz = true; S.onb.semVoz = false; } ditar(ds.alvo, (t) => { if (t && marcoDisponivel() && S.onb && !S.onb.lendo) A.onbMarco(); }); },
   sairCarteira() { A.voltar(); },
-  atualizarApp() { location.reload(); },
+  atualizarApp() { A.forcarAtualizacao(); },
+  // atualização forçada: desliga o service worker, apaga os arquivos guardados do app (não os dados da viagem,
+  // que ficam no armazenamento do aparelho, nem a voz guardada do Marco) e recarrega direto do servidor
+  async forcarAtualizacao() {
+    toast("Atualizando o app… seus dados continuam como estão."); render();
+    try { for (const r of (await navigator.serviceWorker?.getRegistrations?.()) || []) await r.unregister(); } catch (e) {}
+    try { for (const k of await caches.keys()) if (!k.startsWith("cle-voz-")) await caches.delete(k); } catch (e) {}
+    location.replace(location.pathname + "?v=" + Date.now() + location.hash);
+  },
   reconectarMarco() { S.marcoOn = null; toast("Conferindo a sua conta…"); render(); checarMarco(); },
   entrarCom(ds) { if (!AUTH) return; location.href = AUTH.url + "/authorize?provider=" + ds.p + "&redirect_to=" + encodeURIComponent(location.origin + location.pathname); },
   verSenha(ds) { const el = document.getElementById(ds.id); if (!el) return; el.type = el.type === "password" ? "text" : "password"; const b = document.querySelector(`[data-a="verSenha"][data-id="${ds.id}"] span`); if (b) b.textContent = el.type === "password" ? "Mostrar" : "Ocultar"; },
@@ -2129,7 +2146,16 @@ if ("serviceWorker" in navigator && (location.protocol === "https:" || location.
   navigator.serviceWorker.addEventListener("controllerchange", () => { if (jaTinha) { S.novaVersao = true; render(); } });
   navigator.serviceWorker.register("sw.js").then((r) => r.update()).catch(() => {});
   // no celular o app fica aberto em segundo plano: ao voltar para ele, procura versão nova de novo
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {}); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {}); checarVersao(); } });
 }
+// segunda via, independente do service worker: pergunta ao servidor qual é a versão publicada (sem cache)
+function checarVersao() {
+  if (VERSAO_APP === "dev" || location.protocol === "file:") return;
+  fetch("versao.json?t=" + Date.now(), { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((j) => {
+    if (!j || !j.versao || j.versao === S.versaoPublicada) return;
+    S.versaoPublicada = j.versao; if (j.versao !== VERSAO_APP) S.novaVersao = true; render();
+  }).catch(() => {});
+}
+checarVersao();
 render();
 </script>
