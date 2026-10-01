@@ -2,6 +2,7 @@
 # Tudo o mais desta pasta (especificação, validações com chaves de API, exemplos com dados pessoais) fica de fora.
 /*
 !/.gitignore
+!/.gitattributes
 !/README.md
 !/.github/
 !/.githooks/

@@ -1,0 +1,2 @@
+# a trava precisa de fim de linha Unix para rodar em qualquer computador
+.githooks/* text eol=lf
