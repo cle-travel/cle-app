@@ -50,7 +50,12 @@ function nomesPrivados() {
 }
 
 fs.mkdirSync(path.join(APP, "carteira", "lib"), { recursive: true });
-fs.writeFileSync(path.join(APP, "index.html"), html);
+// o app instalável é um documento completo: sem a meta viewport, o celular finge uma tela de computador
+// (~980 px) e o app aparece miniaturizado (bug de 01/10/2026). Trava: recusa gerar sem ela.
+const CABECA = '<!doctype html>\n<html lang="pt-BR">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n';
+const htmlApp = CABECA + html;
+if (!/<meta name="viewport" content="width=device-width/.test(htmlApp)) throw new Error("app NÃO gerado: falta a meta viewport");
+fs.writeFileSync(path.join(APP, "index.html"), htmlApp);
 fs.writeFileSync(path.join(HERE, "index.html"), html);
 for (const f of ["lib/qrcode.js", "lib/jsQR.js", "lib/LICENCAS.txt", "icon-192.png"]) {
   const de = path.join(HERE, "carteira", f);
@@ -95,7 +100,7 @@ fs.writeFileSync(path.join(APP, "icon-maskable-512.png"), png(512, { arredondado
 // ---------- 3. manifest e service worker (offline) ----------
 fs.writeFileSync(path.join(APP, "manifest.webmanifest"), JSON.stringify({
   name: "Clé", short_name: "Clé", description: "Planeje e viva a viagem conversando com o Marco.",
-  lang: "pt-BR", start_url: "./", scope: "./", display: "standalone", orientation: "portrait",
+  lang: "pt-BR", start_url: "./", scope: "./", display: "standalone", orientation: "any",
   background_color: "#F2F2F7", theme_color: "#24476B",
   icons: [
     { src: "icon-192.png", sizes: "192x192", type: "image/png" },
@@ -104,7 +109,7 @@ fs.writeFileSync(path.join(APP, "manifest.webmanifest"), JSON.stringify({
   ],
 }, null, 2));
 const arquivos = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./carteira/lib/qrcode.js", "./carteira/lib/jsQR.js", "./carteira/icon-192.png"];
-const versao = crypto.createHash("sha256").update(html).update(fs.readFileSync(path.join(APP, "carteira/lib/jsQR.js"))).digest("hex").slice(0, 10);
+const versao = crypto.createHash("sha256").update(htmlApp).update(fs.readFileSync(path.join(APP, "carteira/lib/jsQR.js"))).digest("hex").slice(0, 10);
 fs.writeFileSync(path.join(APP, "sw.js"), `// Clé: funciona sem internet depois da primeira abertura (gerado por prototipo/montar.mjs)
 const VERSAO = "cle-${versao}";
 const ARQUIVOS = ${JSON.stringify(arquivos)};

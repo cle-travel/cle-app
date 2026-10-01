@@ -1,4 +1,9 @@
-<title>Clé · Protótipo</title>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clé</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#24476B">
 <link rel="icon" href="icon-192.png">
@@ -8,8 +13,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: um app de celular (até 430px), tela única com cabeçalho grande estilo iOS, conteúdo rolável e barra de abas.
-   No computador, o app fica centralizado como um aparelho. Visual sóbrio; um único destaque: azul-ardósia. */
+/* Layout adaptável (tela única com cabeçalho grande estilo iOS, conteúdo rolável e barra de abas):
+   - celular e tela externa de dobráveis: ocupa a tela toda;
+   - dobrável aberto e tablet (toque, tela larga): ocupa a tela toda, com o conteúdo centralizado em largura confortável;
+   - computador com mouse: o app aparece como um aparelho no centro (útil para testar).
+   Respeita as áreas seguras (entalhe da câmera, barra de status, bordas no modo paisagem).
+   Visual sóbrio; um único destaque: azul-ardósia. */
 :root{
   --bg:#F2F2F7; --card:#FFFFFF; --fg:#1D1D1F; --fg2:#6E6E73; --fg3:#AEAEB2; --sep:#E3E3E8; --fill:#EBEBF0;
   --accent:#24476B; --accent-fg:#FFFFFF; --accent-soft:#E4EBF3;
@@ -18,6 +27,7 @@
   --line:rgba(17,24,39,.07); --sh:0 1px 2px rgba(17,24,39,.04),0 2px 8px rgba(17,24,39,.05); --glass:rgba(255,255,255,.82);
   --font:"Geist",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --r:16px; --r-lg:22px;
+  --col:760px; /* largura máxima do conteúdo em telas largas */
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#000000; --card:#1C1C1E; --fg:#F5F5F7; --fg2:#98989D; --fg3:#636366; --sep:#38383A; --fill:#2C2C2E;
@@ -38,9 +48,12 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
 a{color:var(--accent)}
-.app{position:relative;height:100%;max-width:430px;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
-@media (min-width:600px){body{background:var(--fill)}.app{height:calc(100% - 40px);margin-block:20px;border-radius:34px;border:1px solid var(--sep);box-shadow:0 20px 60px rgba(0,0,0,.12)}}
-.top{padding:14px 16px 8px;display:flex;align-items:center;gap:10px;min-height:52px}
+.app{position:relative;height:100%;height:100dvh;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+/* computador com mouse: aparelho no centro */
+@media (min-width:600px) and (hover:hover) and (pointer:fine){body{background:var(--fill)}.app{max-width:430px;height:calc(100dvh - 40px);margin-block:20px;border-radius:34px;border:1px solid var(--sep);box-shadow:0 20px 60px rgba(0,0,0,.12)}}
+/* telas largas (dobrável aberto, tablet, paisagem): o conteúdo fica numa coluna central confortável */
+.top,.pad,.chat,.chips,.entrada,.voz{width:100%;max-width:var(--col);margin-inline:auto}
+.top{padding:calc(14px + env(safe-area-inset-top,0px)) 16px 8px;display:flex;align-items:center;gap:10px;min-height:52px}
 .top .ttl{flex:1;min-width:0;text-align:center}
 .top .ttl b{display:block;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .ttl span{display:block;font-size:12px;color:var(--fg2)}
@@ -93,7 +106,7 @@ a.row{color:inherit;text-decoration:none}
 .kv:first-child{border-top:0}
 .kv span:first-child{color:var(--fg2)}
 .kv span:last-child{text-align:right;font-variant-numeric:tabular-nums}
-.tabbar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px 6px calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+.tabbar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px max(6px,calc((100% - 560px) / 2)) calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
 .tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:500;color:var(--fg3);padding:4px 0}
 .tab.on{color:var(--accent)}
 .tab .badge{position:absolute;margin-left:18px;margin-top:-2px;background:var(--bad);color:#fff;font-size:10px;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
@@ -124,7 +137,7 @@ a.row{color:inherit;text-decoration:none}
 .transc{font-size:15px;color:var(--fg2);min-height:22px;text-align:center;max-width:320px}
 /* mapa */
 .mapa{background:var(--map);border-radius:var(--r-lg);overflow:hidden;position:relative}
-.mapa svg{display:block;width:100%;height:auto}
+.mapa svg{display:block;width:100%;height:auto;max-height:62vh}
 .daynav{display:flex;align-items:center;gap:8px}
 .daynav .t{flex:1;min-width:0;text-align:center}
 .daynav .t b{display:block;font-size:17px}
@@ -144,9 +157,9 @@ a.row{color:inherit;text-decoration:none}
 .check.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .feito b{color:var(--fg3);text-decoration:line-through}
 /* sobreposições */
-.toast{position:absolute;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:14px;padding:12px 14px;font-size:15px;display:flex;gap:10px;align-items:center;z-index:30;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.toast{position:absolute;left:16px;right:16px;max-width:600px;margin-inline:auto;bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:14px;padding:12px 14px;font-size:15px;display:flex;gap:10px;align-items:center;z-index:30;box-shadow:0 8px 30px rgba(0,0,0,.25)}
 .toast button{margin-left:auto;color:var(--bg);font-weight:600;text-decoration:underline}
-.alerta{position:absolute;inset:0;background:#1C1C1E;color:#F5F5F7;z-index:50;display:flex;flex-direction:column;padding:calc(40px + env(safe-area-inset-top,0px)) 24px calc(28px + env(safe-area-inset-bottom,0px));gap:18px;overflow-y:auto}
+.alerta{position:absolute;inset:0;background:#1C1C1E;color:#F5F5F7;z-index:50;display:flex;flex-direction:column;padding:calc(40px + env(safe-area-inset-top,0px)) max(24px,calc((100% - 640px) / 2)) calc(28px + env(safe-area-inset-bottom,0px));gap:18px;overflow-y:auto}
 .alerta .ic{width:64px;height:64px;border-radius:32px;background:#FF3B30;display:flex;align-items:center;justify-content:center;color:#fff;margin-top:12px}
 .alerta h2{font-size:30px;line-height:1.15;margin:0;font-weight:700;text-wrap:balance}
 .alerta p{margin:0;font-size:17px;line-height:1.45;color:#D1D1D6}
@@ -155,16 +168,26 @@ a.row{color:inherit;text-decoration:none}
 .alerta .b1{height:52px;border-radius:14px;background:#FFFFFF;color:#1D1D1F;font-weight:600;font-size:17px}
 .alerta .b2{height:52px;border-radius:14px;background:#2C2C2E;color:#FFFFFF;font-weight:600;font-size:17px}
 .alerta .b3{height:44px;color:#A1A1A6;font-size:16px}
-.notif{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:10px;right:10px;z-index:40;background:var(--card);border-radius:20px;padding:12px 14px;display:flex;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.22);text-align:left;width:auto}
+.notif{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:10px;right:10px;max-width:600px;margin-inline:auto;z-index:40;background:var(--card);border-radius:20px;padding:12px 14px;display:flex;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.22);text-align:left;width:auto}
 .notif .app-ic{width:38px;height:38px;border-radius:9px;background:var(--accent);color:var(--accent-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .sheet{position:absolute;inset:0;z-index:45;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
-.sheet .in{background:var(--bg);width:100%;border-radius:22px 22px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;max-height:92%;overflow-y:auto}
+.sheet .in{background:var(--bg);width:100%;max-width:640px;margin-inline:auto;border-radius:22px 22px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;max-height:92%;overflow-y:auto}
 .grab{width:36px;height:5px;border-radius:3px;background:var(--fg3);align-self:center;opacity:.5}
 /* onboarding */
 .dots{display:flex;gap:6px;justify-content:center}
 .dots i{width:7px;height:7px;border-radius:4px;background:var(--fg3);opacity:.5}
 .dots i.on{width:20px;background:var(--accent);opacity:1}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:700px){.grid2{grid-template-columns:repeat(3,minmax(0,1fr))}.msg-u{max-width:70%}}
+/* telas baixas (celular deitado, dobrável na tela externa em paisagem): rodapé compacto para a conversa caber */
+@media (max-height:520px){
+  .top{padding-top:calc(6px + env(safe-area-inset-top,0px));padding-bottom:4px;min-height:44px}
+  .chips,.voz .transc,.voz>.small{display:none}
+  .voz{padding-block:2px calc(4px + env(safe-area-inset-bottom,0px))}
+  .orb{width:56px;height:56px}.orb button{width:42px;height:42px}
+  .voz .linha .iconbtn{width:40px!important;height:40px!important}
+  .tabbar{padding-block:2px calc(4px + env(safe-area-inset-bottom,0px))}.tab{font-size:0;gap:0}
+}
 .int{background:var(--card);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left;border:1.5px solid transparent;min-height:78px}
 .int b{font-size:15px;font-weight:600}
 .int.amo{border-color:var(--accent)}
