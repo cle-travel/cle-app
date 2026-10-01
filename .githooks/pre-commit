@@ -1,3 +1,4 @@
 #!/bin/sh
-# Trava do repositório público: confere o que vai ser publicado antes de cada commit.
+# Trava do repositório público: testes automáticos e conferência do que vai ser publicado, antes de cada commit.
+node prototipo/testar.mjs || exit 1
 node prototipo/verificar-publico.mjs

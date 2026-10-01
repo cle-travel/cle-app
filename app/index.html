@@ -496,7 +496,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.1.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.1.1"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -647,7 +647,9 @@ function checarMarco() {
   apiFetch("/estado").then((r) => r.json()).then((j) => { S.marcoOn = !!j.marco; S.semAcesso = j.acesso === false; S.motivoAcesso = j.motivo || null; S.quem = j.quem || null; S.rotasOn = !!j.rotas; S.marcoFaltam = j.faltam || []; S.recursos = j.recursos || {}; render(); }).catch(() => { S.marcoOn = false; render(); });
 }
 const msgMarcoOff = () => S.semAcesso
-  ? (S.conta ? "Sua conta ainda não foi liberada para conversar comigo nesta fase de testes. Peça ao Wagner para incluir o seu e-mail." : "Para conversar comigo, entre na sua conta.")
+  ? (!S.conta ? "Para conversar comigo, entre na sua conta."
+    : S.motivoAcesso === "conta_nao_liberada" ? `Sua conta (${S.conta.email}) ainda não foi liberada para conversar comigo nesta fase de testes. Peça ao Wagner para incluir o seu e-mail.`
+    : "Não consegui confirmar a sua conta agora. Confira a internet e tente de novo; se continuar, saia da conta (Mais) e entre de novo.")
   : !API
   ? "Neste endereço eu ainda não estou ligado: chego aqui quando o servidor na nuvem estiver no ar. Por enquanto converso no computador de testes. Roteiro, mapa, Carteira, Cofre e checklist funcionam normalmente."
   : `Estou desligado neste computador${S.marcoFaltam.length ? `: falta ${S.marcoFaltam.join(", ")}` : ""}. Roteiro, mapa, Carteira, Cofre e checklist funcionam normalmente.`;
@@ -1388,7 +1390,8 @@ function telaOnboarding() {
         <div class="msg-m">Oi! Eu sou o Marco, seu agente de viagens. Bora planejar essa viagem juntos? Me conta pra onde vocês querem ir, quando e quem vai, do jeito que vier na cabeça. O resto eu organizo.</div></div>
       <div class="campo"><label for="onb-fala">Se preferir, escreva aqui</label><textarea id="onb-fala" ${at("fala")} placeholder="Ex.: Quero levar meus pais para a Suíça em julho, uns doze dias. A gente curte montanha, trem e comida boa, mas sem correria.">${esc(f.fala)}</textarea></div>
       ${marcoDisponivel() ? `<button class="btn ${o.lendo ? "sec" : ""}" data-a="onbMarco"${o.lendo ? " disabled" : ""}>${o.lendo ? "O Marco está lendo…" : `${ic("compass", 18)} Preencher a ficha com o Marco`}</button>`
-        : S.semAcesso && AUTH ? `<div class="card" style="gap:6px"><div style="font-size:15px;line-height:1.45">Sua conta ainda não foi liberada para conversar comigo nesta fase de testes. Enquanto isso, preencha a ficha abaixo; peça ao Wagner para incluir o seu e-mail.</div></div>`
+        : S.semAcesso && AUTH && S.motivoAcesso === "conta_nao_liberada" ? `<div class="card" style="gap:6px"><div style="font-size:15px;line-height:1.45">Sua conta (${esc((S.conta && S.conta.email) || "")}) ainda não foi liberada para conversar comigo nesta fase de testes. Enquanto isso, preencha a ficha abaixo; peça ao Wagner para incluir o seu e-mail.</div></div>`
+        : S.semAcesso && AUTH ? `<div class="card" style="gap:10px"><div style="font-size:15px;line-height:1.45">Não consegui confirmar a sua conta agora. Confira a internet e tente de novo; se continuar, saia da conta e entre de novo.</div><button class="btn sec" data-a="reconectarMarco">Tentar de novo</button></div>`
         : S.semAcesso ? `<div class="card" style="gap:10px"><div style="font-size:15px;line-height:1.45">Para eu preencher a ficha com você, preciso do seu código de acesso. É rapidinho: você digita uma vez e pronto.</div><button class="btn sec" data-a="ir" data-t="acesso">${ic("lock", 18)} Digitar meu código</button></div>`
         : `<div class="small">Por aqui eu ainda não consigo conversar; preencha a ficha abaixo.</div>`}
       ${o.marcou ? '<div class="pill ok" style="align-self:flex-start">Ficha preenchida pelo Marco · confira</div>' : ""}
@@ -1702,18 +1705,35 @@ function falarTexto(t, lang) {
 // Ponte até a etapa de voz (ElevenLabs Scribe + voz do Eric): sem custo, em português, funciona no Chrome do Android e no iPhone.
 const Reconhecimento = window.SpeechRecognition || window.webkitSpeechRecognition;
 let reconhecedor = null;
+// /*juntarFala:inicio*/ (testada automaticamente por prototipo/testar.mjs)
+// O Android reenvia a frase inteira a cada atualização ("Oi", "Oi Marco", "Oi Marco tudo"...); o computador manda
+// só os trechos novos. Junta sem repetir: quando um trecho continua o anterior (mesmo começo), fica só o mais completo.
+function juntarFala(trechos) {
+  const partes = [];
+  const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, "").replace(/\s+/g, " ").trim();
+  const inicio = (s) => norm(s).split(" ").slice(0, 3).join(" ");
+  for (const bruto of trechos) {
+    const t = String(bruto || "").trim(); if (!t) continue;
+    const ult = partes[partes.length - 1];
+    const continua = ult && (norm(t).startsWith(norm(ult)) || norm(ult).startsWith(norm(t)) || (inicio(t) === inicio(ult) && inicio(t).split(" ").length >= 2));
+    if (continua) partes[partes.length - 1] = t.length >= ult.length ? t : ult; else partes.push(t);
+  }
+  return partes.join(" ");
+}
+// /*juntarFala:fim*/
 function ditar(alvo, aoTerminar) {
   if (reconhecedor) { reconhecedor.stop(); return; } // segundo toque: termina
   if (!Reconhecimento) { toast("Este navegador não permite ditar. Use o microfone do teclado do celular, ou escreva."); render(); return; }
   const campo = () => document.getElementById(alvo);
   const ler = () => (alvo === "txtMarco" ? S.rascunho : (S.onb && S.onb.f.fala) || "");
   const gravar = (t) => { if (alvo === "txtMarco") S.rascunho = t; else if (S.onb) S.onb.f.fala = t; const el = campo(); if (el) el.value = t; };
-  const base = ler().trim(); let final = "";
+  const base = ler().trim(); let falado = "";
   const r = new Reconhecimento();
   r.lang = "pt-BR"; r.interimResults = true; r.continuous = true;
-  r.onresult = (e) => { let parcial = ""; for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) final += t; else parcial += t; } gravar([base, (final + parcial).trim()].filter(Boolean).join(" ")); if (alvo === "txtMarco") { S.transc = (final + parcial).trim(); const tr = document.querySelector(".transc"); if (tr) tr.textContent = S.transc; } };
+  // relê TODOS os trechos a cada atualização e junta sem repetir (corrige a frase repetida no Android, 01/10/2026)
+  r.onresult = (e) => { const trechos = []; for (let i = 0; i < e.results.length; i++) trechos.push(e.results[i][0].transcript); falado = juntarFala(trechos); gravar([base, falado].filter(Boolean).join(" ")); if (alvo === "txtMarco") { S.transc = falado; const tr = document.querySelector(".transc"); if (tr) tr.textContent = S.transc; } };
   r.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") toast("Para falar comigo, permita o uso do microfone para este app nas configurações do celular."); else if (e.error !== "no-speech" && e.error !== "aborted") toast("Não consegui ouvir agora. Tente de novo ou escreva."); };
-  r.onend = () => { reconhecedor = null; S.ditando = null; S.transc = ""; render(); if (aoTerminar) aoTerminar(final.trim()); };
+  r.onend = () => { reconhecedor = null; S.ditando = null; S.transc = ""; render(); if (aoTerminar) aoTerminar(falado.trim()); };
   reconhecedor = r; S.ditando = alvo; render();
   try { r.start(); } catch (e) { reconhecedor = null; S.ditando = null; render(); }
 }
@@ -1751,6 +1771,7 @@ const A = {
   ditar(ds) { ditar(ds.alvo, (t) => { if (t && marcoDisponivel() && S.onb && !S.onb.lendo) A.onbMarco(); }); },
   sairCarteira() { A.voltar(); },
   atualizarApp() { location.reload(); },
+  reconectarMarco() { S.marcoOn = null; toast("Conferindo a sua conta…"); render(); checarMarco(); },
   entrarCom(ds) { if (!AUTH) return; location.href = AUTH.url + "/authorize?provider=" + ds.p + "&redirect_to=" + encodeURIComponent(location.origin + location.pathname); },
   verSenha(ds) { const el = document.getElementById(ds.id); if (!el) return; el.type = el.type === "password" ? "text" : "password"; const b = document.querySelector(`[data-a="verSenha"][data-id="${ds.id}"] span`); if (b) b.textContent = el.type === "password" ? "Mostrar" : "Ocultar"; },
   sairConta() { if (confirm("Sair da conta neste celular? A viagem continua guardada no aparelho.")) sairDaConta(); },

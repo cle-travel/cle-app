@@ -20,6 +20,9 @@ import { buscarLugar } from "./lugares.mjs";
 
 const LIMITE_CORPO = 25 * 1024 * 1024; // comprovantes em PDF ou foto vão dentro da mensagem
 
+// "Bearer <token>" → "<token>" (exportada para o teste automático em prototipo/testar.mjs)
+export const tokenDoCabecalho = (cabecalho) => String(cabecalho || "").replace(/^Bearer\s+/i, "").trim();
+
 export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], exigirAcesso = false }) {
   const chaves = () => ({ MAPBOX_TOKEN: env("MAPBOX_TOKEN"), FOURSQUARE_API_KEY: env("FOURSQUARE_API_KEY"), NPS_API_KEY: env("NPS_API_KEY") });
   // trava de gasto (R12): vazio ou 0 = sem limite (desligada durante os testes, decisão de Wagner 01/10/2026)
@@ -40,16 +43,20 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
   const liberados = () => { try { return Object.fromEntries(Object.entries(JSON.parse(env("PERMITIDOS") || "{}")).map(([n, e]) => [String(e).trim().toLowerCase(), n])); } catch { return {}; } };
   const cacheContas = new Map();
   const quemPelaConta = async (cabecalho) => {
-    const t = String(cabecalho || "").replace(/^Bearers+/i, "");
+    const t = tokenDoCabecalho(cabecalho);
     if (!t || !env("SUPABASE_URL")) return { quem: null, motivo: "sem_conta" };
     const c = cacheContas.get(t); if (c && c.ate > Date.now()) return c.r;
     let r = { quem: null, motivo: "conta_invalida" };
     try {
       const resp = await fetch(env("SUPABASE_URL") + "/auth/v1/user", { headers: { apikey: env("SUPABASE_SERVICE_ROLE_KEY") || env("SUPABASE_ANON_KEY"), Authorization: "Bearer " + t } });
-      if (resp.ok) { const u = await resp.json(); const nome = liberados()[String(u.email || "").toLowerCase()]; r = nome ? { quem: nome } : { quem: null, motivo: "conta_nao_liberada" }; }
+      if (resp.ok) {
+        const u = await resp.json(); const nome = liberados()[String(u.email || "").toLowerCase()];
+        r = nome ? { quem: nome } : { quem: null, motivo: "conta_nao_liberada" };
+        // só guarda respostas confirmadas pelo Supabase; falha de rede ou token recusado não ficam presos no cache
+        if (cacheContas.size > 500) cacheContas.clear();
+        cacheContas.set(t, { r, ate: Date.now() + 5 * 60 * 1000 });
+      }
     } catch { r = { quem: null, motivo: "conta_indisponivel" }; }
-    if (cacheContas.size > 500) cacheContas.clear();
-    cacheContas.set(t, { r, ate: Date.now() + 5 * 60 * 1000 });
     return r;
   };
 
