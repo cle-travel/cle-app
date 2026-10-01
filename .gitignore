@@ -1,0 +1,17 @@
+# Repositório PÚBLICO: só o app e o código do design entram.
+# Tudo o mais desta pasta (especificação, validações com chaves de API, exemplos com dados pessoais) fica de fora.
+/*
+!/.gitignore
+!/README.md
+!/.github/
+!/app/
+!/prototipo/
+
+# dentro do código do design
+/prototipo/*.bak
+/prototipo/index.html
+
+# nunca, em lugar nenhum
+.env
+.env.*
+*.pem

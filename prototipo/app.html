@@ -1,0 +1,938 @@
+<title>Clé · Protótipo</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#24476B">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Clé">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: um app de celular (até 430px), tela única com cabeçalho grande estilo iOS, conteúdo rolável e barra de abas.
+   No computador, o app fica centralizado como um aparelho. Visual sóbrio; um único destaque: azul-ardósia. */
+:root{
+  --bg:#F2F2F7; --card:#FFFFFF; --fg:#1D1D1F; --fg2:#6E6E73; --fg3:#AEAEB2; --sep:#E3E3E8; --fill:#EBEBF0;
+  --accent:#24476B; --accent-fg:#FFFFFF; --accent-soft:#E4EBF3;
+  --ok:#1E6B34; --ok-bg:#E5F3E8; --warn:#8A4F00; --warn-bg:#FCEFD8; --bad:#B42318; --bad-bg:#FCE9E7;
+  --map:#ECEAE4; --map2:#E3E0D8; --map-grid:#DFDCD4; --road:#FFFFFF; --orb:#24476B;
+  --line:rgba(17,24,39,.07); --sh:0 1px 2px rgba(17,24,39,.04),0 2px 8px rgba(17,24,39,.05); --glass:rgba(255,255,255,.82);
+  --font:"Geist",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --r:16px; --r-lg:22px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#000000; --card:#1C1C1E; --fg:#F5F5F7; --fg2:#98989D; --fg3:#636366; --sep:#38383A; --fill:#2C2C2E;
+  --accent:#8FB3DA; --accent-fg:#0B1B2B; --accent-soft:#1A2837;
+  --ok:#7DD89A; --ok-bg:#132A1B; --warn:#F2C36B; --warn-bg:#35270D; --bad:#FF7B72; --bad-bg:#3A1513;
+  --map:#1B1C1F; --map2:#151618; --map-grid:#26272B; --road:#34363B; --orb:#8FB3DA;
+  --line:rgba(255,255,255,.07); --sh:none; --glass:rgba(28,28,30,.82); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#000000; --card:#1C1C1E; --fg:#F5F5F7; --fg2:#98989D; --fg3:#636366; --sep:#38383A; --fill:#2C2C2E;
+  --accent:#8FB3DA; --accent-fg:#0B1B2B; --accent-soft:#1A2837;
+  --ok:#7DD89A; --ok-bg:#132A1B; --warn:#F2C36B; --warn-bg:#35270D; --bad:#FF7B72; --bad-bg:#3A1513;
+  --map:#1B1C1F; --map2:#151618; --map-grid:#26272B; --road:#34363B; --orb:#8FB3DA;
+  --line:rgba(255,255,255,.07); --sh:none; --glass:rgba(28,28,30,.82); color-scheme:dark}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;-webkit-font-smoothing:antialiased;overflow:hidden}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+a{color:var(--accent)}
+.app{position:relative;height:100%;max-width:430px;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+@media (min-width:600px){body{background:var(--fill)}.app{height:calc(100% - 40px);margin-block:20px;border-radius:34px;border:1px solid var(--sep);box-shadow:0 20px 60px rgba(0,0,0,.12)}}
+.top{padding:14px 16px 8px;display:flex;align-items:center;gap:10px;min-height:52px}
+.top .ttl{flex:1;min-width:0;text-align:center}
+.top .ttl b{display:block;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .ttl span{display:block;font-size:12px;color:var(--fg2)}
+.iconbtn{width:36px;height:36px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0}
+.iconbtn.sos{color:var(--bad)}
+main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.pad{padding:4px 16px 32px;display:flex;flex-direction:column;gap:18px}
+h1{font-size:30px;font-weight:700;letter-spacing:-.8px;line-height:1.1;margin:2px 0 0;text-wrap:balance}
+.sub{font-size:15px;color:var(--fg2);margin:4px 0 0;line-height:1.4}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--fg2);margin:4px 4px -8px}
+.card{background:var(--card);border-radius:var(--r-lg);padding:18px;display:flex;flex-direction:column;gap:14px;border:1px solid var(--line);box-shadow:var(--sh)}
+.list{background:var(--card);border-radius:var(--r);overflow:hidden;border:1px solid var(--line);box-shadow:var(--sh)}
+.hero{display:flex;flex-direction:column;gap:6px}
+.hero .kick{font-size:13px;font-weight:600;color:var(--accent);letter-spacing:.02em}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);box-shadow:var(--sh);border-radius:var(--r);padding:12px 12px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat b{font-size:20px;font-weight:650;letter-spacing:-.3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat span{font-size:12px;color:var(--fg2)}
+.datebox{width:44px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;line-height:1}
+.datebox small{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--fg2)}
+.datebox b{font-size:21px;font-weight:650;margin-top:3px;font-variant-numeric:tabular-nums}
+.thumb{width:54px;height:54px;border-radius:12px;overflow:hidden;flex-shrink:0;background:var(--map);border:1px solid var(--line)}
+.thumb svg{display:block;width:100%;height:100%}
+.avatar{width:28px;height:28px;border-radius:14px;background:var(--accent);color:var(--accent-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:700}
+.who{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--fg2)}
+.trip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--fg2)}
+.trip i{width:6px;height:6px;border-radius:3px;background:var(--ok)}
+#wallet{flex:1;width:100%;border:0;display:block;background:var(--bg)}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:48px;width:100%;text-align:left;position:relative}
+.row+.row::before{content:"";position:absolute;top:0;left:14px;right:0;border-top:.5px solid var(--sep)}
+.row .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row .main b{font-weight:500;font-size:16px}
+.row .main span{font-size:13px;color:var(--fg2)}
+.row .val{color:var(--fg2);font-size:15px;text-align:right;font-variant-numeric:tabular-nums}
+.chev{color:var(--fg3);flex-shrink:0}
+.btn{height:50px;border-radius:14px;letter-spacing:-.1px;text-decoration:none;background:var(--accent);color:var(--accent-fg);font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn.sec{background:var(--fill);color:var(--accent)}
+.btn.ghost{background:none;color:var(--accent)}
+.btn.danger{background:var(--bad);color:#fff}
+.btns{display:flex;gap:10px}
+.btns .btn{flex:1}
+.pill{font-size:12px;font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.pill.ok{color:var(--ok);background:var(--ok-bg)}
+.pill.warn{color:var(--warn);background:var(--warn-bg)}
+.pill.bad{color:var(--bad);background:var(--bad-bg)}
+.pill.acc{color:var(--accent);background:var(--accent-soft)}
+.pill.neu{color:var(--fg2);background:var(--fill)}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:15px;padding:9px 0;border-top:.5px solid var(--sep)}
+.kv:first-child{border-top:0}
+.kv span:first-child{color:var(--fg2)}
+.kv span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.tabbar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px 6px calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:500;color:var(--fg3);padding:4px 0}
+.tab.on{color:var(--accent)}
+.tab .badge{position:absolute;margin-left:18px;margin-top:-2px;background:var(--bad);color:#fff;font-size:10px;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.tab>span{position:relative;display:flex}
+.seg{display:flex;background:var(--fill);border-radius:10px;padding:2px}
+.seg button{flex:1;padding:7px 4px;border-radius:8px;font-size:14px;font-weight:500;color:var(--fg2)}
+.seg button.on{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+/* conversa */
+.chat{display:flex;flex-direction:column;gap:14px;padding:6px 16px 12px}
+.msg-m{font-size:17px;line-height:1.45;max-width:100%}
+.msg-u{align-self:flex-end;max-width:82%;background:var(--accent);color:var(--accent-fg);border-radius:20px 20px 6px 20px;padding:11px 15px;font-size:16px;line-height:1.4}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 8px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;border:.5px solid var(--sep);background:var(--card);border-radius:18px;padding:8px 13px;font-size:14px;color:var(--fg)}
+.voz{display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+.voz .linha{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:300px}
+.orb{position:relative;width:84px;height:84px;display:flex;align-items:center;justify-content:center}
+.orb i{position:absolute;inset:0;border-radius:50%;background:var(--orb);opacity:.1}
+.orb i+i{inset:10px;opacity:.2}
+.orb button{position:relative;width:52px;height:52px;border-radius:26px;background:var(--orb);color:var(--accent-fg);display:flex;align-items:center;justify-content:center}
+.orb.ouvindo i{animation:pulso 1.4s ease-in-out infinite}
+.orb.ouvindo i+i{animation-delay:.2s}
+.orb.pensando i{animation:gira 1s linear infinite;opacity:.18}
+@keyframes pulso{0%,100%{transform:scale(.9)}50%{transform:scale(1.08)}}
+@keyframes gira{0%{opacity:.08}50%{opacity:.3}100%{opacity:.08}}
+@media (prefers-reduced-motion:reduce){.orb i{animation:none!important}}
+.small{font-size:13px;color:var(--fg2)}
+.transc{font-size:15px;color:var(--fg2);min-height:22px;text-align:center;max-width:320px}
+/* mapa */
+.mapa{background:var(--map);border-radius:var(--r-lg);overflow:hidden;position:relative}
+.mapa svg{display:block;width:100%;height:auto}
+.daynav{display:flex;align-items:center;gap:8px}
+.daynav .t{flex:1;min-width:0;text-align:center}
+.daynav .t b{display:block;font-size:17px}
+.daynav .t span{font-size:13px;color:var(--fg2);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.num{width:28px;height:28px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--accent);color:var(--accent-fg)}
+.num.warn{background:var(--card);color:var(--warn);border:2px dashed var(--warn)}
+.num.bad{background:var(--card);color:var(--bad);border:2px dashed var(--bad)}
+.hora{width:48px;flex-shrink:0;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.tl .row{align-items:flex-start}
+.ico{width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.progress{height:6px;border-radius:3px;background:var(--fill);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.bar{display:flex;flex-direction:column;gap:6px}
+.bar .l{display:flex;justify-content:space-between;font-size:14px;font-variant-numeric:tabular-nums}
+.bar .l span:last-child{color:var(--fg2)}
+.check{width:24px;height:24px;border-radius:12px;border:1.5px solid var(--fg3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:transparent}
+.check.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.feito b{color:var(--fg3);text-decoration:line-through}
+/* sobreposições */
+.toast{position:absolute;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:14px;padding:12px 14px;font-size:15px;display:flex;gap:10px;align-items:center;z-index:30;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.toast button{margin-left:auto;color:var(--bg);font-weight:600;text-decoration:underline}
+.alerta{position:absolute;inset:0;background:#1C1C1E;color:#F5F5F7;z-index:50;display:flex;flex-direction:column;padding:calc(40px + env(safe-area-inset-top,0px)) 24px calc(28px + env(safe-area-inset-bottom,0px));gap:18px;overflow-y:auto}
+.alerta .ic{width:64px;height:64px;border-radius:32px;background:#FF3B30;display:flex;align-items:center;justify-content:center;color:#fff;margin-top:12px}
+.alerta h2{font-size:30px;line-height:1.15;margin:0;font-weight:700;text-wrap:balance}
+.alerta p{margin:0;font-size:17px;line-height:1.45;color:#D1D1D6}
+.alerta .bx{background:#2C2C2E;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:4px}
+.alerta .bx small{color:#A1A1A6;font-size:13px}
+.alerta .b1{height:52px;border-radius:14px;background:#FFFFFF;color:#1D1D1F;font-weight:600;font-size:17px}
+.alerta .b2{height:52px;border-radius:14px;background:#2C2C2E;color:#FFFFFF;font-weight:600;font-size:17px}
+.alerta .b3{height:44px;color:#A1A1A6;font-size:16px}
+.notif{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:10px;right:10px;z-index:40;background:var(--card);border-radius:20px;padding:12px 14px;display:flex;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.22);text-align:left;width:auto}
+.notif .app-ic{width:38px;height:38px;border-radius:9px;background:var(--accent);color:var(--accent-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sheet{position:absolute;inset:0;z-index:45;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
+.sheet .in{background:var(--bg);width:100%;border-radius:22px 22px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;max-height:92%;overflow-y:auto}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--fg3);align-self:center;opacity:.5}
+/* onboarding */
+.dots{display:flex;gap:6px;justify-content:center}
+.dots i{width:7px;height:7px;border-radius:4px;background:var(--fg3);opacity:.5}
+.dots i.on{width:20px;background:var(--accent);opacity:1}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.int{background:var(--card);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left;border:1.5px solid transparent;min-height:78px}
+.int b{font-size:15px;font-weight:600}
+.int.amo{border-color:var(--accent)}
+.int.nao{opacity:.45}
+.swipe{background:var(--card);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:10px;min-height:250px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.swipe .ph{height:110px;border-radius:16px;background:linear-gradient(160deg,var(--accent-soft),var(--fill));display:flex;align-items:flex-end;padding:12px;color:var(--accent);font-weight:600}
+.opt{background:var(--card);border-radius:14px;padding:14px;text-align:left;border:1.5px solid transparent;font-size:15px;line-height:1.35}
+.opt.on{border-color:var(--accent);background:var(--accent-soft)}
+.ficha .kv span:last-child{font-weight:500}
+.fade{animation:fade .35s ease}
+@keyframes fade{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.fade{animation:none}}
+.demo{border:1px dashed var(--fg3);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:12px}
+.mono{font-variant-numeric:tabular-nums}
+.sel{user-select:all}
+</style>
+
+<div class="app" id="app"></div>
+
+<script>
+// O app é "virgem": nenhuma viagem vem embutida. A Western é só um arquivo de exemplo (exemplos/), aberto pelo usuário.
+if (!(/*__MONTADO__*/false)) {
+  document.getElementById("app").innerHTML = '<div style="padding:40px 24px;display:flex;flex-direction:column;gap:12px"><b style="font-size:20px">Este arquivo é o modelo do app</b><span style="color:var(--fg2);line-height:1.5">Abra o <b>app/index.html</b>. Ele é gerado pelo comando <code>node montar.mjs</code>, que junta este modelo com a Carteira.</span></div>';
+  throw new Error("modelo: abra app/index.html");
+}
+
+// ---------- utilidades ----------
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtData = (iso, o = { weekday: "short", day: "numeric", month: "short" }) => new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", o).replace(/\./g, "");
+const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m} min`);
+const usd = (c) => "US$ " + (c / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const brl = (c) => "R$ " + (c / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const hmin = (h) => { if (!h) return 9999; const m = h.match(/(\d+)h(\d+)?/); return m ? +m[1] * 60 + +(m[2] || 0) : 9999; };
+const nomeLimpo = (n) => n.replace(/^(Jantar|Almoco|Almoço|Cafe|Café)\s*-\s*/i, "").replace(/\s*\((?:[^()]|\([^)]*\))*\)\s*/g, " ").replace(/\s+-\s+(check-in|check-out|bag drop|chegada).*$/i, "").trim();
+const cidade = (d) => (d.titulo.split("→").pop() || "").trim();
+const gmaps = (lat, lng) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+
+const I = {
+  back: '<path d="M15 5l-7 7 7 7"/>', chev: '<path d="M9 6l6 6-6 6"/>', mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  kb: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/>', pause: '<path d="M9 6v12M15 6v12"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4z"/>', list: '<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+  map: '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>', wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12.5h2M6 6V5a2 2 0 0 1 2-2h8"/>',
+  more: '<path d="M6 12h.01M12 12h.01M18 12h.01"/>', check: '<path d="M5 12l5 5 9-10"/>', sos: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+  flag: '<path d="M5 21V4h11l-2 4 2 4H5"/>', bed: '<path d="M3 18V7M3 13h18v5M21 13a3 3 0 0 0-3-3h-7v3"/><circle cx="7" cy="10.5" r="1.5"/>',
+  cam: '<rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.5"/><path d="M9 7l1.5-3h3L15 7"/>', fork: '<path d="M7 3v8a2 2 0 0 0 4 0V3M9 11v10M17 3c-2 0-3 3-3 6s1 3 3 3v9"/>',
+  fuel: '<rect x="4" y="4" width="10" height="17" rx="1"/><path d="M4 10h10M14 8l4 3v7a1.5 1.5 0 0 0 3 0V9l-3-3"/>', arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  pin: '<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>', doc: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+  star: '<path d="M12 4l2.5 5 5.5.8-4 3.9.9 5.5L12 16.6 7.1 19.2 8 13.7 4 9.8 9.5 9z"/>', people: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5a5 5 0 0 1 5 5"/>',
+  printer: '<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><rect x="7" y="14" width="10" height="7"/>', globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>', plus: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  compass: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>', translate: '<path d="M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M11 5c0 3-3 7-7 8M13 21l4-9 4 9M14.5 18h5"/>',
+};
+const ic = (n, s = 22, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n] || ""}</svg>`;
+const TIPO = { inicio: ["flag", "Saída"], pernoite: ["bed", "Hospedagem"], passeio: ["cam", "Passeio"], refeicao: ["fork", "Refeição"], abastecimento: ["fuel", "Abastecimento"], transito: ["arrow", "Trânsito"] };
+
+// ---------- estado ----------
+const S = {
+  fase: "planejamento", tela: "conversa", hist: [], diaSel: 1, diaHoje: 1, agora: "10h05",
+  lugar: null, confirmados: {}, tarefas: {}, extras: {}, chat: null, pensando: false, voz: "parado", transc: "",
+  carteiraVista: "total", onb: null, overlay: null, toast: null, viagem: null, listas: null,
+};
+let DIAS = [];
+const outros = () => { const v = S.viagem; const o = v ? v.viajantes.filter((n) => n !== v.dono) : []; return o.length ? o.join(" e ") : "o grupo"; };
+const exemploWestern = () => !!(S.viagem && S.viagem.exemplo === "western" && DIAS.length);
+const nomeViagem = () => (S.viagem ? S.viagem.nome : "Clé");
+const fimViagem = () => { if (!S.viagem) return null; const d = new Date(S.viagem.inicio + "T12:00:00"); d.setDate(d.getDate() + (S.viagem.dias || 1) - 1); return d.toISOString().slice(0, 10); };
+const diasAte = () => (S.viagem ? Math.ceil((new Date(S.viagem.inicio + "T12:00:00") - new Date()) / 864e5) : 0);
+const tripSub = () => S.viagem ? `${fmtData(S.viagem.inicio, { day: "numeric", month: "short" })} – ${fmtData(fimViagem(), { day: "numeric", month: "short" })} · ${S.viagem.viajantes.join(" e ")}` : "";
+const vazio = (titulo, texto) => `<div class="card" style="align-items:flex-start"><span class="ico" style="width:44px;height:44px;border-radius:12px">${ic("compass", 24)}</span><div style="font-size:19px;font-weight:600">${esc(titulo)}</div><div style="font-size:15px;line-height:1.45;color:var(--fg2)">${esc(texto)}</div><button class="btn" data-a="ir" data-t="conversa">${ic("mic", 18)} Falar com o Marco</button></div>`;
+const diaObj = (n) => DIAS.find((d) => d.dia === +n);
+const paradasDo = (d) => [...d.paradas, ...(S.extras[d.dia] || [])].slice().sort((a, b) => (a.t === "inicio" ? -1 : b.t === "inicio" ? 1 : hmin(a.h) - hmin(b.h)));
+const seloDe = (p) => (S.confirmados[p.n] ? "verde" : p.selo);
+const aConfirmar = () => { const s = new Set(); for (const d of DIAS) for (const p of d.paradas) if (seloDe(p) !== "verde") s.add(p.n); return s.size; };
+const seloPill = (p) => { const c = seloDe(p); return c === "verde" ? "" : c === "amarelo" ? '<span class="pill warn">A confirmar</span>' : '<span class="pill bad">Confirmar local</span>'; };
+
+// ---------- conversa ----------
+const SYLVAN = { n: "Sylvan Lake", t: "passeio", h: "18h00", dur: "45min", lat: 43.84659, lng: -103.55943, end: "Sylvan Lake, Custer State Park, SD", tel: null, site: null, selo: "verde", est: { n: "Estacionamento do lago", lat: 43.84752, lng: -103.55868, km: 0.15, min: 3 }, novo: true };
+function chatInicial() {
+  const dono = (S.viagem && S.viagem.dono) || "";
+  if (exemploWestern()) {
+    const n = aConfirmar(), f = diasAte();
+    return [
+      { de: "m", txt: `Olá, ${dono}. ${f > 0 ? `Faltam ${f} dias para a ${nomeViagem()}.` : `Esta é a ${nomeViagem()}.`} O roteiro dos ${DIAS.length} dias está montado; ainda há ${n} locais para você conferir no mapa e algumas reservas em aberto.` },
+      { de: "u", txt: "Quero um lugar bonito para ver o pôr do sol no dia 3, perto de Custer." },
+      { de: "m", txt: "O Sylvan Lake fica a 15 minutos do hotel em Custer, e a volta é curta. Veja a proposta:", card: "proposta" },
+    ];
+  }
+  return [{ de: "m", txt: `Olá${dono ? ", " + dono : ""}. Vamos planejar a ${nomeViagem()}? Me conte o que vocês querem ver e fazer. Eu monto o roteiro dia a dia, com rotas, horários e custos, e lanço tudo na Carteira.` }];
+}
+const RESP = {
+  falta: () => ({ txt: `Temos ${pendentes()} tarefas abertas no checklist.${DIAS.length ? ` Há ${aConfirmar()} locais para conferir no mapa.` : ""}`, card: "link:checklist:Abrir checklist" }),
+  gasto: () => ({ txt: "Está tudo na Carteira: o planejado e o realizado por categoria, a carteira de cada um e o acerto de contas entre os viajantes.", card: "link:carteira:Abrir carteira" }),
+  lanca: () => ({ txt: `Entendi: almoço de US$ 38,50, pago por você, dividido igual com ${outros()}. Confere antes de eu lançar na Carteira:`, card: "lanc" }),
+  roteiro: () => ({ txt: "Montar o roteiro de verdade exige que eu esteja conectado à inteligência do Marco, e isso entra na construção. Por enquanto, abra o arquivo de exemplo da Western para ver como um roteiro pronto fica no app.", card: "link:arquivo:Abrir arquivo da viagem" }),
+  posto: () => { const d = diaObj(S.diaHoje); const p = d && d.postos[0]; return p ? { txt: `No roteiro do dia ${d.dia}, o próximo posto recomendado é o ${p.n}.`, card: "posto" } : { txt: "Não encontrei postos no trajeto de hoje." }; },
+};
+const tarefasLista = () => (S.listas && S.listas.tarefas) || TAREFAS_PADRAO;
+const textoTarefa = (t) => (t.id === "conf" ? `Conferir ${aConfirmar()} locais no mapa` : t.t);
+function pendentes() { return tarefasLista().filter((t) => !S.tarefas[t.id]).length; }
+
+// ---------- tarefas (uma viagem nova começa com estas; o arquivo da viagem pode trazer outras) ----------
+const TAREFAS_PADRAO = [
+  { id: "conf", g: "Fazer agora", t: "Conferir locais no mapa", s: "Pontos em que as fontes discordam ou que não existem em base nenhuma", ir: "confirmar" },
+  { id: "seg", g: "Fazer agora", t: "Anexar comprovante do seguro viagem", s: "O Marco lê o documento e preenche tudo", comp: "seguro" },
+  { id: "off", g: "Fazer agora", t: "Baixar mapas para usar sem sinal", s: "Do roteiro inteiro" },
+  { id: "checkin", g: "Até a viagem", t: "Check-in online do voo de ida", s: "Abre 24 h antes do embarque" },
+  { id: "guia", g: "Até a viagem", t: "Imprimir o guia em duas vias", s: "PDF gerado a partir do roteiro", ir: "guia" },
+  { id: "docs", g: "Até a viagem", t: "Separar passaportes e documentos", s: "Todos os viajantes" },
+];
+const COFRE_PADRAO = [{ n: "Passaportes e vistos", s: "Todos os viajantes" }, { n: "Voos", s: "Ida e volta" }, { n: "Hospedagens", s: "Reservas" }, { n: "Seguro viagem", s: "", seguro: true }];
+
+// ---------- renderização ----------
+function header(opts) {
+  const { titulo, sub, voltar, direita } = opts;
+  return `<div class="top">${voltar ? `<button class="iconbtn" data-a="voltar" aria-label="Voltar">${ic("back")}</button>` : `<button class="iconbtn" data-a="ir" data-t="viagens" aria-label="Minhas viagens">${ic("list")}</button>`}
+  <div class="ttl"><b>${esc(titulo)}</b>${sub ? `<span>${esc(sub)}</span>` : ""}</div>${direita ?? `<button class="iconbtn sos" data-a="ir" data-t="emergencia" aria-label="Emergência">${ic("sos")}</button>`}</div>`;
+}
+
+function telaConversa() {
+  if (!S.chat) S.chat = chatInicial();
+  const msgs = S.chat.map((m) => {
+    if (m.de === "u") return `<div class="msg-u">${esc(m.txt)}</div>`;
+    let c = "";
+    if (m.card === "proposta") c = cardProposta();
+    else if (m.card === "lanc") c = cardLanc();
+    else if (m.card === "posto") { const p = diaObj(S.diaHoje).postos[0]; c = `<div class="card"><div class="kv"><span>Posto</span><span>${esc(p.n)}</span></div><a class="btn sec" href="${gmaps(p.lat, p.lng)}" target="_blank" rel="noopener">${ic("compass", 18)} Navegar até o posto</a></div>`; }
+    else if (m.card && m.card.startsWith("link:")) { const [, t, l] = m.card.split(":"); c = `<button class="btn sec" data-a="ir" data-t="${t}">${esc(l)}</button>`; }
+    return `<div class="fade" style="display:flex;flex-direction:column;gap:10px"><div class="who"><span class="avatar">${ic("compass", 16, 2)}</span>Marco</div><div class="msg-m">${esc(m.txt)}</div>${c}</div>`;
+  }).join("");
+  const orbCls = S.pensando ? "pensando" : S.voz === "ouvindo" ? "ouvindo" : "";
+  const status = S.pensando ? "Pensando…" : S.voz === "ouvindo" ? "Ouvindo" : "Toque para falar";
+  const chips = exemploWestern()
+    ? [["lanca", `Lança: almoço US$ 38,50 dividido com ${outros()}`], ["falta", "O que falta resolver?"], ["gasto", "Quanto já gastamos?"], ["posto", "Tem posto no caminho hoje?"]]
+    : [["roteiro", "Monta um primeiro roteiro"], ["falta", "O que falta resolver?"], ["gasto", "Quanto já gastamos?"]];
+  return `${header({ titulo: nomeViagem(), sub: tripSub() })}
+  <main id="main"><div class="chat">${msgs}${S.pensando ? '<div class="small">Marco está pensando…</div>' : ""}</div></main>
+  <div class="chips" role="group" aria-label="Sugestões">${chips.map(([k, l]) => `<button class="chip" data-a="perg" data-k="${k}">${esc(l)}</button>`).join("")}</div>
+  <div class="voz"><div class="transc">${esc(S.transc || "")}</div>
+    <div class="linha"><button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="toast" data-m="No app, o teclado abre aqui para quem prefere digitar." aria-label="Digitar">${ic("kb")}</button>
+    <div class="orb ${orbCls}"><i></i><i></i><button data-a="falar" aria-label="Falar com o Marco">${ic("mic", 24)}</button></div>
+    <button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="toast" data-m="Conversa pausada. O Marco para de ouvir até você tocar de novo." aria-label="Pausar">${ic("pause", 20)}</button></div>
+    <span class="small">${status}</span></div>`;
+}
+function cardProposta() {
+  const aplicada = (S.extras[3] || []).length > 0;
+  return `<div class="card" style="border:.5px solid var(--sep)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="small">Proposta para o D3 · ${esc(fmtData(diaObj(3).data))}</span><span class="pill ok">${ic("check", 12, 2.5)} Local confirmado</span></div>
+    <div><div style="font-size:20px;font-weight:600">Pôr do sol no Sylvan Lake · 18h00</div><div class="small" style="font-size:15px">Custer State Park · 45 min no local</div></div>
+    <div><div class="kv"><span>Impacto no dia</span><span>+25 min de direção</span></div><div class="kv"><span>Chegada ao hotel</span><span>19h10</span></div><div class="kv"><span>Custo extra</span><span>US$ 0,00</span></div></div>
+    ${aplicada ? `<div class="btns"><span class="pill ok" style="font-size:14px;padding:8px 12px">${ic("check", 14, 2.5)} Adicionado ao D3</span><button class="btn ghost" style="height:34px;width:auto" data-a="desfazer">Desfazer</button></div>`
+      : `<div class="btns"><button class="btn" data-a="aprovar">Aprovar</button><button class="btn sec" data-a="toast" data-m="O Marco pergunta o que ajustar: horário, lugar ou duração.">Ajustar</button></div>`}
+  </div>`;
+}
+
+function cardLanc() {
+  const feito = S.lancId;
+  return `<div class="card" style="border:.5px solid var(--sep)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="small">Lançamento na Carteira</span><span class="pill acc">Por voz</span></div>
+    <div style="font-size:28px;font-weight:700;letter-spacing:-.4px" class="mono">US$ 38,50</div>
+    <div><div class="kv"><span>Descrição</span><span>Almoço</span></div><div class="kv"><span>Categoria</span><span>Alimentação</span></div>
+      <div class="kv"><span>Quem pagou</span><span>${esc((S.viagem && S.viagem.dono) || "você")} · fonte padrão</span></div><div class="kv"><span>Divisão</span><span>Igual · US$ 19,25 cada</span></div><div class="kv"><span>Situação</span><span>Realizado</span></div></div>
+    ${feito ? `<div class="btns"><button class="btn sec" data-a="verLanc">${ic("check", 16, 2.5)} Lançado · ver na Carteira</button><button class="btn ghost" style="width:auto;padding:0 10px" data-a="desfazerLanc">Desfazer</button></div>`
+      : `<div class="btns"><button class="btn" data-a="aprovarLanc">Lançar</button><button class="btn sec" data-a="toast" data-m="O Marco pergunta o que mudar: valor, categoria, quem pagou ou a divisão. Na Carteira tudo continua editável à mão.">Ajustar</button></div>`}
+  </div>`;
+}
+
+function telaHoje() {
+  const d = diaObj(S.diaHoje);
+  if (!d) return `${header({ titulo: nomeViagem(), sub: tripSub() })}<main id="main"><div class="pad"><div class="hero"><span class="kick">Na viagem</span><h1>Hoje</h1></div>${vazio("O roteiro ainda está vazio", "Quando o Marco montar o roteiro, aqui aparece o dia de hoje: a próxima atividade, a rota, o pernoite e as pendências.")}</div></main>`;
+  const ps = paradasDo(d);
+  const agora = hmin(S.agora);
+  const prox = ps.find((p) => p.t !== "inicio" && hmin(p.h) >= agora) || ps[ps.length - 1];
+  const idx = ps.indexOf(prox);
+  return `${header({ titulo: nomeViagem(), sub: tripSub() })}<main id="main"><div class="pad">
+    <div class="hero"><span class="kick">Dia ${d.dia} de ${DIAS.length} · ${esc(fmtData(d.data, { weekday: "long", day: "numeric", month: "long" }))}</span><h1>${esc(cidade(d))}</h1>
+      <div class="progress" style="margin-top:6px"><i style="width:${((d.dia / DIAS.length) * 100).toFixed(1)}%"></i></div></div>
+    <div class="stats"><div class="stat"><b>${d.km}</b><span>km hoje</span></div><div class="stat"><b>${fmtMin(d.min)}</b><span>dirigindo</span></div><div class="stat"><b>${ps.length}</b><span>paradas</span></div></div>
+    <div class="card"><div><div class="small">Próxima atividade · agora ${esc(S.agora.replace("h", ":"))}</div>
+      <div style="font-size:22px;font-weight:600;margin-top:2px">${esc(nomeLimpo(prox.n))}</div>
+      <div class="small" style="font-size:15px">${esc(prox.h || "")}${prox.dur ? " · " + esc(prox.dur) : ""}${prox.est ? " · estacionamento a " + Math.round(prox.est.km * 1000) + " m a pé" : ""}</div></div>
+      <div class="mapa">${svgMapa(d, { alto: 130, foco: idx })}</div>
+      <div class="btns"><a class="btn" href="${gmaps(prox.est ? prox.est.lat : prox.lat, prox.est ? prox.est.lng : prox.lng)}" target="_blank" rel="noopener">${ic("compass", 18)} Navegar</a><button class="btn sec" data-a="lugar" data-d="${d.dia}" data-i="${idx}">Detalhes</button></div></div>
+    <div class="list">
+      <div class="row"><span class="ico">${ic("bed", 17)}</span><div class="main"><b>Pernoite</b><span>${esc(nomeLimpo(d.pernoite || "—"))}</span></div></div>
+      <div class="row"><span class="ico">${ic("sun", 17)}</span><div class="main"><b>Clima</b><span>Previsão aparece 5 dias antes</span></div></div>
+      <button class="row" data-a="tab" data-t="carteira"><span class="ico">${ic("wallet", 17)}</span><div class="main"><b>Carteira</b><span>Gastos do dia e saldo de cada um</span></div>${ic("chev", 18)}</button>
+      <button class="row" data-a="ir" data-t="checklist"><span class="ico">${ic("check", 17)}</span><div class="main"><b>Pendências</b><span>${pendentes()} tarefas abertas</span></div>${ic("chev", 18)}</button>
+    </div>
+    <p class="eyebrow">Roteiro do dia</p>${timeline(d)}
+  </div></main>
+  <div style="padding:8px 16px"><button class="row" style="background:var(--card);border-radius:26px;min-height:52px" data-a="ir" data-t="conversa"><div class="main"><span style="font-size:16px">Fale com o Marco</span></div><span class="num" style="width:36px;height:36px;border-radius:18px">${ic("mic", 18)}</span></button></div>`;
+}
+
+function timeline(d) {
+  const ps = paradasDo(d);
+  return `<div class="list tl">${ps.map((p, i) => {
+    const [icn, lab] = TIPO[p.t] || TIPO.passeio;
+    return `<button class="row" data-a="lugar" data-d="${d.dia}" data-i="${i}"><span class="hora">${esc(p.h || "")}</span><span class="ico">${ic(icn, 17)}</span>
+      <div class="main"><b>${esc(nomeLimpo(p.n))}</b><span>${esc(lab)}${p.dur ? " · " + esc(p.dur) : ""}${p.est ? " · " + Math.round(p.est.km * 1000) + " m a pé" : ""}</span>${seloPill(p) ? `<span style="margin-top:4px">${seloPill(p)}</span>` : ""}${p.novo ? '<span style="margin-top:4px"><span class="pill acc">Novo · aprovado agora</span></span>' : ""}</div>${ic("chev", 18)}</button>`;
+  }).join("")}</div>`;
+}
+
+function telaRoteiro() {
+  const kmTot = DIAS.reduce((s, d) => s + d.km, 0), minTot = DIAS.reduce((s, d) => s + d.min, 0);
+  const datas = S.viagem ? `${fmtData(S.viagem.inicio, { day: "numeric", month: "long" })} – ${fmtData(fimViagem(), { day: "numeric", month: "long" })}` : "";
+  if (!DIAS.length) return `${header({ titulo: "Roteiro", sub: nomeViagem() })}<main id="main"><div class="pad"><div class="hero"><span class="kick">${esc(datas)}</span><h1>Roteiro</h1></div>${vazio("O Marco ainda não montou o roteiro", "Conte a ele o que vocês querem fazer. O roteiro aparece aqui dia a dia, com as rotas reais, os horários e os locais conferidos no mapa.")}</div></main>`;
+  return `${header({ titulo: "Roteiro", sub: nomeViagem() })}<main id="main"><div class="pad">
+    <div class="hero"><span class="kick">${esc(datas)}</span><h1>Roteiro</h1></div>
+    <div class="stats"><div class="stat"><b>${DIAS.length}</b><span>dias</span></div><div class="stat"><b>${kmTot.toLocaleString("pt-BR")}</b><span>km de estrada</span></div><div class="stat"><b>${Math.round(minTot / 60)} h</b><span>dirigindo</span></div></div>
+    <div class="list">${DIAS.map((d) => {
+      const n = d.paradas.filter((p) => seloDe(p) !== "verde").length;
+      return `<button class="row" data-a="dia" data-d="${d.dia}"><span class="datebox"><small>${esc(fmtData(d.data, { weekday: "short" }))}</small><b>${new Date(d.data + "T12:00:00").getDate()}</b></span>
+        <div class="main"><span style="font-size:12px;font-weight:600;color:var(--accent)">DIA ${d.dia}</span><b>${esc(d.titulo)}</b><span>${d.km} km · ${fmtMin(d.min)} dirigindo${n ? ` · <span style="color:var(--warn);font-weight:600">${n} a confirmar</span>` : ""}</span></div>
+        <span class="thumb">${miniRota(d)}</span></button>`;
+    }).join("")}</div></div></main>`;
+}
+function telaDia() {
+  const d = diaObj(S.diaSel);
+  if (!d) return telaRoteiro();
+  return `${header({ titulo: `Dia ${d.dia}`, sub: fmtData(d.data, { weekday: "long", day: "numeric", month: "long" }), voltar: true })}<main id="main"><div class="pad">
+    <div><h1 style="font-size:26px">${esc(d.titulo)}</h1></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill neu">${d.km} km</span><span class="pill neu">${fmtMin(d.min)} dirigindo</span><span class="pill neu">${paradasDo(d).length} paradas</span></div>
+    <button class="mapa" data-a="mapa" data-d="${d.dia}" aria-label="Abrir no mapa">${svgMapa(d, { alto: 200 })}</button>
+    ${timeline(d)}</div></main>`;
+}
+
+// ---------- mapa em SVG (traçado real da estrada) ----------
+function svgMapa(d, { alto = 330, foco = -1, zoom = null } = {}) {
+  const W = 360, H = alto, P = 22;
+  const ps = paradasDo(d);
+  let pts = zoom ? zoom : [...d.poly, ...ps.map((p) => [p.lat, p.lng])];
+  const lat0 = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+  const kx = Math.cos((lat0 * Math.PI) / 180);
+  const xs = pts.map((p) => p[1] * kx), ys = pts.map((p) => -p[0]);
+  let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const span = Math.max((x1 - x0) / (W - 2 * P), (y1 - y0) / (H - 2 * P), 1e-4);
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const X = (lng) => W / 2 + (lng * kx - cx) / span, Y = (lat) => H / 2 + (-lat - cy) / span;
+  const path = d.poly.map((p, i) => `${i ? "L" : "M"}${X(p[1]).toFixed(1)} ${Y(p[0]).toFixed(1)}`).join("");
+  const uid = "m" + (++svgN);
+  // régua de escala: 1 grau de latitude ≈ 111 km
+  const kmPorPx = span * 111;
+  const esc0 = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200].find((k) => k / kmPorPx >= 40) || 200;
+  const escPx = esc0 / kmPorPx, escTxt = esc0 < 1 ? `${esc0 * 1000} m` : `${esc0} km`;
+  const postos = zoom ? "" : d.postos.map((p) => `<g transform="translate(${X(p.lng).toFixed(1)} ${Y(p.lat).toFixed(1)})"><circle r="7" fill="var(--card)" stroke="var(--line)" stroke-width="1" filter="url(#${uid}s)"/><path d="M-2.6 -3.4h3.6v6.6h-3.6zM1 -1.6l1.8 1.3v2.6" fill="none" stroke="var(--fg2)" stroke-width="1.1" stroke-linejoin="round"/></g>`).join("");
+  const ini = d.poly[0], fim = d.poly[d.poly.length - 1];
+  const marcas = zoom ? "" : `<circle cx="${X(ini[1]).toFixed(1)}" cy="${Y(ini[0]).toFixed(1)}" r="5" fill="var(--card)" stroke="var(--accent)" stroke-width="2.5"/><g transform="translate(${X(fim[1]).toFixed(1)} ${Y(fim[0]).toFixed(1)})"><rect x="-6" y="-6" width="12" height="12" rx="3" fill="var(--fg)"/><path d="M-3 2V-2.5M-3 0h6v2M3 0a1.6 1.6 0 0 0-1.6-1.6h-2" stroke="var(--bg)" stroke-width="1.1" fill="none"/></g>`;
+  const pins = ps.map((p, i) => {
+    if (p.t === "inicio" && i > 0) return "";
+    const c = seloDe(p), x = X(p.lng).toFixed(1), y = Y(p.lat).toFixed(1);
+    const fill = c === "verde" ? "var(--accent)" : c === "amarelo" ? "var(--warn)" : "var(--bad)";
+    const tc = c === "verde" ? "var(--accent-fg)" : "var(--card)";
+    const s = i === foco ? 1.25 : 1;
+    const est = p.est ? `<g transform="translate(${X(p.est.lng).toFixed(1)} ${Y(p.est.lat).toFixed(1)})"><rect x="-7" y="-7" width="14" height="14" rx="4" fill="var(--fg)"/><text y="3.6" text-anchor="middle" font-size="9.5" font-weight="700" font-family="var(--font)" fill="var(--bg)">P</text></g>` : "";
+    return `${zoom ? est : ""}<g transform="translate(${x} ${y}) scale(${s})" filter="url(#${uid}s)"><path d="M0 0C-1.5-4-9-8.5-9-14.5a9 9 0 0 1 18 0C9-8.5 1.5-4 0 0z" fill="${fill}" stroke="var(--card)" stroke-width="1.5"/><text y="-11" text-anchor="middle" font-size="9.5" font-weight="700" font-family="var(--font)" fill="${tc}">${i + 1}</text></g>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Mapa do dia ${d.dia}"><defs>
+    <linearGradient id="${uid}g" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" style="stop-color:var(--map)"/><stop offset="1" style="stop-color:var(--map2)"/></linearGradient>
+    <filter id="${uid}s" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="1.2" stdDeviation="1.2" flood-color="#000" flood-opacity=".28"/></filter></defs>
+    <rect width="${W}" height="${H}" fill="url(#${uid}g)"/>
+    <path d="${path}" fill="none" stroke="var(--road)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>${marcas}${postos}${pins}
+    ${H >= 120 ? `<g transform="translate(14 ${H - 14})"><path d="M0 -4V0H${escPx.toFixed(1)}V-4" fill="none" stroke="var(--fg2)" stroke-width="1.4"/><text x="${(escPx + 6).toFixed(1)}" y="1" font-size="10" font-family="var(--font)" fill="var(--fg2)">${escTxt}</text></g>` : ""}</svg>`;
+}
+let svgN = 0;
+function miniRota(d) {
+  const pts = d.poly, lat0 = pts[0][0], kx = Math.cos((lat0 * Math.PI) / 180);
+  const xs = pts.map((p) => p[1] * kx), ys = pts.map((p) => -p[0]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const sp = Math.max(x1 - x0, y1 - y0, 1e-4) / 40;
+  const X = (x) => 27 + (x - (x0 + x1) / 2) / sp, Y = (y) => 27 + (y - (y0 + y1) / 2) / sp;
+  const p = pts.map((q, i) => `${i ? "L" : "M"}${X(q[1] * kx).toFixed(1)} ${Y(-q[0]).toFixed(1)}`).join("");
+  const f = pts[pts.length - 1];
+  return `<svg viewBox="0 0 54 54" aria-hidden="true"><path d="${p}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${X(f[1] * kx).toFixed(1)}" cy="${Y(-f[0]).toFixed(1)}" r="2.6" fill="var(--accent)"/></svg>`;
+}
+function telaMapa() {
+  const d = diaObj(S.diaSel);
+  if (!d) return `${header({ titulo: "Mapa", sub: nomeViagem() })}<main id="main"><div class="pad"><div class="hero"><span class="kick">Rotas e lugares</span><h1>Mapa</h1></div>${vazio("Nada no mapa ainda", "Cada lugar da viagem vira um pino com coordenadas, endereço, telefone e o selo de confiança. A rota de cada dia aparece com o traçado real das estradas.")}</div></main>`;
+  const ps = paradasDo(d);
+  return `${header({ titulo: "Mapa", sub: "Traçado real das estradas" })}<main id="main"><div class="pad">
+    <div class="daynav"><button class="iconbtn" data-a="diaMapa" data-v="-1" aria-label="Dia anterior">${ic("back")}</button>
+      <div class="t"><b>Dia ${d.dia} · ${esc(fmtData(d.data))}</b><span>${esc(d.titulo)}</span></div>
+      <button class="iconbtn" data-a="diaMapa" data-v="1" aria-label="Próximo dia">${ic("chev")}</button></div>
+    <div class="mapa">${svgMapa(d)}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" class="small"><span class="num" style="width:18px;height:18px;font-size:10px">1</span> confirmado
+      <span class="num warn" style="width:18px;height:18px;font-size:10px">2</span> a confirmar <span class="num bad" style="width:18px;height:18px;font-size:10px">3</span> fontes discordam · ⛽ postos a cada ~200 km</div>
+    <div class="list">${ps.map((p, i) => `<button class="row" data-a="lugar" data-d="${d.dia}" data-i="${i}"><span class="num ${seloDe(p) === "amarelo" ? "warn" : seloDe(p) === "vermelho" ? "bad" : ""}">${i + 1}</span>
+      <div class="main"><b>${esc(p.h ? p.h + " · " : "")}${esc(nomeLimpo(p.n))}</b><span>${p.est ? esc(p.est.n) + " · " + Math.round(p.est.km * 1000) + " m a pé" : esc(p.end || "")}</span></div>${seloPill(p) || ic("chev", 18)}</button>`).join("")}</div>
+  </div></main>`;
+}
+
+function telaLugar() {
+  const d = S.lugar && diaObj(S.lugar.d), p = d && paradasDo(d)[S.lugar.i];
+  if (!p) return telaRoteiro();
+  const c = seloDe(p);
+  const [icn, lab] = TIPO[p.t] || TIPO.passeio;
+  const aviso = c === "verde" ? `<div class="card" style="flex-direction:row;align-items:center;gap:10px"><span class="pill ok">${ic("check", 12, 2.5)} Local confirmado</span><span class="small">${S.confirmados[p.n] ? "Confirmado por você" : "Fontes concordam no ponto"}</span></div>`
+    : `<div class="card" style="background:${c === "amarelo" ? "var(--warn-bg)" : "var(--bad-bg)"}"><div style="font-weight:600;color:${c === "amarelo" ? "var(--warn)" : "var(--bad)"}">${c === "amarelo" ? "Local a confirmar" : "As fontes discordam deste ponto"}</div>
+      <div style="font-size:15px;line-height:1.4">${c === "amarelo" ? "Só uma fonte encontrou este lugar. Confira no mapa antes de contar com ele." : "As bases de mapas apontam lugares diferentes, ou o ponto não existe em nenhuma delas. Marque o ponto certo no mapa."}</div>
+      <button class="btn" data-a="confirmarLocal">Conferir no mapa</button></div>`;
+  return `${header({ titulo: nomeLimpo(p.n), sub: `Dia ${d.dia} · ${lab}`, voltar: true })}<main id="main"><div class="pad">
+    <div style="display:flex;gap:12px;align-items:center"><span class="ico" style="width:44px;height:44px;border-radius:12px">${ic(icn, 24)}</span><div style="min-width:0"><h1 style="font-size:24px">${esc(nomeLimpo(p.n))}</h1><p class="sub">${esc(p.h || "")}${p.dur ? " · " + esc(p.dur) + " no local" : ""}</p></div></div>
+    ${aviso}
+    <div class="mapa">${svgMapa(d, { alto: 170, foco: S.lugar.i, zoom: [[p.lat, p.lng], ...(p.est ? [[p.est.lat, p.est.lng]] : []), [p.lat + 0.004, p.lng + 0.006], [p.lat - 0.004, p.lng - 0.006]] })}</div>
+    <div class="card" style="gap:0">
+      ${p.end ? `<div class="kv"><span>Endereço</span><span class="sel" style="max-width:62%">${esc(p.end)}</span></div>` : ""}
+      ${p.tel ? `<div class="kv"><span>Telefone</span><span class="sel">${esc(p.tel)}</span></div>` : ""}
+      ${p.site ? `<div class="kv"><span>Site</span><span><a href="${esc(p.site)}" target="_blank" rel="noopener">abrir</a></span></div>` : ""}
+      <div class="kv"><span>Coordenadas</span><span class="sel mono">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</span></div>
+      ${p.est ? `<div class="kv"><span>Chegada de carro</span><span style="max-width:62%">${esc(p.est.n)}</span></div><div class="kv"><span>Trecho a pé</span><span>${Math.round(p.est.km * 1000)} m · ${p.est.min} min</span></div>` : ""}
+    </div>
+    <a class="btn" href="${gmaps(p.est ? p.est.lat : p.lat, p.est ? p.est.lng : p.lng)}" target="_blank" rel="noopener">${ic("compass", 18)} Navegar ${p.est ? "até o estacionamento" : "até aqui"}</a>
+    <p class="small" style="margin:0">A navegação usa as coordenadas, nunca o nome do lugar, para o GPS não refazer a busca e errar de novo.</p>
+  </div></main>`;
+}
+
+function telaCarteira() { return ""; } // a Carteira é o app financeiro original, exibido em #wallet
+
+function telaMais() {
+  const it = (t, ico, lab, sub, extra = "") => `<button class="row" data-a="ir" data-t="${t}"><span class="ico">${ic(ico, 18)}</span><div class="main"><b>${lab}</b>${sub ? `<span>${sub}</span>` : ""}</div>${extra}${ic("chev", 18)}</button>`;
+  const dH = diaObj(S.diaHoje), sos = (S.viagem && S.viagem.emergencia) || "112";
+  return `${header({ titulo: "Mais", sub: nomeViagem() })}<main id="main"><div class="pad"><h1>Mais</h1>
+    <div class="list"><button class="row" data-a="ajustesViagem"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Ajustes da viagem</b><span>Datas, viajantes, moedas, câmbio e carteiras · preenchidos pelo Marco</span></div>${ic("chev", 18)}</button></div>
+    <div class="list"><button class="row" data-a="ir" data-t="arquivo"><span class="ico">${ic("doc", 18)}</span><div class="main"><b>Arquivo da viagem e sincronização</b><span>QR, Quick Share, WhatsApp, exportar e juntar</span></div>${ic("chev", 18)}</button></div>
+    <div class="list">${it("checklist", "check", "Checklist", `${pendentes()} tarefas abertas`)}${it("desejos", "heart", "Desejos", "Lugares, restaurantes e compras")}${it("cofre", "lock", "Cofre", "Documentos disponíveis sem sinal")}${it("grupo", "people", "Viajantes", esc(S.viagem ? S.viagem.viajantes.join(" e ") : ""))}${it("guia", "printer", "Guia impresso", "PDF para imprimir em duas vias")}</div>
+    <div class="list">${it("emergencia", "sos", '<span style="color:var(--bad)">Emergência</span>', `${sos}, tradutor, ficha médica`)}${it("viagens", "globe", "Minhas viagens", "")}</div>
+    <p class="eyebrow">Ferramentas de teste</p>
+    <div class="demo"><div class="small">Fase da viagem (a tela inicial muda)</div>
+      <div class="seg">${[["planejamento", "Planejamento"], ["viagem", "Na viagem"]].map(([k, l]) => `<button class="${S.fase === k ? "on" : ""}" data-a="fase" data-v="${k}">${l}</button>`).join("")}</div>
+      ${dH ? `<div class="daynav"><button class="iconbtn" data-a="diaHoje" data-v="-1" aria-label="Dia anterior">${ic("back")}</button><div class="t"><b>Dia simulado: D${S.diaHoje}</b><span>${esc(fmtData(dH.data))} · ${esc(cidade(dH))}</span></div><button class="iconbtn" data-a="diaHoje" data-v="1" aria-label="Próximo dia">${ic("chev")}</button></div>` : ""}
+      <div class="btns"><button class="btn sec" data-a="alerta">Alerta urgente</button><button class="btn sec" data-a="notif">Notificação</button></div>
+      <button class="btn ghost" style="color:var(--bad)" data-a="pedirFechar">Fechar esta viagem neste aparelho</button></div>
+  </div></main>`;
+}
+
+function telaChecklist() {
+  const L = tarefasLista(), grupos = [...new Set(L.map((t) => t.g))];
+  return `${header({ titulo: "Checklist", sub: `${pendentes()} de ${L.length} abertas`, voltar: true })}<main id="main"><div class="pad"><h1>Checklist</h1>
+    ${grupos.map((g) => `<p class="eyebrow">${esc(g)}</p><div class="list">${L.filter((t) => t.g === g).map((t) => {
+      const on = !!S.tarefas[t.id];
+      return `<div class="row ${on ? "feito" : ""}"><button class="check ${on ? "on" : ""}" data-a="tarefa" data-id="${esc(t.id)}" aria-label="Concluir">${ic("check", 14, 3)}</button>
+        <div class="main"><b>${esc(textoTarefa(t))}</b><span>${esc(t.s)}</span></div>
+        ${!on && t.comp ? `<button class="pill acc" data-a="comprovante" data-id="${t.id}">${ic("upload", 12, 2.2)} Anexar</button>` : ""}${!on && t.ir ? `<button class="pill acc" data-a="ir" data-t="${t.ir === "confirmar" ? "mapa" : t.ir}">Abrir</button>` : ""}</div>`;
+    }).join("")}</div>`).join("")}</div></main>`;
+}
+
+// estado de um desejo: o que já entrou no roteiro ou foi reservado (tarefa concluída) avança sozinho
+const COR_ESTADO = { Ideia: "neu", Desejo: "neu", "No roteiro": "acc", Reservado: "ok", Pago: "ok", Realizado: "ok" };
+function estadoDesejo(x) {
+  if (x.tarefa && S.tarefas[x.tarefa]) return "Reservado";
+  if (Object.values(S.extras).some((l) => l.some((p) => p.n === x.n))) return "No roteiro";
+  return x.st || "Desejo";
+}
+function telaDesejos() {
+  const L = (S.listas && S.listas.desejos) || [];
+  return `${header({ titulo: "Desejos", sub: nomeViagem(), voltar: true })}<main id="main"><div class="pad"><h1>Desejos</h1>
+    <p class="sub">Tudo começa como ideia e segue até realizado: ideia, desejo, no roteiro, reservado, pago, realizado.</p>
+    ${L.length ? `<div class="list">${L.map((x) => { const st = estadoDesejo(x); return `<div class="row"><span class="ico">${ic("star", 17)}</span><div class="main"><b>${esc(x.n)}</b><span>${esc(x.s || "")}</span></div><span class="pill ${COR_ESTADO[st] || "neu"}">${esc(st)}</span></div>`; }).join("")}</div>`
+      : `<div class="card"><div style="font-weight:600">Nenhum desejo ainda</div><span class="small">Fale com o Marco ("quero conhecer…", "quero jantar em…") ou toque em Adicionar desejo.</span></div>`}
+    <button class="btn sec" data-a="toast" data-m="No app, a busca funciona como no Google Maps: digite o nome, confira no mapa e adicione à viagem.">${ic("plus", 18)} Adicionar desejo</button></div></main>`;
+}
+function telaCofre() {
+  const docs = (S.listas && S.listas.cofre) || COFRE_PADRAO;
+  return `${header({ titulo: "Cofre", sub: "Disponível sem sinal", voltar: true })}<main id="main"><div class="pad"><h1>Cofre</h1>
+    <div class="list">${docs.map((x) => { const falta = x.seguro ? !S.tarefas.seg : !!x.falta; const s = x.seguro ? (S.tarefas.seg ? "Anexado · lido pelo Marco" : "Falta anexar") : x.s;
+      return `<div class="row"><span class="ico">${ic("doc", 17)}</span><div class="main"><b>${esc(x.n)}</b><span>${esc(s || "")}</span></div>${falta ? '<span class="pill warn">Falta</span>' : `<span class="pill ok">${ic("check", 12, 2.5)} Offline</span>`}</div>`; }).join("")}</div>
+    <p class="small" style="margin:0">Os documentos ficam guardados no aparelho e abrem sem internet. Nenhum número de documento aparece nesta demonstração.</p></div></main>`;
+}
+function telaGrupo() {
+  const vs = S.viagem ? S.viagem.viajantes : [];
+  return `${header({ titulo: "Viajantes", sub: nomeViagem(), voltar: true })}<main id="main"><div class="pad"><h1>Viajantes</h1>
+    <div class="list">${vs.map((n, i) => `<div class="row"><span class="num" ${i ? 'style="background:var(--fill);color:var(--fg)"' : ""}>${esc(n[0] || "?")}</span><div class="main"><b>${esc(n)}</b><span>${i ? "Convidado" : "Organizador"}${S.viagem.dono === n ? " · este celular" : ""}</span></div></div>`).join("")}</div>
+    <button class="btn sec" data-a="toast" data-m="Link de convite copiado. Quem entrar faz o próprio perfil e acrescenta os desejos dele.">${ic("plus", 18)} Convidar viajante</button>
+    ${exemploWestern() ? `<p class="eyebrow">Conciliação de desejos · exemplo</p>
+    <div class="card"><div style="font-weight:600">Atividade separada sugerida no D15</div><div style="font-size:15px;line-height:1.45">${esc(vs[1] || "Um viajante")} quer a exposição do Titanic no Luxor; ${esc(vs[0] || "o outro")} prefere o Jardim Botânico do Bellagio. Os dois ficam na mesma região: cada um vai ao seu programa e vocês se reencontram às 16h00 na estação do monotrilho do MGM.</div>
+      <div class="btns"><button class="btn" data-a="toast" data-m="Proposta aprovada: o D15 agora tem dois blocos individuais e o ponto de reencontro.">Aprovar</button><button class="btn sec" data-a="toast" data-m="Mantido como programa do grupo.">Manter juntos</button></div></div>` : ""}</div></main>`;
+}
+function telaGuia() {
+  const d = diaObj(S.diaSel) || DIAS[0];
+  if (!d) return `${header({ titulo: "Guia impresso", sub: nomeViagem(), voltar: true })}<main id="main"><div class="pad"><h1>Guia impresso</h1>${vazio("O guia nasce do roteiro", "Quando o roteiro estiver montado, o guia sai em PDF com o dia a dia, endereços, telefones, reservas e mapas, pronto para imprimir em duas vias.")}</div></main>`;
+  return `${header({ titulo: "Guia impresso", sub: "Prévia de uma página", voltar: true })}<main id="main"><div class="pad"><h1>Guia impresso</h1>
+    <div class="card" style="font-family:Georgia,'Times New Roman',serif;gap:8px"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg2)">${esc(nomeViagem())} · Dia ${d.dia} · ${esc(fmtData(d.data, { weekday: "long", day: "numeric", month: "long" }))}</div>
+      <div style="font-size:20px;font-weight:700">${esc(d.titulo)}</div><div style="font-size:14px;color:var(--fg2)">${d.km} km · ${fmtMin(d.min)} dirigindo · pernoite: ${esc(nomeLimpo(d.pernoite || ""))}</div>
+      <div class="mapa">${svgMapa(d, { alto: 150 })}</div>
+      ${paradasDo(d).map((p) => `<div style="display:flex;gap:10px;font-size:14px;border-top:.5px solid var(--sep);padding-top:6px"><b style="width:44px;flex-shrink:0">${esc(p.h || "")}</b><div style="min-width:0">${esc(nomeLimpo(p.n))}${p.tel ? ` · ${esc(p.tel)}` : ""}<br><span style="color:var(--fg2)">${esc(p.end || "")}</span></div></div>`).join("")}</div>
+    <p class="small" style="margin:0">Sem notas de construção: só o que o viajante precisa. O PDF é gerado pelo servidor e sai igual no Android e no iPhone.</p>
+    <button class="btn" data-a="toast" data-m="No app, o PDF completo do roteiro é gerado e salvo no aparelho.">Gerar PDF dos ${DIAS.length} dias</button></div></main>`;
+}
+function telaEmergencia() {
+  const frases = [["Preciso de um médico.", "I need a doctor."], ["Estou com dor no peito.", "I have chest pain."], ["Sou alérgico a penicilina.", "I am allergic to penicillin."], ["Fui roubado.", "I was robbed."], ["Perdi meu passaporte.", "I lost my passport."]];
+  const sos = (S.viagem && S.viagem.emergencia) || "112";
+  return `${header({ titulo: "Emergência", sub: "Funciona sem sinal", voltar: true, direita: "<span style='width:36px'></span>" })}<main id="main"><div class="pad">
+    <div class="card" style="background:var(--bad-bg)"><div style="font-weight:700;color:var(--bad);font-size:20px">Você está em segurança?</div><div style="font-size:15px">Se alguém corre risco, ligue primeiro para o número de emergência do país onde vocês estão.</div>
+      <a class="btn danger" href="tel:${esc(sos)}" target="_blank" rel="noopener">${ic("phone", 18)} Ligar ${esc(sos)}</a><span class="small">Se o discador não abrir, disque <b class="sel">${esc(sos)}</b>. O número muda conforme o país do roteiro.</span></div>
+    <div class="list"><button class="row" data-a="toast" data-m="Tradutor ao vivo: tela dividida, cada pessoa fala no seu idioma. Precisa de internet."><span class="ico">${ic("translate", 18)}</span><div class="main"><b>Tradutor de emergência</b><span>Voz a voz, tela dividida</span></div>${ic("chev", 18)}</button>
+      <button class="row" data-a="toast" data-m="Ficha médica em inglês: condições, medicações, alergias e contatos, para mostrar ao atendimento."><span class="ico">${ic("doc", 18)}</span><div class="main"><b>Ficha médica em inglês</b><span>Para mostrar ao atendimento</span></div>${ic("chev", 18)}</button>
+      <div class="row"><span class="ico">${ic("phone", 18)}</span><div class="main"><b>Central do seguro viagem 24 h</b><span>${S.tarefas.seg ? "Número lido do comprovante" : "Anexe o comprovante para aparecer aqui"}</span></div></div>
+      <div class="row"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Consulado-Geral do Brasil</b><span>O mais próximo do roteiro do dia</span></div></div></div>
+    <p class="eyebrow">Frases prontas · sem internet</p><div class="list">${frases.map(([pt, en]) => `<div class="row"><div class="main"><b>${esc(en)}</b><span>${esc(pt)}</span></div></div>`).join("")}</div></div></main>`;
+}
+function telaViagens() {
+  const v = S.viagem, f = diasAte();
+  return `${header({ titulo: "Minhas viagens", sub: "", voltar: true, direita: "<span style='width:36px'></span>" })}<main id="main"><div class="pad"><h1>Viagens</h1>
+    ${v ? `<div class="list"><button class="row" data-a="home"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>${esc(v.nome)}</b><span>${esc(tripSub())} · ${v.dias} dias</span></div><span class="pill acc">${S.fase === "viagem" ? "Em andamento" : f > 0 ? `Faltam ${f} dias` : "Aberta"}</span></button></div>` : ""}
+    <label class="btn sec" for="arqViagem" style="cursor:pointer">${ic("doc", 18)} Abrir arquivo da viagem</label>
+    <button class="btn" data-a="onb">${ic("plus", 18)} Nova viagem com o Marco</button>
+    <p class="small" style="margin:0">Uma viagem por vez neste aparelho, como na Carteira. Para trocar, abra o arquivo de outra viagem.</p></div></main>`;
+}
+
+// ---------- onboarding ----------
+const INTERESSES = ["Montanhas e natureza", "Trilhas", "Trens cênicos", "Cidades históricas", "Museus", "Gastronomia", "Compras", "Fotografia", "Lagos e barcos", "Vida noturna", "Aventura radical", "Bem-estar"];
+const ATRACOES = [["Jungfraujoch", "A estação de trem mais alta da Europa, entre geleiras."], ["Vale de Lauterbrunnen", "Vale de paredões e cachoeiras, bom para caminhadas leves."], ["Glacier Express", "Trem panorâmico entre Zermatt e St. Moritz."], ["Lucerna", "Cidade à beira do lago, com a ponte de madeira da Kapellbrücke."], ["Zermatt e o Matterhorn", "Vila sem carros aos pés do Matterhorn."]];
+const CENARIO = ["Subir de trem até um mirante e almoçar com vista", "Fazer uma trilha de 3 horas entre vilarejos", "Voo panorâmico de helicóptero", "Ficar num café da vila, sem pressa"];
+const FALA = "Quero levar meus pais para a Suíça em julho, uns doze dias. A gente gosta de montanha, trem e comida boa, mas sem correria.";
+function telaOnboarding() {
+  const o = S.onb, dots = `<div class="dots">${[0, 1, 2, 3, 4].map((i) => `<i class="${i === o.step ? "on" : ""}"></i>`).join("")}</div>`;
+  let c = "";
+  if (o.step === 0) {
+    const n = o.fala.length, ok = n >= FALA.length;
+    c = `<h1 style="font-size:28px">Me conta sobre essa viagem.</h1><p class="sub">Para onde, com quem, o que você está imaginando. Pode falar à vontade.</p>
+      <div class="transc" style="text-align:left;max-width:none;font-size:17px;color:var(--fg);min-height:72px">${esc(FALA.slice(0, n))}${!ok && n ? "▍" : ""}</div>
+      <div class="card ficha" style="gap:0"><div class="small" style="padding-bottom:6px">Ficha da viagem</div>
+        <div class="kv"><span>Destino</span><span>${n > 40 ? "Suíça" : "…"}</span></div><div class="kv"><span>Quando</span><span>${n > 60 ? "Julho · ~12 dias" : "…"}</span></div>
+        <div class="kv"><span>Quem vai</span><span>${n > 30 ? "Você + pais (3)" : "…"}</span></div><div class="kv"><span>Estilo</span><span>${n > 100 ? "Montanha, trens, gastronomia" : "…"}</span></div><div class="kv"><span>Ritmo</span><span>${ok ? "Tranquilo" : "…"}</span></div></div>
+      <div style="display:flex;justify-content:center"><div class="orb ${o.falando ? "ouvindo" : ""}"><i></i><i></i><button data-a="onbFalar" aria-label="Falar">${ic("mic", 24)}</button></div></div>
+      <button class="btn ${ok ? "" : "sec"}" data-a="onbNext">${ok ? "Continuar" : "Pular a fala"}</button>`;
+  } else if (o.step === 1) {
+    c = `<h1 style="font-size:28px">Do que vocês gostam?</h1><p class="sub">Toque uma vez para "curto", duas para "amo", três para "não é comigo".</p>
+      <div class="grid2">${INTERESSES.map((n, i) => { const v = o.int[i] || 0; return `<button class="int ${v === 2 ? "amo" : v === 3 ? "nao" : ""}" data-a="onbInt" data-i="${i}"><b>${n}</b><span class="pill ${v === 2 ? "acc" : v === 1 ? "neu" : "neu"}" style="align-self:flex-start">${["Tocar", "Curto", "Amo", "Não é comigo"][v]}</span></button>`; }).join("")}</div>
+      <button class="btn" data-a="onbNext">Continuar</button>`;
+  } else if (o.step === 2) {
+    const a = ATRACOES[o.at];
+    c = `<h1 style="font-size:28px">Atrações na Suíça</h1><p class="sub">${o.at < ATRACOES.length ? `${o.at + 1} de ${ATRACOES.length}` : "Pronto"} · "Quero" vai direto para a lista de desejos.</p>
+      ${a ? `<div class="swipe fade"><div class="ph">${esc(a[0])}</div><div style="font-size:20px;font-weight:600">${esc(a[0])}</div><div style="font-size:15px;color:var(--fg2);line-height:1.4">${esc(a[1])}</div></div>
+      <div class="btns"><button class="btn sec" data-a="onbAt" data-v="nao">Não</button><button class="btn sec" data-a="onbAt" data-v="talvez">Talvez</button><button class="btn" data-a="onbAt" data-v="quero">Quero</button></div>`
+      : `<div class="card"><div style="font-size:17px"><b>${o.quero.length}</b> na lista de desejos · <b>${o.talvez}</b> como ideia</div><span class="small">${esc(o.quero.join(", ") || "Nenhuma marcada")}</span></div><button class="btn" data-a="onbNext">Continuar</button>`}`;
+  } else if (o.step === 3) {
+    c = `<h1 style="font-size:28px">Uma situação</h1><p class="sub">Vocês estão em Zermatt, com 3 horas livres. O que preferem?</p>
+      <div style="display:flex;flex-direction:column;gap:10px">${CENARIO.map((t, i) => `<button class="opt ${o.cen === i ? "on" : ""}" data-a="onbCen" data-i="${i}">${esc(t)}</button>`).join("")}</div>
+      <p class="small" style="margin:0">Cenários como este ajustam o perfil (conservador ↔ aventureiro, econômico ↔ premium) melhor do que perguntas diretas.</p>
+      <button class="btn" data-a="onbNext">Continuar</button>`;
+  } else {
+    const amo = INTERESSES.filter((_, i) => o.int[i] === 2);
+    const perfil = ["Conservador e contemplativo", "Equilibrado, gosta de caminhar", "Aventureiro, aceita gastar mais", "Relaxado, sem pressa"][o.cen ?? 1];
+    c = `<h1 style="font-size:28px">Entendi assim</h1>
+      <div class="card ficha" style="gap:0"><div class="kv"><span>Viagem</span><span>Suíça · julho · ~12 dias</span></div><div class="kv"><span>Grupo</span><span>Você + pais</span></div><div class="kv"><span>Ritmo</span><span>Tranquilo</span></div>
+        <div class="kv"><span>Amam</span><span style="max-width:62%">${esc(amo.join(", ") || "Montanha, trens, gastronomia")}</span></div><div class="kv"><span>Desejos</span><span>${o.quero.length} atrações</span></div><div class="kv"><span>Carteira</span><span style="max-width:62%">3 viajantes · CHF e EUR → R$ · câmbio do dia</span></div><div class="kv"><span>Perfil</span><span>${esc(perfil)}</span></div></div>
+      <p class="sub">"Montei o perfil da viagem. Quer que eu comece pelas cidades-base e pelos trens?"</p>
+      <label class="small" for="onbNome" style="margin-bottom:-8px">Seu nome (este celular fica em seu nome)</label>
+      <input id="onbNome" value="${esc(o.nome || "")}" placeholder="Ex.: Ana" autocomplete="given-name" style="height:50px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:17px;padding:0 14px">
+      <button class="btn" data-a="onbFim">Criar viagem</button>`;
+  }
+  return `<div class="top"><button class="iconbtn" data-a="voltar" aria-label="Fechar">${ic("x")}</button><div class="ttl"><b>Nova viagem</b></div><span style="width:36px"></span></div>
+    <main id="main"><div class="pad">${dots}${c}</div></main>`;
+}
+
+// ---------- montagem ----------
+const TABS = () => [[S.fase === "viagem" ? "hoje" : "conversa", S.fase === "viagem" ? "sun" : "chat", S.fase === "viagem" ? "Hoje" : "Marco"], ["roteiro", "list", "Roteiro"], ["mapa", "map", "Mapa"], ["carteira", "wallet", "Carteira"], ["mais", "more", "Mais"]];
+const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "roteiro", mapa: "mapa", carteira: "carteira", mais: "mais", checklist: "mais", desejos: "mais", cofre: "mais", grupo: "mais", guia: "mais", emergencia: "mais", arquivo: "mais", lugar: null, viagens: null };
+let ultimaTela = null;
+function render() {
+  const T = { conversa: telaConversa, hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo }[S.tela];
+  const main0 = $("#main"), scroll = main0 && ultimaTela === S.tela ? main0.scrollTop : 0;
+  const raiz = RAIZ[S.tela] ?? S.hist.map((h) => RAIZ[h.tela]).filter(Boolean).pop();
+  const tabbar = S.tela === "onboarding" || S.tela === "boasvindas" ? "" : `<nav class="tabbar">${TABS().map(([t, i, l]) => `<button class="tab ${raiz === t ? "on" : ""}" data-a="tab" data-t="${t}"><span>${ic(i, 24)}${t === "mais" && pendentes() ? `<i class="badge">${pendentes()}</i>` : ""}</span>${l}</button>`).join("")}</nav>`;
+  let over = "";
+  if (S.overlay === "alerta") over = `<div class="alerta" role="alertdialog" aria-label="Alerta urgente"><div style="font-size:13px;color:#A1A1A6">Agora · Marco, seu agente de viagem</div><div class="ic">${ic("sos", 30, 2)}</div>
+    <div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:600;color:#FF6961">Alerta urgente</div><h2>Estrada fechada no seu trajeto</h2><p>A US-191 está interditada ao norte de Moab. O trajeto de hoje passa por ela.</p></div>
+    <div class="bx"><small>Rota alternativa</small><b style="font-size:17px">+25 min · chegada às 9h40</b><small>Seu horário de entrada das 10h00 continua garantido.</small></div><div style="flex:1"></div>
+    <button class="b1" data-a="fechar" data-m="Rota alternativa aplicada ao dia.">Usar rota alternativa</button><button class="b2" data-a="fecharIr" data-t="conversa">Falar com o Marco</button><button class="b3" data-a="fechar">Ciente</button></div>`;
+  if (S.overlay === "notif") over = `<button class="notif fade" data-a="fecharIr" data-t="conversa"><span class="app-ic">${ic("compass", 22)}</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:15px">Marco</b><span class="small">agora</span></span><b style="font-size:15px">Chuva prevista amanhã cedo em Moab</b><span style="font-size:15px;color:var(--fg2)">Sugiro levar a trilha do Delicate Arch para a tarde. Quer ver a proposta?</span></span></button>`;
+  if (S.overlay === "comprovante") over = sheetComprovante();
+  if (S.overlay === "confirmar") over = sheetConfirmar();
+  if (S.overlay === "dono") over = sheetDono();
+  if (S.overlay === "fechar") over = `<div class="sheet" data-a="fecharFundo"><div class="in fade"><div class="grab"></div><div style="font-size:20px;font-weight:600">Fechar ${esc(nomeViagem())}?</div>
+    <p class="sub">A viagem e a Carteira saem deste aparelho. Exporte o arquivo da viagem antes, se quiser abrir de novo depois.</p>
+    <button class="btn sec" data-a="ir" data-t="arquivo">Exportar antes</button><div class="btns"><button class="btn danger" data-a="fecharViagem">Fechar viagem</button><button class="btn ghost" data-a="fechar">Cancelar</button></div></div></div>`;
+  const toast = S.toast ? `<div class="toast fade" role="status">${esc(S.toast.m)}${S.toast.undo ? `<button data-a="${S.toast.undo}">Desfazer</button>` : ""}</div>` : "";
+  // estrutura fixa: a Carteira (app financeiro original) fica num quadro próprio que não é recriado a cada toque
+  if (!$("#view")) $("#app").innerHTML = '<input type="file" id="arqViagem" accept=".json,.pdf,application/json,application/pdf" hidden><input type="file" id="arqJuntar" accept=".json,.pdf,application/json,application/pdf" hidden><div id="view" style="flex:1;display:flex;flex-direction:column;min-height:0"></div><div id="walletBox" hidden style="flex:1;display:flex;flex-direction:column;min-height:0"></div><div id="tabs"></div><div id="over"></div>';
+  const naCarteira = S.tela === "carteira";
+  if (!$("#wallet")) abrirCarteira(); // carregada desde o início, para o Marco poder lançar
+  $("#walletBox").hidden = !naCarteira;
+  if ($("#walletSub")) $("#walletSub").textContent = nomeViagem();
+  $("#view").hidden = naCarteira;
+  if (!naCarteira) $("#view").innerHTML = T();
+  $("#tabs").innerHTML = naCarteira ? "" : tabbar; // na Carteira fica só o menu dela + a seta de voltar
+  $("#over").innerHTML = over + toast;
+  const m = $("#main");
+  if (m) { m.scrollTop = S.tela === "conversa" && (ultimaTela !== S.tela || S.rolarFim) ? m.scrollHeight : scroll; S.rolarFim = false; }
+  ultimaTela = S.tela;
+  memSalvar();
+}
+// A Carteira é o app financeiro original (carteira/index.html), sem alteração. No computador ele abre direto
+// no quadro; publicado, a página lê o arquivo e o entrega ao quadro como conteúdo (o visualizador do Claude
+// bloqueia quadros que buscam outra página). A única adição é <base href="carteira/"> para ele achar lib/ e ícones.
+const CARTEIRA_HTML = /*__CARTEIRA__*/null;
+function abrirCarteira() {
+  const box = $("#walletBox");
+  box.innerHTML = `<div class="top" style="min-height:44px;padding:8px 10px 4px"><button class="iconbtn" data-a="sairCarteira" aria-label="Voltar">${ic("back")}</button><div class="ttl"><b style="font-size:15px">Carteira</b><span id="walletSub"></span></div><span style="width:36px"></span></div>`;
+  const f = document.createElement("iframe");
+  f.id = "wallet"; f.title = "Carteira";
+  box.appendChild(f);
+  f.srcdoc = CARTEIRA_HTML.replace(/<head>/i, '<head><base href="' + new URL("carteira/", location.href).href + '"><script>window.CLE_APP=true<\/script>');
+}
+const cle = () => { try { const w = $("#wallet") && $("#wallet").contentWindow; return w && w.CLE && w.CLE.pronto() ? w.CLE : null; } catch (e) { return null; } };
+function sheetComprovante() {
+  const c = S.comp;
+  let corpo;
+  if (c.etapa === 0) corpo = `<div style="font-size:20px;font-weight:600">Anexar comprovante</div><p class="sub">Foto, PDF ou print. O Marco lê e preenche a viagem sozinho.</p>
+    <label class="btn sec" for="arquivo" style="cursor:pointer">${ic("upload", 18)} Escolher arquivo</label><input id="arquivo" type="file" accept="image/*,application/pdf" hidden>
+    <button class="btn" data-a="compExemplo">Usar um exemplo</button><button class="btn ghost" data-a="fechar">Cancelar</button>`;
+  else if (c.etapa === 1) corpo = `<div style="font-size:20px;font-weight:600">Lendo ${esc(c.nome)}…</div><div class="progress"><i style="width:65%"></i></div><p class="sub">Identificando seguradora, vigência, apólice e telefone da central.</p>`;
+  else corpo = `<div style="font-size:20px;font-weight:600">Confira o que o Marco leu</div><p class="small" style="margin:0">Dados de exemplo${c.nome !== "exemplo" ? "; o arquivo escolhido não sai do seu aparelho nesta demonstração" : ""}.</p>
+    <div class="card" style="gap:0"><div class="kv"><span>Tipo</span><span>Seguro viagem</span></div><div class="kv"><span>Viajantes</span><span>${esc(S.viagem ? S.viagem.viajantes.join(" e ") : "")}</span></div><div class="kv"><span>Vigência</span><span>${esc(S.viagem ? `${fmtData(S.viagem.inicio, { day: "numeric", month: "short" })} – ${fmtData(fimViagem(), { day: "numeric", month: "short", year: "numeric" })}` : "")}</span></div><div class="kv"><span>Cobertura médica</span><span>US$ 60.000,00</span></div><div class="kv"><span>Central 24 h</span><span>salva no Cofre e na Emergência</span></div></div>
+    <p class="small" style="margin:0">Ao confirmar: tarefa concluída, documento no Cofre e telefone da central na tela de Emergência.</p>
+    <div class="btns"><button class="btn" data-a="compOk">Confirmar</button><button class="btn sec" data-a="fechar">Corrigir</button></div>`;
+  return `<div class="sheet" data-a="fecharFundo"><div class="in fade"><div class="grab"></div>${corpo}</div></div>`;
+}
+function sheetConfirmar() {
+  const d = diaObj(S.lugar.d), p = paradasDo(d)[S.lugar.i];
+  return `<div class="sheet" data-a="fecharFundo"><div class="in fade"><div class="grab"></div><div style="font-size:20px;font-weight:600">É aqui?</div>
+    <p class="sub">${esc(nomeLimpo(p.n))}. Arraste o mapa até o ponto certo ou confirme este.</p>
+    <div class="mapa" style="position:relative">${svgMapa(d, { alto: 220, foco: S.lugar.i, zoom: [[p.lat + 0.006, p.lng + 0.009], [p.lat - 0.006, p.lng - 0.009]] })}<span class="pill neu" style="position:absolute;right:10px;bottom:10px">Satélite no app</span></div>
+    <div class="btns"><button class="btn" data-a="confOk">É aqui</button><button class="btn sec" data-a="fechar" data-m="No app, você arrasta o pino até o ponto certo.">Ajustar</button></div></div></div>`;
+}
+
+// ---------- memória da viagem (o "arquivo da viagem": tudo da viagem, Carteira incluída) ----------
+const MEM = "cle-viagem";
+function memSalvar() {
+  if (!S.viagem) return;
+  try { localStorage.setItem(MEM, JSON.stringify({ viagem: S.viagem, estado: estadoApp(), roteiro: { dias: DIAS } })); } catch (e) {}
+}
+function memLer() { try { return JSON.parse(localStorage.getItem(MEM) || "null"); } catch (e) { return null; } }
+function memApagar() { try { localStorage.removeItem(MEM); } catch (e) {} }
+const estadoApp = () => ({ fase: S.fase, diaHoje: S.diaHoje, confirmados: S.confirmados, tarefas: S.tarefas, extras: S.extras, chat: S.chat, lancId: S.lancId || null, listas: S.listas || null });
+function aplicarEstado(e) {
+  Object.assign(S, { fase: "planejamento", diaHoje: 1, confirmados: {}, tarefas: {}, extras: {}, chat: null, lancId: null, listas: null });
+  if (!e) return;
+  Object.assign(S, { fase: e.fase || "planejamento", diaHoje: e.diaHoje || 1, confirmados: e.confirmados || {}, tarefas: e.tarefas || {}, extras: e.extras || {}, chat: e.chat || null, lancId: e.lancId || null, listas: e.listas || null });
+}
+// configuração da Carteira a partir da viagem (o Marco preenche; o usuário não redigita)
+const cfgCarteira = (v) => ({ nome: v.nome, inicio: v.inicio, dias: v.dias, seuNome: v.viajantes[0], localCod: (v.moeda && v.moeda.cod) || "USD", localSimb: (v.moeda && v.moeda.simb) || "US$", nativaCod: "BRL", nativaSimb: "R$", cotacao: v.cotacao || 5.5 });
+// espera a Carteira terminar a leitura inicial antes de conversar com ela
+function carteiraPronta() {
+  return new Promise((ok) => {
+    let n = 0; const t = setInterval(() => {
+      let w = null; try { w = $("#wallet") && $("#wallet").contentWindow; } catch (e) {}
+      if ((w && w.CLE_INICIADO && w.CLE) || ++n > 100) { clearInterval(t); ok(w && w.CLE ? w.CLE : null); }
+    }, 100);
+  });
+}
+async function montarArquivo() {
+  const c = await carteiraPronta();
+  return { formato: "cle-viagem", versao: 1, app: "Clé", exportado: new Date().toISOString(), de: S.viagem.dono,
+    viagem: S.viagem, roteiro: { dias: DIAS }, estado: estadoApp(), carteira: c ? c.exportar() : null };
+}
+const slug = (t) => String(t).toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+async function salvarArquivo(nome, dados) {
+  if (location.protocol === "file:" || !window.claude) {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([dados])); a.download = nome; a.click();
+    toast(`Arquivo salvo: ${nome}`); render(); return;
+  }
+  const dl = await window.claude.use("downloads");
+  if (!dl) { toast("Este visualizador não permite salvar arquivos. Abra o protótipo pelo computador."); render(); return; }
+  try { await dl.save({ filename: nome, data: dados }); toast(`Arquivo pronto: ${nome}`); }
+  catch (e) { toast(e && e.code === "declined" ? "Salvamento cancelado." : "Não foi possível salvar o arquivo aqui."); }
+  render();
+}
+async function lerArquivo(file) {
+  const txt = await file.text();
+  if (txt.startsWith("%PDF")) { const c = await carteiraPronta(); if (!c) throw new Error("pdf"); return c.lerPdf(txt); }
+  return JSON.parse(txt);
+}
+// aceita o arquivo da viagem do app ou um arquivo antigo só da Carteira
+function normalizarArquivo(d) {
+  if (d && d.formato === "cle-viagem") return d;
+  if (d && d.viagem && Array.isArray(d.lanc)) {
+    const v = d.viagem;
+    return { formato: "cle-viagem", viagem: { nome: v.nome, inicio: v.inicio, dias: v.dias, viajantes: v.viajantes.map((p) => p.nome), dono: null }, roteiro: null, estado: null, carteira: d, soCarteira: true };
+  }
+  throw new Error("formato");
+}
+async function abrirArquivoViagem(file) {
+  try {
+    const d = normalizarArquivo(await lerArquivo(file));
+    S.viagem = { ...d.viagem, dono: null };
+    DIAS = d.roteiro && Array.isArray(d.roteiro.dias) ? d.roteiro.dias : [];
+    aplicarEstado(d.estado);
+    S.diaSel = S.diaHoje;
+    const c = await carteiraPronta();
+    if (c) { if (d.carteira) c.carregar(d.carteira, null); else c.criar(cfgCarteira(S.viagem), S.viagem.viajantes.slice(1), null); }
+    S.donoOpcoes = c ? c.viajantes() : S.viagem.viajantes.map((n) => ({ id: null, nome: n }));
+    S.overlay = "dono"; S.hist = []; S.tela = S.fase === "viagem" ? "hoje" : "conversa"; render();
+    if (d.soCarteira) { toast("Arquivo da Carteira aberto. O roteiro desta viagem ainda está vazio."); render(); }
+  } catch (e) { toast("Este arquivo não é um arquivo de viagem válido."); render(); }
+}
+async function juntarArquivo(file) {
+  try {
+    const d = normalizarArquivo(await lerArquivo(file));
+    let r = null; const c = await carteiraPronta();
+    if (c && d.carteira) r = c.juntar(d.carteira);
+    const e = d.estado || {};
+    let extra = 0;
+    for (const [k, v] of Object.entries(e.confirmados || {})) if (v && !S.confirmados[k]) { S.confirmados[k] = true; extra++; }
+    for (const [k, v] of Object.entries(e.tarefas || {})) if (v && !S.tarefas[k]) { S.tarefas[k] = true; extra++; }
+    for (const [dia, lista] of Object.entries(e.extras || {})) for (const p of lista) { S.extras[dia] = S.extras[dia] || []; if (!S.extras[dia].some((x) => x.n === p.n)) { S.extras[dia].push(p); extra++; } }
+    render(); toast(`Juntado${d.de ? " o arquivo de " + d.de : ""}: ${r ? `${r.novos} lançamento(s) novo(s), ${r.atualizados} atualizado(s)` : "sem Carteira"} · ${extra} mudança(s) no roteiro e checklist.`); render();
+  } catch (e) { toast("Este arquivo não é um arquivo de viagem válido."); render(); }
+}
+
+function telaBoasVindas() {
+  return `<main id="main"><div class="pad" style="min-height:100%;justify-content:center;padding-top:40px">
+    <span class="avatar" style="width:64px;height:64px;border-radius:18px">${ic("compass", 34, 1.6)}</span>
+    <div><h1 style="font-size:34px">Clé</h1><p class="sub" style="font-size:17px">Planeje e viva a viagem conversando com o Marco. Tudo fica neste celular e cabe num único arquivo da viagem.</p></div>
+    <label class="btn" for="arqViagem" style="cursor:pointer">Abrir arquivo da viagem</label>
+    <button class="btn sec" data-a="onb">Criar uma viagem nova com o Marco</button>
+    <p class="small" style="margin:0;line-height:1.5">O arquivo da viagem (.json ou .pdf) vem de quem organizou a viagem ou de outro celular. Arquivos antigos da Carteira também abrem aqui.</p>
+  </div></main>`;
+}
+function telaArquivo() {
+  return `${header({ titulo: "Arquivo da viagem", sub: S.viagem ? S.viagem.nome : "", voltar: true })}<main id="main"><div class="pad">
+    <div class="hero"><span class="kick">Memória da viagem</span><h1>Arquivo e sincronização</h1>
+      <p class="sub">Roteiro, lugares confirmados, desejos, checklist, documentos, viajantes e Carteira ficam guardados neste celular e cabem num arquivo só.</p></div>
+    <div class="list">
+      <button class="row" data-a="syncQR"><span class="ico">${ic("phone", 18)}</span><div class="main"><b>Sincronizar com outro celular</b><span>Lado a lado, por QR Code, sem internet</span></div>${ic("chev", 18)}</button>
+      <button class="row" data-a="enviarPdf"><span class="ico">${ic("upload", 18)}</span><div class="main"><b>Enviar por Quick Share ou WhatsApp</b><span>PDF com a viagem inteira guardada dentro</span></div>${ic("chev", 18)}</button>
+      <label class="row" for="arqJuntar" style="cursor:pointer"><span class="ico">${ic("plus", 18)}</span><div class="main"><b>Juntar arquivo recebido</b><span>Entra o que é novo; nada duplica</span></div>${ic("chev", 18)}</label>
+      <button class="row" data-a="exportar"><span class="ico">${ic("doc", 18)}</span><div class="main"><b>Exportar arquivo da viagem</b><span>Cópia de segurança (.json)</span></div>${ic("chev", 18)}</button>
+    </div>
+    <div class="list"><label class="row" for="arqViagem" style="cursor:pointer"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Abrir outra viagem</b><span>Substitui a viagem aberta neste celular</span></div>${ic("chev", 18)}</label></div>
+    <p class="small" style="margin:0;line-height:1.5">Neste protótipo, o QR sincroniza a Carteira; o arquivo e o PDF já levam a viagem inteira. Na construção, o QR também passa a levar tudo.</p>
+  </div></main>`;
+}
+function sheetDono() {
+  return `<div class="sheet"><div class="in fade"><div class="grab"></div><div style="font-size:20px;font-weight:600">De quem é este celular?</div>
+    <p class="sub">O que for lançado e conversado aqui fica em nome desta pessoa.</p>
+    <div class="list">${(S.donoOpcoes || []).map((p) => `<button class="row" data-a="dono" data-id="${esc(p.id || "")}" data-n="${esc(p.nome)}"><span class="num">${esc(p.nome[0])}</span><div class="main"><b>${esc(p.nome)}</b></div>${ic("chev", 18)}</button>`).join("")}</div></div></div>`;
+}
+
+// ---------- ações ----------
+let toastT;
+function toast(m, undo) { S.toast = { m, undo }; clearTimeout(toastT); toastT = setTimeout(() => { S.toast = null; render(); }, 3800); }
+function ir(tela, extra = {}) { S.hist.push({ tela: S.tela, lugar: S.lugar, diaSel: S.diaSel }); Object.assign(S, extra, { tela }); render(); }
+function home() { S.hist = []; S.tela = S.fase === "viagem" ? "hoje" : "conversa"; render(); }
+function pergunta(k, texto) {
+  S.chat.push({ de: "u", txt: texto }); S.pensando = true; S.rolarFim = true; render();
+  setTimeout(() => { S.pensando = false; S.chat.push({ de: "m", ...RESP[k]() }); S.rolarFim = true; render(); }, 900);
+}
+const A = {
+  voltar() { const h = S.hist.pop(); if (h) Object.assign(S, h); else S.tela = S.fase === "viagem" ? "hoje" : "conversa"; render(); },
+  ir(ds) { if (ds.t === (S.fase === "viagem" ? "hoje" : "conversa")) return home(); ir(ds.t); },
+  tab(ds) { S.hist = []; S.tela = ds.t; if (ds.t === "mapa" && S.fase === "viagem") S.diaSel = S.diaHoje; render(); },
+  home, dia(ds) { ir("dia", { diaSel: +ds.d }); }, mapa(ds) { ir("mapa", { diaSel: +ds.d }); },
+  lugar(ds) { ir("lugar", { lugar: { d: +ds.d, i: +ds.i } }); },
+  diaMapa(ds) { S.diaSel = Math.min(DIAS.length, Math.max(1, S.diaSel + +ds.v)); render(); },
+  diaHoje(ds) { S.diaHoje = Math.min(DIAS.length, Math.max(1, S.diaHoje + +ds.v)); render(); },
+  fase(ds) { S.fase = ds.v; render(); toast(ds.v === "viagem" ? "Na viagem, a tela inicial passa a ser o painel do dia." : "No planejamento, a tela inicial é a conversa com o Marco."); render(); },
+  vista(ds) { S.carteiraVista = ds.v; render(); },
+  perg(ds, el) { pergunta(ds.k, el.textContent); },
+  falar() {
+    if (S.voz === "ouvindo") return;
+    const frase = "Tem posto de gasolina no caminho hoje?"; S.voz = "ouvindo"; S.transc = ""; render();
+    let i = 0; const t = setInterval(() => { i += 3; S.transc = frase.slice(0, i); render(); if (i >= frase.length) { clearInterval(t); setTimeout(() => { S.voz = "parado"; S.transc = ""; pergunta("posto", frase); }, 400); } }, 60);
+  },
+  sairCarteira() { A.voltar(); },
+  async dono(ds) {
+    S.viagem.dono = ds.n; S.overlay = null;
+    const c = await carteiraPronta();
+    if (c && ds.id) c.definirDono(ds.id);
+    render(); toast(`Pronto. Este celular é de ${ds.n}.`); render();
+  },
+  async exportar() {
+    const d = await montarArquivo();
+    await salvarArquivo(`viagem-${slug(S.viagem.nome)}-${slug(S.viagem.dono || "celular")}.json`, JSON.stringify(d));
+  },
+  async enviarPdf() {
+    const d = await montarArquivo(), c = await carteiraPronta();
+    if (!c) { toast("A Carteira ainda está carregando. Tente de novo em instantes."); render(); return; }
+    const quando = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const pdf = await c.pdf(JSON.stringify(d), ["Clé · Arquivo da viagem", "Viagem: " + S.viagem.nome, "Enviado por " + (S.viagem.dono || "?") + " em " + quando, "",
+      "Para usar: no outro celular, abra o app Clé, toque em Mais > Arquivo da viagem", "e em Juntar arquivo recebido.", "", "A viagem inteira está guardada dentro deste arquivo."]);
+    const nome = `viagem-${slug(S.viagem.nome)}-${slug(S.viagem.dono || "celular")}.pdf`;
+    const file = new File([pdf], nome, { type: "application/pdf" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); toast("No outro celular: Mais > Arquivo da viagem > Juntar arquivo recebido."); render(); return; } catch (e) { if (e.name === "AbortError") return; }
+    }
+    await salvarArquivo(nome, pdf);
+  },
+  async syncQR() { ir("carteira"); const c = await carteiraPronta(); if (c && c.tem()) c.sincronizar(); else { toast("Abra uma viagem primeiro."); render(); } },
+  ajustesViagem() { ir("carteira"); const c = cle(); if (c) c.abrir("ajustes"); else { toast("Carregue o arquivo da viagem na Carteira uma vez; depois os ajustes abrem aqui."); render(); } },
+  aprovarLanc() {
+    const c = cle();
+    if (!c) { toast("Abra a Carteira e carregue o arquivo da viagem uma vez. Depois o Marco lança direto."); render(); return; }
+    S.lancId = c.lancar({ desc: "Almoço", cat: "ali", valor: 38.5, resp: c.viajantes().map((v) => v.id), obs: "Lançado pelo Marco por voz" });
+    render(); toast("Lançado na Carteira. Tudo continua editável lá."); render();
+  },
+  desfazerLanc() { const c = cle(); if (c && S.lancId) c.desfazer(S.lancId); S.lancId = null; render(); toast("Lançamento desfeito."); render(); },
+  verLanc() { ir("carteira"); const c = cle(); if (c) c.abrir("lista"); },
+  aprovar() { S.extras[3] = [SYLVAN]; render(); toast("Adicionado ao D3. Roteiro e mapa atualizados.", "desfazer"); render(); },
+  desfazer() { S.extras[3] = []; S.toast = null; render(); toast("Alteração desfeita."); render(); },
+  toast(ds) { toast(ds.m); render(); },
+  tarefa(ds) { S.tarefas[ds.id] = !S.tarefas[ds.id]; render(); },
+  comprovante(ds) { S.comp = { id: ds.id, etapa: 0 }; S.overlay = "comprovante"; render(); },
+  compExemplo() { lerComprovante("exemplo"); },
+  compOk() { S.tarefas[S.comp.id] = true; S.overlay = null; render(); toast("Seguro anexado. Cofre e Emergência atualizados."); render(); },
+  confirmarLocal() { S.overlay = "confirmar"; render(); },
+  confOk() { const p = paradasDo(diaObj(S.lugar.d))[S.lugar.i]; S.confirmados[p.n] = true; S.overlay = null; render(); toast("Local confirmado. O selo ficou verde."); render(); },
+  alerta() { S.overlay = "alerta"; render(); }, notif() { S.overlay = "notif"; render(); setTimeout(() => { if (S.overlay === "notif") { S.overlay = null; render(); } }, 6000); },
+  fechar(ds) { S.overlay = null; render(); if (ds && ds.m) { toast(ds.m); render(); } },
+  fecharIr(ds) { S.overlay = null; S.hist = []; S.tela = ds.t; S.rolarFim = true; render(); },
+  fecharFundo(ds, el, ev) { if (ev.target === el) { S.overlay = null; render(); } },
+  pedirFechar() { S.overlay = "fechar"; render(); },
+  async fecharViagem() {
+    const c = await carteiraPronta(); if (c) c.apagar();
+    memApagar(); DIAS = []; S.viagem = null; aplicarEstado(null); S.overlay = null; S.hist = []; S.tela = "boasvindas"; render();
+    toast("Viagem fechada neste aparelho. O arquivo exportado continua valendo."); render();
+  },
+  onb() { S.onb = { step: 0, fala: "", int: {}, at: 0, quero: [], talvez: 0, cen: null }; ir("onboarding"); },
+  onbFalar() {
+    const o = S.onb; if (o.falando) return; o.falando = true; o.fala = ""; render();
+    const t = setInterval(() => { o.fala = FALA.slice(0, o.fala.length + 3); render(); if (o.fala.length >= FALA.length) { clearInterval(t); o.falando = false; o.fala = FALA; render(); } }, 45);
+  },
+  onbNext() { const o = S.onb; if (o.step === 0 && o.fala.length < FALA.length) o.fala = FALA; o.step++; render(); $("#main").scrollTop = 0; },
+  onbInt(ds) { const o = S.onb; o.int[ds.i] = ((o.int[ds.i] || 0) + 1) % 4; render(); },
+  onbAt(ds) { const o = S.onb; if (ds.v === "quero") o.quero.push(ATRACOES[o.at][0]); if (ds.v === "talvez") o.talvez++; o.at++; render(); },
+  onbCen(ds) { S.onb.cen = +ds.i; render(); },
+  async onbFim() {
+    const nome = (($("#onbNome") || {}).value || S.onb.nome || "").trim();
+    if (!nome) { toast("Digite seu nome para criar a viagem."); render(); return; }
+    const o = S.onb;
+    S.viagem = { nome: "Suíça com os pais", inicio: "2027-07-05", dias: 12, viajantes: [nome, "Pai", "Mãe"], dono: nome, emergencia: "112", moeda: { cod: "CHF", simb: "CHF" }, cotacao: 6.5 };
+    DIAS = []; aplicarEstado(null);
+    S.listas = { tarefas: null, desejos: o.quero.map((n) => ({ n, s: "Escolhido no onboarding", st: "Desejo" })), cofre: null };
+    const c = await carteiraPronta(); if (c) c.criar(cfgCarteira(S.viagem), S.viagem.viajantes.slice(1), nome);
+    S.hist = []; S.tela = "conversa"; render();
+    toast("Viagem criada. A Carteira já nasceu configurada."); render();
+  },
+};
+function lerComprovante(nome) { S.comp.etapa = 1; S.comp.nome = nome; render(); setTimeout(() => { if (S.overlay === "comprovante") { S.comp.etapa = 2; render(); } }, 1400); }
+
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest("[data-a]"); if (!el) return;
+  const f = A[el.dataset.a]; if (!f) return;
+  if (el.dataset.a !== "fecharFundo") ev.preventDefault();
+  f(el.dataset, el, ev);
+});
+document.addEventListener("change", (ev) => {
+  const f = ev.target.files && ev.target.files[0]; if (!f) return;
+  if (ev.target.id === "arquivo") lerComprovante(f.name);
+  if (ev.target.id === "arqViagem") abrirArquivoViagem(f);
+  if (ev.target.id === "arqJuntar") juntarArquivo(f);
+  ev.target.value = "";
+});
+const _mem = memLer();
+if (_mem && _mem.viagem && _mem.viagem.dono) {
+  S.viagem = _mem.viagem; aplicarEstado(_mem.estado); DIAS = (_mem.roteiro && _mem.roteiro.dias) || []; S.diaSel = S.diaHoje;
+  S.tela = S.fase === "viagem" ? "hoje" : "conversa";
+} else S.tela = "boasvindas";
+document.addEventListener("input", (ev) => { if (ev.target.id === "onbNome" && S.onb) S.onb.nome = ev.target.value; });
+// app instalável (PWA): funciona sem internet depois da primeira abertura
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  const jaTinha = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (jaTinha) { toast("Nova versão do app instalada. Feche e abra de novo para usar."); render(); } });
+  navigator.serviceWorker.register("sw.js").then((r) => r.update()).catch(() => {});
+}
+render();
+</script>

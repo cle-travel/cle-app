@@ -1,0 +1,7 @@
+Bibliotecas de terceiros usadas pelo app (copiadas sem alteração):
+
+qrcode.js — QR Code Generator for JavaScript, Copyright (c) 2009 Kazuhiko Arase. Licença MIT.
+  https://github.com/kazuhikoarase/qrcode-generator  (npm qrcode-generator@1.4.4)
+
+jsQR.js — jsQR, Copyright (c) Cosmo Wolfe. Licença Apache 2.0.
+  https://github.com/cozmo/jsQR  (npm jsqr@1.4.0) — usado só quando o celular não tem o leitor de QR nativo do Chrome.

@@ -1,0 +1,1914 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F3B3C">
+<title>Financeiro da Viagem</title>
+<meta name="description" content="Controle financeiro de viagem, offline">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#F3F4F1; --surface:#FFFFFF; --surface-2:#F7F7F4; --line:#E4E4DE;
+  --ink:#1B2424; --ink-2:#56605F; --ink-3:#8A9392;
+  --brand:#0F3B3C; --brand-2:#1D5C5D; --brand-soft:#E3EEEC;
+  --gold:#B8892A; --gold-soft:#F6EEDC;
+  --ok:#2E7D4F; --ok-soft:#E3F2E8;
+  --warn:#A8660B; --warn-soft:#FBEFD9;
+  --bad:#B23A32; --bad-soft:#F8E3E1;
+  --est:#5B6B8C; --est-soft:#E8ECF4; --mix:#C2410C;
+  --shadow:0 1px 2px rgba(16,24,24,.06),0 4px 16px rgba(16,24,24,.06);
+  --r:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1414; --surface:#161E1E; --surface-2:#1B2525; --line:#263232;
+    --ink:#E9EEEC; --ink-2:#AAB6B3; --ink-3:#7C8986;
+    --brand:#7FC4BE; --brand-2:#9ED6D0; --brand-soft:#1C3131;
+    --gold:#D9B35E; --gold-soft:#2E2718;
+    --ok:#6CC990; --ok-soft:#173022; --warn:#E3A650; --warn-soft:#33260F;
+    --bad:#EE8A82; --bad-soft:#3A1C1A; --est:#9DAEDB; --est-soft:#1F2638; --mix:#F59E5B;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1414; --surface:#161E1E; --surface-2:#1B2525; --line:#263232;
+  --ink:#E9EEEC; --ink-2:#AAB6B3; --ink-3:#7C8986;
+  --brand:#7FC4BE; --brand-2:#9ED6D0; --brand-soft:#1C3131;
+  --gold:#D9B35E; --gold-soft:#2E2718;
+  --ok:#6CC990; --ok-soft:#173022; --warn:#E3A650; --warn-soft:#33260F;
+  --bad:#EE8A82; --bad-soft:#3A1C1A; --est:#9DAEDB; --est-soft:#1F2638; --mix:#F59E5B;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:96px;position:relative}
+.num{font-variant-numeric:tabular-nums}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* topo */
+.top{background:var(--brand);color:#fff;padding:14px 16px 56px;border-radius:0 0 24px 24px}
+:root[data-theme="dark"] .top{background:#12302F}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .top{background:#12302F}}
+.top-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.trip{font-size:13px;opacity:.8}
+.trip b{display:block;font-size:17px;opacity:1;color:#fff}
+.daypill{background:rgba(255,255,255,.14);border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap}
+.seg{display:flex;background:rgba(255,255,255,.12);border-radius:12px;padding:3px;margin-top:14px}
+.seg button{flex:1;border:0;background:transparent;color:#fff;opacity:.8;padding:8px 4px;border-radius:9px;cursor:pointer;font-weight:500}
+.seg button.on{background:#fff;color:#0F3B3C;opacity:1}
+.proto{background:var(--gold-soft);color:var(--gold);font-size:12px;text-align:center;padding:6px 12px}
+
+.wrap{padding:0 16px;margin-top:-40px}
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+.card h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;justify-content:space-between}
+.card h3 small{font-weight:400;color:var(--ink-3);font-size:12px}
+.muted{color:var(--ink-3)}
+.sub{color:var(--ink-2);font-size:13px}
+
+/* hero */
+.hero .lbl{font-size:13px;color:var(--ink-2)}
+.hero .big{font-size:30px;font-weight:700;letter-spacing:-.5px;margin:2px 0}
+.hero .alt{font-size:13px;color:var(--ink-3)}
+.bar{height:10px;border-radius:99px;background:var(--surface-2);overflow:hidden;position:relative;margin:14px 0 8px;border:1px solid var(--line)}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--brand-2);border-radius:99px}
+.bar i.over{background:var(--bad)}
+.legend{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2)}
+.plan-line{font-size:12.5px;color:var(--ink-2);margin-top:8px}.plan-line .up{color:var(--bad);font-weight:600}.plan-line .down{color:var(--ok);font-weight:600}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.kpi{background:var(--surface-2);border-radius:12px;padding:10px 12px}
+.kpi .l{font-size:12px;color:var(--ink-2)}
+.kpi .v{font-size:17px;font-weight:650;margin-top:2px}
+.kpi .a{font-size:11.5px;color:var(--ink-3)}
+
+/* categorias no painel */
+.catrow{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);cursor:pointer}
+.catrow:first-of-type{border-top:0}
+.ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center}
+.ic svg{width:18px;height:18px}
+.catrow .n{font-weight:550;font-size:14px}
+.minibar{height:6px;border-radius:9px;background:var(--surface-2);margin-top:6px;position:relative;overflow:hidden}
+.minibar i{position:absolute;inset:0 auto 0 0;border-radius:9px}
+.catrow .vals{text-align:right;font-size:13px}
+.catrow .vals b{display:block;font-size:14px}
+
+/* dias */
+.days{display:flex;gap:4px;align-items:flex-end;height:110px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.day{flex:0 0 18px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.day .col{width:14px;height:86px;position:relative;display:flex;align-items:flex-end}
+.day .p{position:absolute;bottom:0;left:0;right:0;background:var(--brand-soft);border-radius:4px}
+.day .r{position:absolute;bottom:0;left:3px;right:3px;background:var(--brand-2);border-radius:3px}
+.day .r.over{background:var(--bad)}
+.day span{font-size:9.5px;color:var(--ink-3)}
+.day.today span{color:var(--gold);font-weight:700}
+.dleg{display:flex;gap:14px;font-size:12px;color:var(--ink-2);margin-top:8px}
+.dleg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* acerto */
+.acerto{display:flex;align-items:center;gap:12px}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex:none}
+.acerto + .acerto{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.acerto .arrow{color:var(--ink-3)}
+.acerto .t{flex:1;font-size:13.5px}
+.acerto .t b{font-size:17px;display:block}
+
+/* próximos a pagar */
+.due{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:13.5px}
+.due:first-of-type{border-top:0}
+.due .d{font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-soft);border-radius:8px;padding:3px 7px;min-width:36px;text-align:center}
+.due .x{flex:1}
+.due .v{font-weight:600}
+
+/* lista */
+.bar-tools{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 16px 8px}
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.search input{border:0;outline:0;background:transparent;flex:1;min-width:0}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-top:10px;scrollbar-width:none}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+:root[data-theme="dark"] .chip.on{color:#0E1414}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip.on{color:#0E1414}}
+.group{padding:0 16px}
+.ghead{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);margin:16px 4px 6px;font-weight:600}
+.item{display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;background:var(--surface);padding:11px 12px;border-radius:14px;margin-bottom:6px;box-shadow:var(--shadow);cursor:pointer}
+.item .t{font-weight:550;font-size:14px;line-height:1.25}
+.item .m{font-size:12px;color:var(--ink-3);margin-top:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.item .v{text-align:right;font-weight:650;font-size:14.5px}
+.item .v small{display:block;font-weight:400;font-size:11.5px;color:var(--ink-3)}
+.item.off{opacity:.45}
+.st{font-size:10.5px;font-weight:700;letter-spacing:.2px;padding:2px 7px;border-radius:6px;text-transform:uppercase}
+.st.estimado{background:var(--est-soft);color:var(--est)}
+.st.apagar{background:var(--warn-soft);color:var(--warn)}
+.st.pago{background:var(--ok-soft);color:var(--ok)}
+.st.realizado{background:var(--brand-soft);color:var(--brand-2)}
+.who{font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 6px;color:#fff}
+.who.grp{background:var(--ink-3)}
+.seg{overflow-x:auto;scrollbar-width:none}.seg button{min-width:76px;white-space:nowrap}
+.pchips{display:flex;flex-wrap:wrap;gap:6px}
+.pchip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px 5px 5px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:13.5px}
+.pchip .av{width:24px;height:24px;font-size:11px}
+.pchip.on{border-color:var(--brand-2);background:var(--brand-soft);font-weight:600}
+.pchip.all{padding-left:12px}
+.trav{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.trav:first-of-type{border-top:0}
+.trav .field{flex:1;padding:9px 11px}
+.trav .av{cursor:pointer}
+.minus{border:0;width:34px;height:34px;border-radius:10px;background:var(--bad-soft);color:var(--bad);font-size:20px;line-height:1;cursor:pointer;flex:none}
+.minus:disabled{opacity:.35;cursor:not-allowed}
+.empty{text-align:center;color:var(--ink-3);padding:40px 20px}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(8px + env(safe-area-inset-bottom))}
+.nav .in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);align-items:end}
+.nav button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-3);padding:6px 0;cursor:pointer}
+.nav button.on{color:var(--brand)}
+.nav .fab{width:56px;height:56px;border-radius:18px;background:var(--gold);color:#fff;display:grid;place-items:center;margin:-26px auto 0;box-shadow:0 6px 18px rgba(184,137,42,.4)}
+.nav .fab svg{width:26px;height:26px;stroke-width:2.2}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,16,16,.45);z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;transform:translateY(105%);transition:transform .25s ease}
+.sheet.on{transform:none}
+.sheet .in{max-width:480px;margin:0 auto;background:var(--surface);border-radius:22px 22px 0 0;max-height:92vh;overflow:auto;padding:10px 16px calc(20px + env(safe-area-inset-bottom))}
+.grab{width:40px;height:4px;border-radius:9px;background:var(--line);margin:0 auto 10px}
+.shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.shead h2{font-size:17px;margin:0}
+.iconbtn{border:0;background:var(--surface-2);width:34px;height:34px;border-radius:10px;display:grid;place-items:center;cursor:pointer}
+.amount{display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0 4px}
+.amount input{border:0;outline:0;background:transparent;font-size:38px;font-weight:700;width:190px;text-align:center;letter-spacing:-.5px}
+.amount input::placeholder{color:var(--line)}
+.cur{display:flex;background:var(--surface-2);border-radius:10px;padding:3px}
+.cur button{border:0;background:transparent;padding:6px 10px;border-radius:8px;font-weight:600;cursor:pointer;color:var(--ink-2)}
+.cur button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.conv{text-align:center;font-size:13px;color:var(--ink-3);min-height:18px}
+.flabel{font-size:12.5px;font-weight:600;color:var(--ink-2);margin:16px 0 8px}
+.catgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.catbtn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11.5px;cursor:pointer;line-height:1.15;text-align:center}
+.catbtn .ic{width:32px;height:32px}
+.catbtn.on{border-color:var(--brand-2);box-shadow:0 0 0 2px var(--brand-soft)}
+.field{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 12px;outline:0}
+.field:focus{border-color:var(--brand-2)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.segl{display:flex;background:var(--surface-2);border-radius:12px;padding:3px;gap:3px}
+.segl button{flex:1;border:0;background:transparent;padding:9px 4px;border-radius:9px;cursor:pointer;font-size:13px;color:var(--ink-2);font-weight:500}
+.segl button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);font-weight:600}
+.hint{font-size:12px;color:var(--ink-3);margin-top:6px}
+.more{border:0;background:transparent;color:var(--brand-2);font-weight:600;padding:12px 0 0;cursor:pointer}
+.photo{display:flex;align-items:center;gap:10px}
+.photo img{width:54px;height:54px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.btn{border:0;border-radius:14px;padding:14px;font-weight:650;cursor:pointer;width:100%}
+.btn.pri{background:var(--brand);color:#fff;margin-top:18px}
+:root[data-theme="dark"] .btn.pri{color:#0E1414}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.pri{color:#0E1414}}
+.btn.ghost{background:var(--surface-2);color:var(--ink)}
+.btn.danger{background:var(--bad-soft);color:var(--bad);margin-top:8px}
+.btn.sm{padding:9px 12px;width:auto;font-size:13px;border-radius:10px}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:10px 0}
+.sw{width:44px;height:26px;border-radius:99px;background:var(--line);position:relative;border:0;cursor:pointer;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.sw.on{background:var(--brand-2)}.sw.on::after{left:21px}
+
+/* telas simples */
+.page-h{padding:18px 16px 4px}
+.page-h h1{font-size:22px;margin:0}
+.page-h p{margin:4px 0 0;color:var(--ink-2);font-size:13.5px}
+.list{padding:8px 16px}
+.set{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.set:first-of-type{border-top:0}
+.set .k{font-size:14px}
+.set .k small{display:block;color:var(--ink-3);font-size:12px}
+.set input.field{width:110px;text-align:right;padding:8px 10px}
+.subs{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 10px 46px}
+.subs .chip{font-size:12px;padding:4px 10px}
+.colors{display:flex;gap:8px;flex-wrap:wrap}
+.colors button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+.colors button.on{border-color:var(--ink)}
+.wal .st-big{display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:12px;padding:12px 14px;margin:4px 0 12px}
+.wal .st-big.ok{background:var(--ok-soft);color:var(--ok)}.wal .st-big.bad{background:var(--bad-soft);color:var(--bad)}
+.wal .st-big b{font-size:19px;display:block}
+.wal .st-big span{font-size:12.5px}
+.wal .nums{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.fonte{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.fonte .n{font-weight:550;font-size:14px}
+.fonte .vals{text-align:right;font-size:12.5px;color:var(--ink-3)}
+.fonte .vals b{display:block;font-size:14px;color:var(--ink)}
+.fonte.cred .ic{background:var(--est-soft)!important;color:var(--est)!important}
+.pessoa-din{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);cursor:pointer}
+.pessoa-din:first-of-type{border-top:0}
+.pessoa-din .x{flex:1;font-size:14px}
+.pessoa-din .tag{font-size:12.5px;font-weight:700;border-radius:8px;padding:4px 9px}
+.pessoa-din .tag.ok{background:var(--ok-soft);color:var(--ok)}.pessoa-din .tag.bad{background:var(--bad-soft);color:var(--bad)}.pessoa-din .tag.nd{background:var(--surface-2);color:var(--ink-3)}
+.linkbtn{border:0;background:transparent;color:var(--brand-2);font-weight:600;cursor:pointer;font-size:13px;padding:0}
+.pagopor{font-size:11.5px;color:var(--ink-2)}
+.partes{background:var(--surface-2);border-radius:12px;padding:10px 12px;margin-top:10px}
+.parte-row{display:flex;align-items:center;gap:10px;padding:5px 0}
+.parte-row .x{flex:1;font-size:14px}
+.parte-row .field{width:120px;text-align:right;padding:8px 10px}
+.resto{font-size:12.5px;font-weight:600;margin-top:6px}
+.resto.ok{color:var(--ok)}.resto.bad{color:var(--bad)}
+.welcome{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:32px 20px}
+.welcome .logo{width:64px;height:64px;border-radius:18px;background:var(--brand);color:#fff;display:grid;place-items:center;margin-bottom:18px}
+.welcome .logo svg{width:34px;height:34px}
+.welcome h1{font-size:26px;margin:0 0 6px}
+.welcome p{color:var(--ink-2);margin:0 0 22px}
+.welcome .btn{margin-top:10px}
+.obs{font-size:12px;color:var(--ink-3);margin-top:3px;line-height:1.3}
+.syncbtn{border:0;background:rgba(255,255,255,.14);color:#fff;width:36px;height:34px;border-radius:10px;display:grid;place-items:center;cursor:pointer;flex:none}
+.top-row .dir{display:flex;gap:8px;align-items:center}
+.qrbox{background:#fff;border-radius:16px;padding:12px;display:flex;justify-content:center;margin:12px auto 6px;max-width:340px}
+.qrbox canvas{width:auto;max-width:100%;height:auto;image-rendering:pixelated}
+.qrctl{display:flex;justify-content:center;gap:8px;margin:6px 0 2px}
+.qrctl button{border:0;background:var(--surface-2);color:var(--ink);border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;min-width:52px}
+.pontos{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin:8px 0 2px}
+.pontos i{width:10px;height:10px;border-radius:3px;background:var(--line)}
+.pontos i.ok{background:var(--ok)}
+.pontos i.at{outline:2px solid var(--brand-2);outline-offset:1px}
+.aviso-grande{background:var(--warn-soft);color:var(--ink);border-radius:12px;padding:10px 12px;font-size:13px;margin:8px 0}
+.aviso-grande b{color:var(--warn)}
+.qrinfo{text-align:center;font-size:12.5px;color:var(--ink-2);min-height:18px}
+.passo{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin:8px 0}
+.passo b{flex:none;width:24px;height:24px;border-radius:50%;background:var(--brand-soft);color:var(--brand-2);display:grid;place-items:center;font-size:12.5px}
+.cam{position:relative;background:#000;border-radius:16px;overflow:hidden;margin:12px 0 6px;aspect-ratio:1/1}
+.cam video{width:100%;height:100%;object-fit:cover}
+.cam .mira{position:absolute;inset:14%;border:3px solid rgba(255,255,255,.85);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+.progresso{height:8px;border-radius:9px;background:var(--surface-2);overflow:hidden;margin-top:8px}
+.progresso i{display:block;height:100%;background:var(--ok);width:0;transition:width .2s}
+.ok-grande{text-align:center;padding:10px 0}
+.ok-grande .ico{width:56px;height:56px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center;margin:0 auto 8px;font-size:28px}
+.fonte[data-verf]{cursor:pointer}
+.fonte .prev{font-size:11.5px;color:var(--warn);margin-top:3px;line-height:1.25}
+.fonte .prev + .prev{margin-top:1px}
+/* camadas da barra: estimado (azul listrado) < a pagar (âmbar listrado) < gasto (sólido, por cima) */
+:root{--pat-apagar:repeating-linear-gradient(135deg,var(--warn) 0 4px,color-mix(in srgb,var(--warn) 45%,transparent) 4px 8px);
+      --pat-est:repeating-linear-gradient(45deg,var(--est) 0 4px,color-mix(in srgb,var(--est) 40%,transparent) 4px 8px)}
+.minibar i.prev,.bar i.prev{background:var(--pat-apagar);opacity:1}
+.seg i{border-radius:0}.seg i:first-child{border-top-left-radius:9px;border-bottom-left-radius:9px}
+.seg i:last-child{border-top-right-radius:9px;border-bottom-right-radius:9px}
+.minibar i.est,.bar i.est{background:var(--pat-est);opacity:1}
+.fonte .prev .e{color:var(--est)}
+.wal .minibar{height:8px;border:1px solid var(--line)}
+.leg-prev[data-ajuda]{cursor:pointer;-webkit-user-select:none;user-select:none}
+.leg-prev[data-ajuda] span{padding:3px 0}
+.wal-ajuda{display:none}
+.wal-ajuda.on{display:block}
+.leg-prev{display:flex;gap:14px;font-size:11.5px;color:var(--ink-2);margin:4px 0 0}
+.leg-prev i{display:inline-block;width:14px;height:8px;border-radius:3px;margin-right:5px;vertical-align:0}
+.secao{font-size:12.5px;font-weight:700;color:var(--ink-2);margin:16px 0 6px;display:flex;justify-content:space-between}
+/* saldo projetado da fonte: âmbar = só a pagar · roxo = só estimado · laranja = os dois · vermelho = negativo */
+.fonte .vals .proj{font-weight:700;font-size:13px;margin-top:5px;white-space:nowrap}
+.fonte .vals .proj small{font-weight:500;font-size:10.5px;opacity:.9;margin-right:3px;display:inline}
+.proj.ap{color:var(--warn)}.proj.es{color:var(--est)}.proj.mx{color:var(--mix)}.proj.neg{color:var(--bad)}
+.pgrow{display:grid;grid-template-columns:1fr 1.25fr;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.pgrow:first-child{border-top:0}
+.pgrow .quem{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.pgrow .quem .av{width:24px;height:24px;font-size:11px}
+.pgrow .field{padding:9px 10px}
+.pgrow input.field{text-align:right}
+/* aviso "meio de pagamento não definido": nota de dólar com X vermelho */
+.nopay{display:inline-flex;align-items:center;cursor:pointer;padding:2px;margin:-2px 0;border-radius:6px}
+.nopay svg{width:28px;height:24px;display:block}
+.nopay:active{background:var(--bad-soft)}
+.divida{display:inline-flex;align-items:center;cursor:pointer;padding:2px;margin:-2px 0;border-radius:6px}
+.divida svg{width:28px;height:26px;display:block}
+.divida:active{background:var(--warn-soft)}
+/* aviso de versão nova */
+.atualizar{position:fixed;left:12px;right:12px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:70;max-width:456px;margin:0 auto;background:var(--brand);color:#fff;border-radius:14px;padding:12px 12px 12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:14px}
+.atualizar span{flex:1}
+.atualizar button{border:0;border-radius:10px;padding:9px 14px;font-weight:700;background:var(--gold);color:#fff;cursor:pointer}
+:root[data-theme="dark"] .atualizar{background:#12302F}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .atualizar{background:#12302F}}
+.acerto .sub2{font-size:12px;color:var(--ink-3);margin-top:1px}
+.acerto .prevtag{font-size:10.5px;font-weight:700;color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.acerto[data-dev]{cursor:pointer}
+.acerto[data-dev] .t::after{content:"›";color:var(--ink-3);margin-left:4px}
+.acerto-net{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--brand-soft);font-size:13.5px}
+.acerto-net b{font-size:15px}
+/* selo do meio de pagamento: cor da instituição + sigla + tipo (Cred/Débt/Esp) */
+.selo{display:inline-flex;align-items:center;gap:3px;height:19px;padding:0 5px;border-radius:5px;background:var(--c);color:var(--t);font-size:10.5px;font-weight:800;letter-spacing:.2px;line-height:1;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);white-space:nowrap}
+.selos{display:inline-flex;align-items:center;gap:4px;flex-wrap:nowrap;white-space:nowrap}
+.selo em{font-style:normal;font-weight:600;font-size:9.5px;opacity:.85}
+.selo .quem{min-width:15px;height:15px;padding:0 3px;border-radius:8px;display:inline-grid;place-items:center;font-size:8.5px;font-weight:800;color:#fff;margin-left:-3px;box-shadow:0 0 0 1.5px rgba(255,255,255,.85)}
+.selo-g{width:36px;height:36px;border-radius:10px;background:var(--c);color:var(--t);display:grid;place-items:center;align-content:center;font-weight:800;font-size:11px;line-height:1.05;text-align:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);flex:none}
+.selo-g em{font-style:normal;font-weight:600;font-size:8.5px;opacity:.85}
+.cores-selo{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.cores-selo button{width:28px;height:28px;border-radius:8px;border:2px solid transparent;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.cores-selo button.on{border-color:var(--ink)}
+.selo-edit{display:flex;align-items:center;gap:10px}
+.selo-edit .field{width:110px;text-transform:uppercase}
+.toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:13.5px;opacity:0;transition:.2s;z-index:60;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<nav class="nav"><div class="in">
+  <button data-tab="painel" class="on"><svg class="i"><use href="#i-home"/></svg>Painel</button>
+  <button data-tab="lista"><svg class="i"><use href="#i-list"/></svg>Lançamentos</button>
+  <button id="fab" aria-label="Novo lançamento"><span class="fab"><svg class="i"><use href="#i-plus"/></svg></span></button>
+  <button data-tab="categorias" style="grid-column:4 / span 2"><svg class="i"><use href="#i-tag"/></svg>Categorias</button>
+  <!-- Clé: a aba Ajustes saiu daqui; os dados da viagem vêm do Marco e se editam em Mais → Ajustes da viagem -->
+</div></nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"><div class="in" id="sheetIn"></div></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="cam" accept="image/*" capture="environment" hidden>
+<input type="file" id="imp" accept=".json,.txt,.pdf,application/json,text/plain,application/pdf" hidden>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h14V9"/><path d="M10 21v-6h4v6"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".8"/><circle cx="3.5" cy="12" r=".8"/><circle cx="3.5" cy="18" r=".8"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V3h9l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.4"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+  <symbol id="i-plane" viewBox="0 0 24 24"><path d="M10.5 13.5 3 11l1.5-1.5 8 1 4-4.5a2 2 0 0 1 3 3l-4.5 4 1 8L14.5 22 12 14.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 19V6M3 14h18v5M21 14v-2a3 3 0 0 0-3-3h-8v5"/><circle cx="6.5" cy="10.5" r="1.8"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16 7l3 3M14 9l2 2"/></symbol>
+  <symbol id="i-fuel" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M14 10h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/><path d="M7 7h4"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24"><path d="M4 16v-4l2-5h12l2 5v4z"/><path d="M4 12h16"/><circle cx="7.5" cy="16.5" r="1.8"/><circle cx="16.5" cy="16.5" r="1.8"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z"/><path d="M14 7v2M14 11v2M14 15v2"/></symbol>
+  <symbol id="i-food" viewBox="0 0 24 24"><path d="M6 3v7a2 2 0 0 0 2 2v9M10 3v7a2 2 0 0 1-2 2M8 3v5"/><path d="M17 21V3c-2 1.5-3 4-3 8h3"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r=".9"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7h15a3 3 0 0 1 3 3v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l12-3v3"/><circle cx="16.5" cy="14" r="1.2"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></symbol>
+  <symbol id="i-cash" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v.01M18 14.5v.01"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12M6 10l6 6 6-6M4 20h16"/></symbol>
+</svg>
+
+<script src="lib/qrcode.js"></script>
+<script>
+/* ============================================================
+   Financeiro da Viagem — v1
+   Offline (PWA). Os dados ficam só no aparelho (IndexedDB) e entram por arquivo.
+   Este código não contém dados pessoais.
+   ============================================================ */
+const VERSAO_APP = '1.15.0';
+
+const CAT_DEF = [
+  {id:'pass',  nome:'Passagens',            icone:'plane',  cor:'#3F6FB0', subs:['Aéreo','Taxas e bagagem']},
+  {id:'seg',   nome:'Seguros e documentos', icone:'shield', cor:'#6C5BA8', subs:['Seguro viagem','Seguro do carro','PID / CNH','Vacinas / CIVP','Passe de parques']},
+  {id:'hosp',  nome:'Hospedagem',           icone:'bed',    cor:'#1D5C5D', subs:['Hotel','Motel','Camping','Taxas do hotel']},
+  {id:'loc',   nome:'Locação do carro',     icone:'key',    cor:'#4F6470', subs:['Diárias','Taxas da locadora']},
+  {id:'comb',  nome:'Combustível',          icone:'fuel',   cor:'#B23A32', subs:['Gasolina']},
+  {id:'desl',  nome:'Deslocamentos',        icone:'car',    cor:'#8A6A3D', subs:['Estacionamento','Pedágio','Monotrilho / transporte','Uber / táxi']},
+  {id:'pas',   nome:'Passeios e ingressos', icone:'ticket', cor:'#C2410C', subs:['Parques','Tours','Shows','Museus']},
+  {id:'ali',   nome:'Alimentação',          icone:'food',   cor:'#B8892A', subs:['Café da manhã','Almoço','Jantar','Lanches','Mercado']},
+  {id:'comp',  nome:'Compras',              icone:'bag',    cor:'#2E7D4F', subs:['Vestuário','Calçados','Eletrônicos','Ferramentas','Souvenirs','Cosméticos','Presentes','Tabacaria','Outdoor / camping','Casa']},
+  {id:'con',   nome:'Conectividade',        icone:'wifi',   cor:'#0E7490', subs:['Starlink','eSIM / chip']},
+  {id:'out',   nome:'Outros',               icone:'dots',   cor:'#6B7280', subs:['Imprevistos','Lavanderia','Farmácia','Gorjetas avulsas']},
+];
+
+const CORES_P = ['#1D5C5D','#B8892A','#3F6FB0','#BE185D','#6C5BA8','#2E7D4F','#C2410C','#4F6470'];
+
+// viagem nova, sem lançamentos (as regras de responsável começam em "quem lança")
+function novaViagem(c){
+  return {
+    formato:'finviagem', versao:1,
+    viagem:{ id:'v'+Date.now().toString(36), nome:c.nome, inicio:c.inicio, dias:c.dias,
+      local:{cod:c.localCod, simb:c.localSimb}, nativa:{cod:c.nativaCod, simb:c.nativaSimb}, cotacao:c.cotacao, iofPadrao:3.5,
+      orcamento:{}, hojeManual:null, viajantes:[{id:'p'+Date.now().toString(36), nome:c.seuNome, cor:CORES_P[0], fontes:[]}] },
+    categorias: CAT_DEF.map(x => ({...JSON.parse(JSON.stringify(x)), regra:'eu'})),
+    lanc: [], excluidos:{}, ultFonte:{}, aparelho:null
+  };
+}
+
+/* ---------- armazenamento: IndexedDB, com localStorage como reserva ---------- */
+const DB = {
+  nome:'finviagem', loja:'estado', chave:'atual',
+  abrir(){ return new Promise((ok, erro) => { const r = indexedDB.open(this.nome, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(this.loja); r.onsuccess = () => ok(r.result); r.onerror = () => erro(r.error); }); },
+  async ler(){
+    try { const db = await this.abrir(); return await new Promise((ok, erro) => { const t = db.transaction(this.loja).objectStore(this.loja).get(this.chave); t.onsuccess = () => ok(t.result || null); t.onerror = () => erro(t.error); }); }
+    catch(e){ try { return JSON.parse(localStorage.getItem('finviagem')); } catch(_){ return null; } }
+  },
+  async gravar(v){
+    try { const db = await this.abrir(); await new Promise((ok, erro) => { const t = db.transaction(this.loja, 'readwrite'); t.objectStore(this.loja).put(v, this.chave); t.oncomplete = ok; t.onerror = () => erro(t.error); }); }
+    catch(e){ try { localStorage.setItem('finviagem', JSON.stringify(v)); } catch(_){} }
+  },
+  async apagar(){ try { const db = await this.abrir(); db.transaction(this.loja, 'readwrite').objectStore(this.loja).delete(this.chave); } catch(e){} try { localStorage.removeItem('finviagem'); } catch(_){} }
+};
+
+let S = null;
+let _gravando = null;
+function save(){ if (!S) return; clearTimeout(_gravando); _gravando = setTimeout(() => DB.gravar(S), 150); }
+function normalizar(d){
+  d.excluidos ||= {}; d.ultFonte ||= {};
+  d.local ||= {}; d.local.enviadoOk ||= {}; d.local.recebido ||= {}; d.local.excLoc ||= {}; d.local.ultimaSync ||= {};
+  d.viagem.orcamento ||= {}; d.viagem.iofPadrao ??= 3.5;
+  for (const v of d.viagem.viajantes) v.fontes ||= [];
+  for (const l of d.lanc) { l.partes ??= null; l.obs ??= ''; l.upd ??= 0; l.pagamentos ??= null; }
+  return d;
+}
+
+const UI = { tab:'painel', pessoa:'t', filtroStatus:'todos', filtroCat:null, filtroDia:null, busca:'', moedaVer:'local' };
+
+/* ---------- utilidades ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cat = id => S.categorias.find(c => c.id === id) || {nome:'—',cor:'#888',icone:'dots',subs:[]};
+// dia da viagem hoje: 0 = antes de começar · 1..dias = durante · dias+1 = depois
+function diaAtual(){
+  const v = S.viagem;
+  if (v.hojeManual) return v.hojeManual;
+  const ini = new Date(v.inicio + 'T00:00:00'), agora = new Date();
+  const d = Math.floor((new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()) - ini) / 864e5) + 1;
+  return Math.max(0, Math.min(v.dias + 1, d));
+}
+// pagamentos do lançamento: [{por, fonte, valor}] com valor na moeda do lançamento.
+// Lançamento antigo (um só pagador) vira uma lista de um item.
+function pagtos(l){ return (l.pagamentos && l.pagamentos.length) ? l.pagamentos : [{ por:l.por, fonte:l.fonte, valor:l.valor }]; }
+function fonteObj(pg){ const v = trav(pg.por); return v && pg.fonte ? (v.fontes||[]).find(x => x.id === pg.fonte) || null : null; }
+function fonteDe(l){ return fonteObj(pagtos(l)[0]); }
+function semFormaPgto(l, p){
+  if (l.status === 'pago') return false;
+  return pagtos(l).filter(pg => p === 't' || pg.por === p).some(pg => !pg.fonte);
+}
+const ICONE_SEM_PGTO = `<svg viewBox="0 0 30 26" aria-hidden="true"><g transform="rotate(-22 15 8)"><rect x="8.5" y="2" width="13" height="9" rx="1.3" fill="#36A474"/><circle cx="15" cy="6.5" r="2" fill="#fff" opacity=".9"/><circle cx="10.6" cy="6.5" r=".8" fill="#fff" opacity=".7"/><circle cx="19.4" cy="6.5" r=".8" fill="#fff" opacity=".7"/></g><rect x="2" y="8.5" width="21" height="14.5" rx="2.6" fill="var(--ink)"/><rect x="16.8" y="13.2" width="7.2" height="5.2" rx="2.4" fill="var(--ink)" stroke="var(--surface)" stroke-width="1.3"/><circle cx="19.6" cy="15.8" r="1" fill="var(--surface)"/><circle cx="24" cy="20.5" r="5.2" fill="var(--bad)" stroke="var(--surface)" stroke-width="1.6"/><path d="M22 18.5l4 4M26 18.5l-4 4" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+function dividaNoLanc(l){
+  const saldo = {};
+  for (const pg of pagtos(l)) saldo[pg.por] = (saldo[pg.por] || 0) + (+pg.valor || 0);
+  for (const id of l.resp) saldo[id] = (saldo[id] || 0) - l.valor * parte(l, id);
+  const dev = Object.entries(saldo).filter(([,x]) => x < -0.009).map(([id,x]) => [id,-x]);
+  const cre = Object.entries(saldo).filter(([,x]) => x > 0.009);
+  const out = []; let i = 0, j = 0;
+  while (i < dev.length && j < cre.length) {
+    const x = Math.min(dev[i][1], cre[j][1]);
+    if (x >= 0.01) out.push({ de: dev[i][0], para: cre[j][0], v: x });
+    dev[i][1] -= x; cre[j][1] -= x;
+    if (dev[i][1] < 0.009) i++; if (cre[j][1] < 0.009) j++;
+  }
+  return out;
+}
+function dividasVisiveis(l, p){ return dividaNoLanc(l).filter(d => p === 't' || d.de === p || d.para === p); }
+const ICONE_DIVIDA = `<svg viewBox="0 0 28 26" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7.4 8.6a6.8 6.8 0 0 1 11.8-3.5" stroke="var(--warn)" stroke-width="1.9"/><path d="M19.6 2.3l-.3 2.9-2.9-.4" stroke="var(--warn)" stroke-width="1.9"/>
+  <path d="M20.6 9.6a6.8 6.8 0 0 1-11.8 3.5" stroke="var(--warn)" stroke-width="1.9"/><path d="M8.4 15.9l.3-2.9 2.9.4" stroke="var(--warn)" stroke-width="1.9"/>
+  <circle cx="14" cy="9.1" r="4.3" fill="var(--warn)" stroke="none"/>
+  <path d="M15.4 7.4c-.3-.5-.8-.7-1.4-.7-.9 0-1.5.5-1.5 1.1 0 1.5 3 .8 3 2.4 0 .6-.6 1.1-1.5 1.1-.7 0-1.2-.3-1.5-.8M14 5.9v.8M14 11.6v.8" stroke="#fff" stroke-width="1.1"/>
+  <path d="M2.5 19.6h3l4.3-1.8c.8-.3 1.6-.3 2.4 0l3.4 1.3c.9.4.7 1.7-.3 1.7h-3.2" stroke="var(--ink)" stroke-width="1.6"/>
+  <path d="M12.1 20.8h5l5-2.8c.8-.5 1.8-.2 2.2.6.3.6.1 1.3-.5 1.7l-6 4H2.5" stroke="var(--ink)" stroke-width="1.6"/>
+</svg>`;
+function pgDe(l, p, id){ return pagtos(l).find(pg => pg.por === p && pg.fonte === id) || null; }
+// quantos R$ custa 1 unidade da moeda local, conforme a fonte usada
+function fatorNativa(fo){
+  const v = S.viagem;
+  if (fo && fo.moeda === v.local.cod && fo.cambio > 0) return fo.cambio;
+  if (fo && fo.moeda === v.nativa.cod) return v.cotacao * (1 + (fo.iof ?? v.iofPadrao)/100);
+  return v.cotacao * (1 + v.iofPadrao/100);
+}
+function descConv(fo){
+  const v = S.viagem;
+  if (fo && fo.moeda === v.local.cod && fo.cambio > 0) return 'câmbio pago de ' + fmt(fo.cambio, v.nativa.simb);
+  if (fo && fo.moeda === v.nativa.cod) return 'com IOF de ' + pct(fo.iof ?? v.iofPadrao) + '%';
+  return 'com IOF de ' + pct(v.iofPadrao) + '%';
+}
+function fmt(v, simb){ return simb + ' ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+const pct = x => (x||0).toLocaleString('pt-BR',{maximumFractionDigits:2});
+function numBR(v){
+  if (typeof v === 'number') return v;
+  const t = String(v ?? '').trim().replace(/\s/g, ''); if (!t) return NaN;
+  return parseFloat(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t);
+}
+function fmt0(v, simb){ return fmt(v, simb); } // valores sempre com centavos exatos
+function emNativa(l){
+  if (l.fatura) return l.fatura;
+  if (l.moeda === S.viagem.nativa.cod) return l.valor;
+  return pagtos(l).reduce((a, pg) => a + (+pg.valor || 0) * fatorNativa(fonteObj(pg)), 0);
+}
+function emLocal(l){ return l.moeda === S.viagem.local.cod ? l.valor : l.valor / S.viagem.cotacao; }
+// Parte de cada responsável em CENTAVOS EXATOS (a soma é sempre o total da conta):
+// 1) se cada responsável pagou a própria parte, a parte dele é o que ele pagou;
+// 2) senão, cada parte é arredondada ao centavo e o centavo que sobra fica com o primeiro responsável
+//    (mesma regra que o formulário usa para sugerir os valores de pagamento).
+function partesCent(l){
+  const c = x => Math.round(x * 100);
+  const total = c(l.valor), ids = l.resp;
+  const exata = id => l.partes ? (+l.partes[id] || 0) : l.valor / ids.length;
+  const pgs = pagtos(l);
+  if (pgs.length > 1) {
+    const pago = {}; for (const pg of pgs) pago[pg.por] = (pago[pg.por] || 0) + c(+pg.valor || 0);
+    const mesmos = Object.keys(pago).length === ids.length && ids.every(id => pago[id] !== undefined);
+    if (mesmos && ids.every(id => Math.abs(pago[id] - exata(id) * 100) <= 1.01) && ids.reduce((a, id) => a + pago[id], 0) === total) return pago;
+  }
+  const r = {}; ids.forEach(id => r[id] = c(exata(id)));
+  const dif = total - ids.reduce((a, id) => a + r[id], 0);
+  if (ids.length) r[ids[0]] += dif;
+  return r;
+}
+function parte(l, p){
+  if (p === 't') return 1;
+  if (!l.resp.includes(p) || !(l.valor > 0)) return 0;
+  return (partesCent(l)[p] || 0) / Math.round(l.valor * 100);
+}
+const trav = id => S.viagem.viajantes.find(v => v.id === id);
+const inicial = n => (n||'?').trim().charAt(0).toUpperCase() || '?';
+// iniciais que diferenciam as pessoas: inicial do nome; se repetir, nome + sobrenome (MA/MS);
+// sem sobrenome, duas primeiras letras do nome (Ma/Mr); em último caso, numera.
+function iniciaisPessoas(){
+  const vs = S.viagem.viajantes, out = {};
+  const palavras = v => (v.nome || '?').trim().split(/\s+/).filter(Boolean);
+  const nivel1 = v => (palavras(v)[0] || '?').charAt(0).toUpperCase();
+  const nivel2 = v => { const w = palavras(v); return w.length > 1 ? (w[0].charAt(0) + w[w.length - 1].charAt(0)).toUpperCase() : (w[0] || '?').charAt(0).toUpperCase() + (w[0] || '?').charAt(1).toLowerCase(); };
+  const conta = (f, v) => vs.filter(x => f(x) === f(v)).length;
+  for (const v of vs) out[v.id] = conta(nivel1, v) === 1 ? nivel1(v) : conta(nivel2, v) === 1 ? nivel2(v) : nivel2(v) + (vs.filter(x => nivel2(x) === nivel2(v)).indexOf(v) + 1);
+  return out;
+}
+function iniciais(id){ return iniciaisPessoas()[id] || '?'; }
+function av(id){ const v = trav(id) || {nome:'?',cor:'#888'}; return `<span class="av" style="background:${v.cor}" title="${esc(v.nome)}">${esc(iniciais(id))}</span>`; }
+
+/* ---------- selo do meio de pagamento ---------- */
+const TIPO_SELO = { credito:'Cred', debito:'Débt', especie:'Esp' };
+const CORES_SELO = ['#1A1A1A','#F5C518','#820AD1','#FF7A00','#EC0000','#0B4AA2','#00A650','#9FE870','#00B2E3','#8A6A3D','#6B7280','#2E7D4F'];
+// sugestão de sigla e cor pelo nome (o usuário pode trocar ao editar a fonte)
+function padraoSelo(fo){
+  const n = (fo.nome || '').toLowerCase();
+  if (fo.tipo === 'especie') return { sigla:'$', cor:'#2E7D4F' };
+  // cores aproximadas das marcas (sem logos); a ordem importa: nomes mais específicos primeiro
+  const regras = [
+    // contas globais / câmbio
+    [/nomad/,'NMD','#F5C518'],[/wise/,'WISE','#9FE870'],[/revolut/,'REV','#0666EB'],[/\bn26\b/,'N26','#36A18B'],[/paypal/,'PAYPAL','#003087'],
+    [/payoneer/,'PAYON','#FF4800'],[/avenue/,'AVE','#0B4AA2'],[/\bmonzo\b/,'MONZO','#FF4F40'],
+    // Brasil
+    [/\bc6\b/,'C6','#1A1A1A'],[/nubank|\bnu\b/,'NU','#820AD1'],[/banco inter|\binter\b/,'INTER','#FF7A00'],[/ita[uú]/,'ITAÚ','#EC7000'],
+    [/bradesco/,'BRAD','#CC092F'],[/santander/,'SAN','#EC0000'],[/banco do brasil|\bbb\b/,'BB','#F5C518'],[/caixa/,'CAIXA','#0070AF'],
+    [/\bbtg\b/,'BTG','#0B2B4B'],[/\bxp\b/,'XP','#1A1A1A'],[/picpay/,'PIC','#21C25E'],[/mercado ?pago/,'MP','#00B1EA'],[/pagbank|pagseguro/,'PAG','#00A868'],
+    [/\bnext\b/,'NEXT','#00C853'],[/\bneon\b/,'NEON','#00B7EB'],[/sicredi/,'SICR','#33A02C'],[/sicoob/,'SICO','#003641'],[/banrisul/,'BANRI','#005CA9'],
+    [/safra/,'SAFRA','#0B2A55'],[/banco original|\boriginal\b/,'ORIG','#00A859'],[/\bwill\b/,'WILL','#FFD500'],[/\bbs2\b/,'BS2','#0033A0'],
+    // Estados Unidos
+    [/bank of america|\bbofa\b/,'BOFA','#E31837'],[/\bchase\b/,'CHASE','#117ACA'],[/wells fargo/,'WELLS','#D71E28'],[/\bciti/,'CITI','#056DAE'],
+    [/capital one/,'CAP1','#004977'],[/american express|\bamex\b/,'AMEX','#2E77BC'],[/discover/,'DISC','#FF6000'],[/\bus bank\b|u\.s\. bank/,'USB','#0C2074'],
+    [/\bpnc\b/,'PNC','#EF7622'],[/\btd\b/,'TD','#34A853'],[/schwab/,'SCHW','#00A0DF'],[/truist/,'TRUIST','#2E1A47'],[/\bally\b/,'ALLY','#650360'],
+    // Europa e outros
+    [/hsbc/,'HSBC','#DB0011'],[/barclays/,'BARC','#00AEEF'],[/\bing\b/,'ING','#FF6200'],[/bnp/,'BNP','#00965E'],[/deutsche/,'DB','#0018A8'],
+    [/millennium/,'MILL','#D1005D'],[/scotiabank/,'SCOTIA','#EC111A'],[/bbva/,'BBVA','#004481']
+  ];
+  for (const [re, sg, cor] of regras) if (re.test(n)) return { sigla:sg, cor };
+  const w = (fo.nome || '?').trim().split(/\s+/);
+  return { sigla: (w[0] || '?').slice(0, 4).toUpperCase(), cor:'#6B7280' };
+}
+function seloDe(fo){ const d = padraoSelo(fo); return { sigla: fo.sigla || d.sigla, cor: fo.cor || d.cor }; }
+function corTexto(hex){ const h = hex.replace('#',''); const [r,g,b] = [0,2,4].map(i => parseInt(h.substr(i,2),16)/255); return (0.299*r + 0.587*g + 0.114*b) > 0.62 ? '#1B2424' : '#FFFFFF'; }
+function seloHTML(fo, quem, attrs = ''){
+  const sl = seloDe(fo), pessoa = quem ? trav(quem) : null;
+  return `<span class="selo" style="--c:${sl.cor};--t:${corTexto(sl.cor)}" ${attrs}>${pessoa ? `<i class="quem" style="background:${pessoa.cor}">${esc(iniciais(quem))}</i>` : ''}${esc(sl.sigla)}<em>${TIPO_SELO[fo.tipo] || ''}</em></span>`;
+}
+function seloGrande(fo){ const sl = seloDe(fo); return `<span class="selo-g" style="--c:${sl.cor};--t:${corTexto(sl.cor)}">${esc(sl.sigla)}<em>${TIPO_SELO[fo.tipo] || ''}</em></span>`; }
+function whoBadge(l){
+  const n = S.viagem.viajantes.length;
+  if (l.resp.length === 1) { const v = trav(l.resp[0]) || {nome:'?',cor:'#888'}; return `<span class="who" style="background:${v.cor}">${esc(v.nome)}</span>`; }
+  if (l.partes) return `<span class="who grp">Por valores</span>`;
+  return `<span class="who grp">${l.resp.length === n ? 'Todos' : 'Dividido ÷' + l.resp.length}</span>`;
+}
+function respPorRegra(regra){
+  const ids = S.viagem.viajantes.map(v => v.id);
+  if (regra === 'todos') return ids;
+  if (regra && regra !== 'eu' && ids.includes(regra)) return [regra];
+  return [S.aparelho];
+}
+function nomeRegra(regra){ if (regra === 'todos') return 'dividir entre todos'; if (regra && regra !== 'eu' && trav(regra)) return trav(regra).nome; return 'quem lança (dono do aparelho)'; }
+function val(l, p, moeda){ const base = moeda === 'nativa' ? emNativa(l) : emLocal(l); return base * parte(l, p); }
+const isPlano = l => l.status === 'estimado' || l.status === 'apagar' || l.status === 'pago';
+const isReal  = l => l.status === 'pago' || l.status === 'realizado';
+const ativos = () => S.lanc.filter(l => l.incluir);
+function dataDia(d){ if (!d) return 'Pré-viagem'; const x = new Date(S.viagem.inicio+'T12:00:00'); x.setDate(x.getDate()+d-1); return x.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); }
+function nomeDia(d){ return d ? `D${d} · ${dataDia(d)}` : 'Pré-viagem'; }
+const simbVer = () => UI.moedaVer === 'nativa' ? S.viagem.nativa.simb : S.viagem.local.simb;
+const STN = {estimado:'Estimado', apagar:'A pagar', pago:'Pré-pago', realizado:'Pago na viagem'};
+function nomeP(p){ return p==='t' ? 'Total da viagem' : (trav(p)||{nome:'—'}).nome; }
+function toast(t){ const e=$('#toast'); e.textContent=t; e.classList.add('on'); clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('on'),1800); }
+const ic = (nome, cor, soft=true) => `<span class="ic" style="background:${cor}1f;color:${cor}"><svg class="i"><use href="#i-${nome}"/></svg></span>`;
+
+/* ---------- cálculo ---------- */
+function totais(p){
+  const m = UI.moedaVer;
+  let plano=0, real=0, falta=0;
+  for (const l of ativos()){
+    const v = val(l,p,m); if (!v) continue;
+    if (isPlano(l)) plano += v;
+    if (isReal(l)) real += v;
+    // ainda a pagar: reservas a pagar no local + estimativas de hoje em diante
+    // (estimativas de dias que já passaram foram substituídas pelos gastos reais)
+    if (l.status==='apagar' || (l.status==='estimado' && (l.dia===0 || l.dia>=diaAtual()))) falta += v;
+  }
+  return {plano, real, falta, proj: real + falta};
+}
+function porCategoria(p){
+  const m = UI.moedaVer;
+  return S.categorias.map(c => {
+    let plano=0, real=0;
+    for (const l of ativos()) if (l.cat===c.id){ const v=val(l,p,m); if(isPlano(l)) plano+=v; if(isReal(l)) real+=v; }
+    const orc = S.viagem.orcamento[c.id]; // orçamento limite na moeda local
+    return {c, plano, real, orc};
+  }).filter(x => x.plano || x.real);
+}
+function porDia(p){
+  const m = UI.moedaVer, out=[];
+  for (let d=1; d<=S.viagem.dias; d++){
+    let plano=0, real=0;
+    for (const l of ativos()) if (l.dia===d){ const v=val(l,p,m); if(isPlano(l)) plano+=v; if(isReal(l)) real+=v; }
+    out.push({d,plano,real});
+  }
+  return out;
+}
+// valor na moeda da fonte → moeda de exibição
+function fonteVer(fo, x){
+  const v = S.viagem, verNat = UI.moedaVer === 'nativa';
+  if (fo.moeda === v.nativa.cod) return verNat ? x : x / v.cotacao;
+  return verNat ? x * fatorNativa(fo) : x;
+}
+// quanto um lançamento tirou da fonte (na moeda da fonte)
+function saidaFonte(l, fo, pg){
+  const v = S.viagem, x = pg ? (+pg.valor || 0) : l.valor;
+  if (fo.moeda === v.nativa.cod) {
+    if (l.moeda === v.nativa.cod) return x;
+    return l.fatura ? l.fatura * x / l.valor : x * fatorNativa(fo);
+  }
+  return l.moeda === fo.moeda ? x : x / v.cotacao;
+}
+function classeProj(x, saldo){ if (saldo < -0.005) return 'neg'; const a = x.apagar > 0.005, e = x.estimado > 0.005; return a && e ? 'mx' : a ? 'ap' : e ? 'es' : ''; }
+// barra da fonte: cada parte começa onde a anterior termina (nada fica por baixo de nada)
+function barraFonte(x){
+  const pc = n => x.fo.valor ? Math.min(100, Math.max(0, n / x.fo.valor * 100)) : 0;
+  const a = pc(x.gasto), b = pc(x.gasto + x.apagar), c = pc(x.gasto + x.apagar + x.estimado);
+  const seg = (cls, ini, fim, extra = '') => fim - ini > 0.05 ? `<i class="${cls}" style="left:${ini}%;width:${fim - ini}%;${extra}"></i>` : '';
+  return seg('', 0, a, `background:${x.resta < 0 ? 'var(--bad)' : 'var(--brand-2)'}`) + seg('prev', a, b) + seg('est', b, c);
+}
+function previstoNaFonte(l, p, id){
+  if (!l.incluir || isReal(l) || !pgDe(l, p, id)) return false;
+  return l.status === 'apagar' || l.dia >= diaAtual();
+}
+function carteira(p){
+  const fontes = ((trav(p)||{}).fontes||[]).map(fo => {
+    const parte = l => saidaFonte(l, fo, pgDe(l, p, fo.id));
+    const gasto = S.lanc.filter(l => l.incluir && isReal(l) && pgDe(l, p, fo.id)).reduce((a,l) => a + parte(l), 0);
+    const prevs = S.lanc.filter(l => previstoNaFonte(l, p, fo.id));
+    const apagar = prevs.filter(l => l.status === 'apagar').reduce((a,l) => a + parte(l), 0);
+    const estimado = prevs.filter(l => l.status === 'estimado').reduce((a,l) => a + parte(l), 0);
+    return {fo, gasto, apagar, estimado, previsto: apagar + estimado, resta: fo.valor - gasto};
+  });
+  const noOrc = fo => fo.tipo !== 'credito' || fo.noOrcamento;
+  const din = fontes.filter(x => noOrc(x.fo)), cred = fontes.filter(x => !noOrc(x.fo));
+  const hoje = diaAtual();
+  // parte da pessoa nos gastos DURANTE a viagem: não inclui o que foi pago antes de embarcar
+  let precisa = 0, jaGastou = 0;
+  for (const l of ativos()){
+    if (l.dia < 1 || l.status === 'pago') continue;
+    if (l.status === 'estimado' && l.dia < hoje) continue;
+    const x = val(l, p, UI.moedaVer); precisa += x; if (l.status === 'realizado') jaGastou += x;
+  }
+  const levado = din.reduce((a,x) => a + fonteVer(x.fo, x.fo.valor), 0);
+  const resta = din.reduce((a,x) => a + fonteVer(x.fo, x.resta), 0);
+  const credDisp = cred.reduce((a,x) => a + fonteVer(x.fo, x.resta), 0);
+  return {fontes, din, cred, levado, resta, credDisp, precisa, jaGastou, folga: levado - precisa};
+}
+function dividasPorDirecao(){
+  const m = UI.moedaVer, hoje = diaAtual(), acc = {};
+  for (const l of ativos()) {
+    if (l.status === 'estimado' && l.dia >= 1 && l.dia < hoje) continue; // estimativa de dia que já passou
+    const base = m === 'nativa' ? emNativa(l) : emLocal(l);
+    for (const d of dividaNoLanc(l)) {
+      const k = d.de + '|' + d.para, x = base * d.v / l.valor;
+      acc[k] ||= { de: d.de, para: d.para, pago: 0, prev: 0 };
+      if (isReal(l)) acc[k].pago += x; else acc[k].prev += x;
+    }
+  }
+  return Object.values(acc).filter(x => x.pago + x.prev >= 0.01).sort((a, b) => (b.pago + b.prev) - (a.pago + a.prev));
+}
+function contasDaDivida(de, para){
+  const m = UI.moedaVer, hoje = diaAtual(), out = [];
+  for (const l of ativos()) {
+    if (l.status === 'estimado' && l.dia >= 1 && l.dia < hoje) continue;
+    const d = dividaNoLanc(l).find(y => y.de === de && y.para === para); if (!d) continue;
+    const base = m === 'nativa' ? emNativa(l) : emLocal(l);
+    out.push({ l, v: base * d.v / l.valor, total: base });
+  }
+  return out.sort((a, b) => a.l.dia - b.l.dia);
+}
+function abrirDividas(de, para){
+  const sb = simbVer(), itens = contasDaDivida(de, para);
+  const pagos = itens.filter(x => isReal(x.l)), prev = itens.filter(x => !isReal(x.l));
+  const soma = a => a.reduce((t, x) => t + x.v, 0);
+  const linha = x => { const c = cat(x.l.cat);
+    return `<div class="item" data-id="${x.l.id}">${ic(c.icone, c.cor)}
+      <div><div class="t">${esc(x.l.desc)}</div><div class="m"><span class="st ${x.l.status}">${STN[x.l.status]}</span><span>${nomeDia(x.l.dia)}</span></div></div>
+      <div class="v num">${fmt(x.v, sb)}<small>de ${fmt(x.total, sb)}</small></div></div>`; };
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>${esc(nomeP(de))} deve a ${esc(nomeP(para))}</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="acerto" style="margin:4px 0 2px">${av(de)}<svg class="i arrow"><use href="#i-arrow"/></svg>${av(para)}<div class="t">Total em aberto<b class="num">${fmt(soma(itens), sb)}</b></div></div>
+    <div class="hint">Em cada conta: em destaque, a parte de ${esc(nomeP(de))} que ${esc(nomeP(para))} pagou; abaixo, o total da conta. Toque numa conta para abrir.</div>
+    ${pagos.length ? `<div class="secao"><span>Já pago (${pagos.length})</span><span class="num">${fmt(soma(pagos), sb)}</span></div>${pagos.map(linha).join('')}` : ''}
+    ${prev.length ? `<div class="secao"><span>Previsto (${prev.length})</span><span class="num">${fmt(soma(prev), sb)}</span></div>${prev.map(linha).join('')}` : ''}`;
+  abrirSheet();
+}
+function acerto(){
+  // saldo de cada um = o que pagou − a parte que lhe cabe; depois, transferências mínimas
+  const m = UI.moedaVer, bal = {};
+  S.viagem.viajantes.forEach(v => bal[v.id] = 0);
+  for (const l of ativos()){
+    if (!isReal(l)) continue;
+    const v = m==='nativa' ? emNativa(l) : emLocal(l);
+    for (const pg of pagtos(l)) if (bal[pg.por] !== undefined) bal[pg.por] += v * (+pg.valor || 0) / l.valor;
+    for (const id of l.resp) if (bal[id] !== undefined) bal[id] -= v * parte(l, id);
+  }
+  const dev = Object.entries(bal).filter(([,x]) => x < -0.005).map(([id,x]) => [id,-x]).sort((a,b)=>b[1]-a[1]);
+  const cre = Object.entries(bal).filter(([,x]) => x >  0.005).sort((a,b)=>b[1]-a[1]);
+  const out = []; let i = 0, j = 0;
+  while (i < dev.length && j < cre.length){
+    const x = Math.min(dev[i][1], cre[j][1]);
+    if (x >= 0.005) out.push({de: dev[i][0], para: cre[j][0], v: x});
+    dev[i][1] -= x; cre[j][1] -= x;
+    if (dev[i][1] < 0.005) i++; if (cre[j][1] < 0.005) j++;
+  }
+  return out;
+}
+
+/* ---------- carteira ---------- */
+const TIPO_F = {especie:{nome:'Espécie', ic:'cash'}, debito:{nome:'Débito / conta global', ic:'card'}, credito:{nome:'Crédito (reserva)', ic:'card'}};
+function cardCarteira(p){
+  const nome = esc(nomeP(p)), sb = simbVer(), c = carteira(p);
+  if (!c.fontes.length) return `<section class="card wal"><h3>Carteira de ${nome}</h3>
+    <p class="sub" style="margin:0 0 12px">Cadastre quanto dinheiro ${nome} está levando (espécie, cartões de débito, conta global) para saber se vai sobrar ou faltar.</p>
+    <button class="btn ghost" data-cart="${p}">+ Cadastrar dinheiro da viagem</button></section>`;
+  const ok = c.folga >= -0.005;
+  const cobreCred = !ok && c.credDisp >= -c.folga;
+  return `<section class="card wal"><h3>Carteira de ${nome} <button class="linkbtn" data-cart="${p}">Editar</button></h3>
+    <div class="st-big ${ok?'ok':'bad'}"><div><span>${ok?'Orçamento folgado: vai sobrar':'Vai faltar dinheiro'}</span><b class="num">${fmt(Math.abs(c.folga), sb)}</b></div>
+      <span style="text-align:right">${ok?'':!c.cred.length?'sem reserva no crédito':cobreCred?'a reserva do crédito cobre':'nem a reserva do crédito cobre'}</span></div>
+    <div class="nums">
+      <div class="kpi"><div class="l">Levando</div><div class="v num">${fmt0(c.levado, sb)}</div><div class="a">resta ${fmt0(c.resta, sb)} nas fontes</div></div>
+      <div class="kpi"><div class="l">Parte nos gastos da viagem</div><div class="v num">${fmt0(c.precisa, sb)}</div><div class="a">já gastou ${fmt0(c.jaGastou, sb)}</div></div>
+    </div>
+    ${c.fontes.map(x => { const ti = TIPO_F[x.fo.tipo] || TIPO_F.debito; const fs = x.fo.moeda === S.viagem.nativa.cod ? S.viagem.nativa.simb : S.viagem.local.simb;
+      const usado = x.fo.valor ? Math.min(100, Math.max(0, x.gasto / x.fo.valor * 100)) : 0;
+      const pc = n => x.fo.valor ? Math.min(100, Math.max(0, n / x.fo.valor * 100)) : 0;
+      return `<div class="fonte ${x.fo.tipo==='credito'?'cred':''}" data-verf="${p}|${x.fo.id}">${seloGrande(x.fo)}
+        <div><div class="n">${esc(x.fo.nome)} <span class="muted">›</span></div><div class="minibar seg">${barraFonte(x)}</div>
+        ${x.apagar > 0.005 ? `<div class="prev num">a pagar ${fmt(x.apagar, fs)}</div>` : ''}${x.estimado > 0.005 ? `<div class="prev num"><span class="e">estimado ${fmt(x.estimado, fs)}</span></div>` : ''}</div>
+        <div class="vals num"><b>${fmt(x.resta, fs)}</b>${x.fo.tipo==='credito'?'livre agora':'de '+fmt0(x.fo.valor, fs)}${x.previsto > 0.005 ? (() => { const pj = x.fo.valor - x.gasto - x.previsto; return `<div class="proj ${classeProj(x, pj)}"><small>projetado</small>${fmt(pj, fs)}</div>`; })() : ''}</div></div>`; }).join('')}
+    <div class="leg-prev" data-ajuda title="Toque para ver a explicação"><span><i style="background:var(--brand-2)"></i>gasto</span><span><i style="background:var(--pat-apagar)"></i>a pagar</span><span><i style="background:var(--pat-est)"></i>estimado</span></div>
+    <div class="wal-ajuda${UI.ajudaCarteira ? ' on' : ''}">
+    <div class="hint" style="margin-top:4px">Saldo projetado (valor da fonte − a pagar − estimado): <b style="color:var(--warn)">âmbar</b> só a pagar · <b style="color:var(--est)">roxo</b> só estimado · <b style="color:var(--mix)">laranja</b> os dois · <b style="color:var(--bad)">vermelho</b> se ficar negativo.</div>
+    <div class="hint">Toque numa fonte para ver as despesas pagas e previstas nela. Parte nos gastos = já gasto + a pagar no local + estimativas até o fim (sem o que foi pago antes de embarcar). Crédito só entra em "Levando" se estiver marcado para o orçamento da viagem.</div>
+    </div>
+  </section>`;
+}
+function cardDinheiroTodos(){
+  const sb = simbVer();
+  return `<section class="card"><h3>Dinheiro para a viagem <small>toque para ver a carteira</small></h3>
+    ${S.viagem.viajantes.map(v => { const c = carteira(v.id);
+      const tag = !c.fontes.length ? '<span class="tag nd">não cadastrado</span>' : c.folga >= -0.005 ? `<span class="tag ok num">sobra ${fmt0(c.folga, sb)}</span>` : `<span class="tag bad num">faltam ${fmt0(-c.folga, sb)}</span>`;
+      return `<div class="pessoa-din" data-irp="${v.id}">${av(v.id)}<span class="x">${esc(v.nome)}</span>${tag}</div>`; }).join('')}
+  </section>`;
+}
+function abrirFonte(p, id){
+  const c = carteira(p), x = c.fontes.find(y => y.fo.id === id); if (!x) return;
+  const fo = x.fo, ti = TIPO_F[fo.tipo] || TIPO_F.debito, v = S.viagem;
+  const fs = fo.moeda === v.nativa.cod ? v.nativa.simb : v.local.simb;
+  const cred = fo.tipo === 'credito';
+  const pagos = S.lanc.filter(l => l.incluir && isReal(l) && pgDe(l, p, id)).sort((a,b) => b.dia - a.dia);
+  const prev = S.lanc.filter(l => previstoNaFonte(l, p, id)).sort((a,b) => a.dia - b.dia);
+  const prevAp = prev.filter(l => l.status === 'apagar'), prevEst = prev.filter(l => l.status === 'estimado');
+  const livre = fo.valor - x.gasto - x.previsto;
+  const pct = n => fo.valor ? Math.min(100, Math.max(0, n / fo.valor * 100)) : 0;
+  const linha = l => { const pg = pgDe(l, p, id), c2 = cat(l.cat), vf = saidaFonte(l, fo, pg), outra = l.moeda !== fo.moeda, dividido = pagtos(l).length > 1;
+    return `<div class="item" data-id="${l.id}">${ic(c2.icone, c2.cor)}
+      <div><div class="t">${esc(l.desc)}</div><div class="m"><span class="st ${l.status}">${STN[l.status]}</span><span>${nomeDia(l.dia)}</span>${dividido ? '<span>· parte de ' + esc(nomeP(p)) + '</span>' : ''}</div></div>
+      <div class="v num">${fmt(vf, fs)}${outra || dividido ? `<small>${outra ? fmt(+pg.valor, l.moeda === v.nativa.cod ? v.nativa.simb : v.local.simb) : ''}${dividido ? ' de ' + fmt(l.valor, l.moeda === v.nativa.cod ? v.nativa.simb : v.local.simb) : ''}</small>` : ''}</div></div>`; };
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>${esc(fo.nome)}</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="sub">${cred && fo.noOrcamento ? 'Crédito (no orçamento da viagem)' : ti.nome} · ${esc(nomeP(p))}</div>
+    <div class="bar seg">${barraFonte(x)}</div>
+    <div class="leg-prev"><span><i style="background:var(--brand-2)"></i>${cred ? 'usado' : 'gasto'}</span><span><i style="background:var(--pat-apagar)"></i>a pagar</span><span><i style="background:var(--pat-est)"></i>estimado</span></div>
+    <div class="kpis" style="margin-top:8px">
+      <div class="kpi"><div class="l">${cred ? 'Usado' : 'Gasto'}</div><div class="v num">${fmt0(x.gasto, fs)}</div></div>
+      <div class="kpi"><div class="l">A pagar</div><div class="v num" style="color:var(--warn)">${fmt0(x.apagar, fs)}</div></div>
+      <div class="kpi"><div class="l">Estimado</div><div class="v num" style="color:var(--est)">${fmt0(x.estimado, fs)}</div></div>
+      <div class="kpi"><div class="l">Saldo projetado</div><div class="v num proj ${classeProj(x, livre)}">${fmt0(livre, fs)}</div></div>
+    </div>
+    <div class="hint">${cred ? 'Limite' : 'Levando'}: ${fmt(fo.valor, fs)}. Saldo projetado = valor inicial − gasto − a pagar − estimado.</div>
+    <div class="secao"><span>Pagas com esta fonte (${pagos.length})</span><span class="num">${fmt(x.gasto, fs)}</span></div>
+    ${pagos.map(linha).join('') || '<div class="hint">Nenhuma despesa paga com esta fonte ainda. Ao lançar, escolha esta fonte em "Pago com".</div>'}
+    <div class="secao"><span>A pagar nesta fonte (${prevAp.length})</span><span class="num">${fmt(x.apagar, fs)}</span></div>
+    ${prevAp.map(linha).join('') || '<div class="hint">Nenhuma reserva a pagar marcada aqui. Numa reserva "A pagar" (ex.: hotel), abra o lançamento e escolha esta fonte em "Vai pagar com".</div>'}
+    <div class="secao"><span>Estimadas nesta fonte (${prevEst.length})</span><span class="num">${fmt(x.estimado, fs)}</span></div>
+    ${prevEst.map(linha).join('') || '<div class="hint">Nenhuma estimativa marcada aqui. Numa estimativa (ex.: combustível, compras planejadas), escolha esta fonte em "Vai pagar com".</div>'}
+    <button class="btn ghost" id="fEdit" style="margin-top:14px">Editar fonte</button>`;
+  abrirSheet();
+  $('#fEdit').onclick = () => editarFonte(p, id);
+}
+function abrirCarteira(p){
+  const v = trav(p), c = carteira(p);
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>Carteira de ${esc(v.nome)}</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <p class="sub" style="margin:0 0 6px">Quanto ${esc(v.nome)} está levando, por fonte. Toque numa fonte para editar.</p>
+    ${c.fontes.map(x => { const ti = TIPO_F[x.fo.tipo] || TIPO_F.debito; const fs = x.fo.moeda === S.viagem.nativa.cod ? S.viagem.nativa.simb : S.viagem.local.simb;
+      return `<div class="fonte ${x.fo.tipo==='credito'?'cred':''}" data-edf="${x.fo.id}" style="cursor:pointer">${seloGrande(x.fo)}
+        <div><div class="n">${esc(x.fo.nome)}</div><div class="sub">${x.fo.tipo==='credito' && x.fo.noOrcamento ? 'Crédito (no orçamento da viagem)' : ti.nome}</div></div><div class="vals num"><b>${fmt(x.fo.valor, fs)}</b>${x.fo.tipo==='credito'?'limite':'levando'}</div></div>`; }).join('') || '<div class="empty" style="padding:20px">Nenhuma fonte cadastrada.</div>'}
+    <button class="btn ghost" id="addFonte" style="margin-top:10px">+ Adicionar fonte</button>`;
+  abrirSheet();
+  $('#addFonte').onclick = () => editarFonte(p, null);
+  $('#sheetIn').querySelectorAll('[data-edf]').forEach(b => b.onclick = () => editarFonte(p, b.dataset.edf));
+}
+function editarFonte(p, id){
+  const v = trav(p), sv = S.viagem; v.fontes ||= [];
+  const orig = id ? v.fontes.find(x => x.id === id) : null;
+  const E = orig ? {...orig} : {id:null, nome:'', tipo:'debito', moeda:sv.local.cod, valor:null, cambio:null, iof:sv.iofPadrao};
+  { const sl = seloDe(E); E._sigla = orig && orig.sigla ? orig.sigla : sl.sigla; E._cor = orig && orig.cor ? orig.cor : sl.cor; E._siglaManual = !!(orig && orig.sigla); }
+  const desenhar = () => {
+    const cred = E.tipo === 'credito', loc = E.moeda === sv.local.cod;
+    if (!E._siglaManual) { const sl = padraoSelo(E); E._sigla = sl.sigla; if (!E._corManual) E._cor = sl.cor; }
+    $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>${orig?'Editar fonte':'Nova fonte'}</h2><button class="iconbtn" id="voltaCart"><svg class="i"><use href="#i-x"/></svg></button></div>
+      <div class="flabel">Nome</div><input class="field" id="eNome" placeholder="Ex.: Nomad débito internacional" value="${esc(E.nome)}">
+      <div class="flabel">Selo <span class="muted" style="font-weight:400">· aparece nos lançamentos pagos com esta fonte</span></div>
+      <div class="selo-edit"><span id="eSeloPrev">${seloGrande({...E, sigla: E._sigla, cor: E._cor})}</span>
+        <input class="field" id="eSigla" maxlength="5" placeholder="Sigla" value="${esc(E._sigla || '')}"></div>
+      <div class="cores-selo" id="eCores">${CORES_SELO.map(c => `<button data-cor="${c}" style="background:${c}" class="${(E._cor||'').toUpperCase()===c.toUpperCase()?'on':''}" aria-label="cor ${c}"></button>`).join('')}</div>
+      <div class="flabel">Tipo</div><div class="segl" id="eTipo">${Object.entries(TIPO_F).map(([k,t])=>`<button data-t="${k}" class="${E.tipo===k?'on':''}">${k==='debito'?'Débito / conta':k==='credito'?'Crédito':'Espécie'}</button>`).join('')}</div>
+      ${cred?`<div class="toggle"><div>Usar no orçamento da viagem<div class="hint" style="margin:0">Ligado: o limite conta como dinheiro da viagem (ex.: cartão para pagar hotéis). Desligado: fica como reserva de emergência.</div></div><button class="sw ${E.noOrcamento?'on':''}" id="eOrc"></button></div>`:''}
+      <div class="flabel">Moeda</div><div class="cur" id="eMoeda" style="display:inline-flex"><button data-m="${sv.local.cod}" class="${loc?'on':''}">${sv.local.simb}</button><button data-m="${sv.nativa.cod}" class="${!loc?'on':''}">${sv.nativa.simb}</button></div>
+      <div class="flabel">${cred?'Limite disponível para a viagem':'Quanto está levando'}</div>
+      <input class="field num" id="eValor" inputmode="decimal" placeholder="0,00" value="${E.valor!=null?String(E.valor).replace('.',','):''}">
+      ${loc ? `<div class="flabel">Câmbio pago (${sv.nativa.simb} por ${sv.local.simb}) <span class="muted" style="font-weight:400">· opcional</span></div>
+        <input class="field num" id="eCambio" inputmode="decimal" placeholder="Em branco: cotação + IOF padrão" value="${E.cambio?String(E.cambio).replace('.',','):''}">
+        <div class="hint">Quanto custou cada ${sv.local.simb} já com IOF e taxas. Serve para mostrar em ${sv.nativa.simb} o custo real dos gastos feitos com esta fonte.</div>`
+      : `<div class="flabel">IOF (%)</div><input class="field num" id="eIof" inputmode="decimal" value="${String(E.iof ?? sv.iofPadrao).replace('.',',')}">
+        <div class="hint">Gastos em ${sv.local.simb} com esta fonte são convertidos pela cotação + este IOF.</div>`}
+      <button class="btn pri" id="eOk">Salvar</button>${orig?'<button class="btn danger" id="eDel">Excluir fonte</button>':''}`;
+    const ler = () => { E.nome = $('#eNome').value; E.valor = $('#eValor').value; const sg = $('#eSigla').value.trim().toUpperCase(); if (sg !== E._sigla) { E._sigla = sg; E._siglaManual = true; } if ($('#eCambio')) E.cambio = $('#eCambio').value; if ($('#eIof')) E.iof = $('#eIof').value; };
+    if ($('#eOrc')) $('#eOrc').onclick = () => { ler(); E.noOrcamento = !E.noOrcamento; desenhar(); };
+    $('#eCores').onclick = e => { const b = e.target.closest('[data-cor]'); if (!b) return; ler(); E._cor = b.dataset.cor; E._corManual = true; desenhar(); };
+    $('#eSigla').oninput = () => { E._sigla = $('#eSigla').value.trim().toUpperCase(); E._siglaManual = true; const f = {...E, sigla: E._sigla, cor: E._cor}; $('#eSeloPrev').innerHTML = seloGrande(f); };
+    $('#eNome').onchange = () => { ler(); if (!E._siglaManual) desenhar(); };
+    $('#eTipo').onclick = e => { const b = e.target.closest('[data-t]'); if (!b) return; ler(); E.tipo = b.dataset.t; desenhar(); };
+    $('#eMoeda').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; ler(); E.moeda = b.dataset.m; desenhar(); };
+    $('#voltaCart').onclick = () => abrirCarteira(p);
+    $('#eOk').onclick = () => {
+      ler(); const num = x => numBR(String(x ?? ''));
+      const valor = num(E.valor); if (!(valor >= 0) || E.valor === '' || E.valor == null) return toast('Digite o valor');
+      const reg = {id: E.id || p + '-f' + Date.now().toString(36), nome: E.nome.trim() || TIPO_F[E.tipo].nome, tipo: E.tipo, moeda: E.moeda, valor, noOrcamento: E.tipo === 'credito' ? !!E.noOrcamento : undefined, sigla: (E._sigla || '').slice(0, 5) || undefined, cor: E._cor || undefined,
+        cambio: E.moeda === sv.local.cod && num(E.cambio) > 0 ? num(E.cambio) : null, iof: E.moeda === sv.nativa.cod ? (num(E.iof) >= 0 ? num(E.iof) : sv.iofPadrao) : undefined};
+      reg.upd = Date.now();
+      if (orig) Object.assign(orig, reg); else v.fontes.push(reg);
+      save(); render(); abrirCarteira(p); toast('Fonte salva');
+    };
+    if ($('#eDel')) $('#eDel').onclick = () => {
+      v.fontes = v.fontes.filter(x => x.id !== id);
+      for (const l of S.lanc) { if (l.por === p && l.fonte === id) l.fonte = null; for (const pg of l.pagamentos || []) if (pg.por === p && pg.fonte === id) pg.fonte = null; }
+      save(); render(); abrirCarteira(p); toast('Fonte excluída');
+    };
+  };
+  desenhar();
+}
+
+/* ---------- telas ---------- */
+function topo(){
+  const d = diaAtual(), v = S.viagem;
+  const pill = d < 1 ? (() => { const n = Math.round((new Date(v.inicio + 'T00:00:00') - new Date(new Date().toDateString())) / 864e5); return n > 1 ? `Faltam ${n} dias` : n === 1 ? 'Começa amanhã' : 'Começa hoje'; })()
+    : d > v.dias ? 'Viagem encerrada' : `Hoje: D${d} de ${v.dias} · ${dataDia(d)}`;
+  return `<header class="top">
+    <div class="top-row">
+      <div class="trip">Viagem<b>${esc(S.viagem.nome)}</b></div>
+      <div class="dir"><div class="daypill">${pill}${v.hojeManual ? ' · teste' : ''}</div><!-- Clé: sincronizar virou função do app (Mais → Arquivo da viagem e sincronização) --></div>
+    </div>
+    <div class="seg" id="segP">
+      ${['t',...S.viagem.viajantes.map(v=>v.id)].map(p=>`<button data-p="${p}" class="${UI.pessoa===p?'on':''}">${p==='t'?'Total':esc(nomeP(p))}</button>`).join('')}
+    </div>
+  </header>`;
+}
+
+function telaPainel(){
+  const p = UI.pessoa, sb = simbVer(), t = totais(p);
+  const pct = t.proj ? Math.min(100, t.real/t.proj*100) : 0;
+  const dif = t.proj - t.plano, difPct = t.plano ? dif/t.plano*100 : 0;
+  const outraSimb = UI.moedaVer==='nativa' ? S.viagem.local.simb : S.viagem.nativa.simb;
+  const outra = (()=>{ const k=UI.moedaVer; UI.moedaVer = k==='nativa'?'local':'nativa'; const x=totais(p); UI.moedaVer=k; return x; })();
+  const dias = porDia(p), maxD = Math.max(1,...dias.map(x=>Math.max(x.plano,x.real)));
+  const hoje = diaAtual();
+  const restDias = Math.max(1, S.viagem.dias - Math.max(1, hoje) + 1);
+  const naViagem = hoje >= 1 && hoje <= S.viagem.dias;
+  const cats = porCategoria(p).sort((a,b)=>Math.max(b.plano,b.real)-Math.max(a.plano,a.real));
+  const dv = dividasPorDirecao();
+  // compensação só quando duas pessoas devem uma à outra
+  const nets = []; const vistos = new Set();
+  for (const x of dv) { const k = [x.de, x.para].sort().join('|'); if (vistos.has(k)) continue; const volta = dv.find(y => y.de === x.para && y.para === x.de);
+    if (volta) { vistos.add(k); const a = x.pago + x.prev, b = volta.pago + volta.prev; if (Math.abs(a - b) >= 0.01) nets.push(a > b ? {de:x.de, para:x.para, v:a-b} : {de:x.para, para:x.de, v:b-a}); } }
+  const due = ativos().filter(l => l.status==='apagar' && l.dia>=hoje && parte(l,p)).sort((a,b)=>a.dia-b.dia).slice(0,4);
+  return topo() + `<div class="wrap">
+    <section class="card hero">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div class="lbl">Projeção do custo total · ${esc(nomeP(p))}</div>
+          <div class="big num">${fmt(t.proj, sb)}</div>
+          <div class="alt num">≈ ${fmt0(outra.proj, outraSimb)}</div></div>
+        <div class="cur" id="curVer">
+          <button data-m="local" class="${UI.moedaVer==='local'?'on':''}">${S.viagem.local.simb}</button>
+          <button data-m="nativa" class="${UI.moedaVer==='nativa'?'on':''}">${S.viagem.nativa.simb}</button>
+        </div>
+      </div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="legend"><span>Já pago/gasto <b class="num">${fmt0(t.real,sb)}</b></span><span>Falta <b class="num">${fmt0(t.falta,sb)}</b></span></div>
+      <div class="plan-line">Planejado <b class="num">${fmt0(t.plano,sb)}</b> · <span class="${dif>0.005?'up':'down'}">${Math.abs(dif)<0.005?'dentro do plano':(dif>0?'acima ':'abaixo ')+fmt0(Math.abs(dif),sb)+' ('+(dif>0?'+':'')+difPct.toFixed(2).replace('.',',')+'%)'}</span></div>
+      <div class="kpis">
+        ${naViagem ? `<div class="kpi"><div class="l">Gasto de hoje</div><div class="v num">${fmt0(dias[hoje-1]?.real||0,sb)}</div><div class="a">planejado ${fmt0(dias[hoje-1]?.plano||0,sb)}</div></div>`
+          : `<div class="kpi"><div class="l">Já pago antes de embarcar</div><div class="v num">${fmt0(t.real,sb)}</div><div class="a">passagens, reservas e ingressos</div></div>`}
+        <div class="kpi"><div class="l">Disponível por dia</div><div class="v num">${fmt0(Math.max(0,t.plano-t.real)/restDias,sb)}</div><div class="a">até o fim, para ficar no plano</div></div>
+      </div>
+    </section>
+
+    ${p==='t' ? cardDinheiroTodos() : cardCarteira(p)}
+
+    ${p==='t' && S.viagem.viajantes.length > 1 ? `<section class="card"><h3>Acerto entre vocês <small>despesas divididas</small></h3>
+      ${dv.length ? dv.map(x => `<div class="acerto" data-dev="${x.de}|${x.para}">${av(x.de)}<svg class="i arrow"><use href="#i-arrow"/></svg>${av(x.para)}
+        <div class="t">${esc(nomeP(x.de))} deve a ${esc(nomeP(x.para))}${x.pago < 0.01 ? '<span class="prevtag">previsto</span>' : ''}<b class="num">${fmt(x.pago + x.prev, sb)}</b>${x.pago >= 0.01 && x.prev >= 0.01 ? `<div class="sub2 num">já pago ${fmt(x.pago, sb)} · previsto ${fmt(x.prev, sb)}</div>` : ''}</div></div>`).join('')
+        + nets.map(n => `<div class="acerto-net">Para acertar: <b>${esc(nomeP(n.de))} transfere ${fmt(n.v, sb)} a ${esc(nomeP(n.para))}</b></div>`).join('')
+        : '<div class="acerto"><div class="t"><b>Tudo acertado</b></div></div>'}
+      <div class="hint">Soma, conta a conta, o que cada um pagou a mais que a sua parte. "Previsto" = contas estimadas ou a pagar; "já pago" = contas pagas.</div></section>` : ''}
+
+    <section class="card"><h3>Por categoria <small>planejado × gasto</small></h3>
+      ${cats.map(x=>{ const ref=Math.max(x.plano,x.orc||0,1); const over=x.real>x.plano+0.005;
+        return `<div class="catrow" data-cat="${x.c.id}">${ic(x.c.icone,x.c.cor)}
+          <div><div class="n">${esc(x.c.nome)}</div>
+          <div class="minibar"><i style="width:${Math.min(100,x.plano/ref*100)}%;background:${x.c.cor}33"></i><i style="width:${Math.min(100,x.real/ref*100)}%;background:${over?'var(--bad)':x.c.cor}"></i></div></div>
+          <div class="vals num"><b>${fmt0(x.plano,sb)}</b><span class="${over?'':'muted'}" style="${over?'color:var(--bad)':''}">${fmt0(x.real,sb)} gasto</span></div></div>`;}).join('')}
+    </section>
+
+    <section class="card"><h3>Dia a dia <small>toque para ver o dia</small></h3>
+      <div class="days">${dias.map(x=>`<div class="day ${x.d===hoje?'today':''}" data-dia="${x.d}">
+        <div class="col"><div class="p" style="height:${x.plano/maxD*100}%"></div><div class="r ${x.real>x.plano*1.05&&x.real>0?'over':''}" style="height:${x.real/maxD*100}%"></div></div>
+        <span>${x.d}</span></div>`).join('')}</div>
+      <div class="dleg"><span><i style="background:var(--brand-soft)"></i>Planejado</span><span><i style="background:var(--brand-2)"></i>Gasto</span><span><i style="background:var(--bad)"></i>Acima do plano</span></div>
+    </section>
+
+    ${due.length?`<section class="card"><h3>Próximos pagamentos no local</h3>
+      ${due.map(l=>`<div class="due" data-id="${l.id}"><span class="d">D${l.dia}</span><span class="x">${esc(l.desc)}</span><span class="v num">${fmt(val(l,p,UI.moedaVer),sb)}</span></div>`).join('')}</section>`:''}
+  </div>`;
+}
+
+function telaLista(){
+  const sb = simbVer(), p = UI.pessoa;
+  let ls = S.lanc.filter(l => parte(l,p) > 0);
+  if (UI.filtroStatus !== 'todos') ls = ls.filter(l => l.status === UI.filtroStatus);
+  if (UI.filtroCat) ls = ls.filter(l => l.cat === UI.filtroCat);
+  if (UI.filtroDia !== null) ls = ls.filter(l => l.dia === UI.filtroDia);
+  if (UI.busca) { const q = UI.busca.toLowerCase(); ls = ls.filter(l => (l.desc+' '+l.sub+' '+cat(l.cat).nome+' '+(l.obs||'')).toLowerCase().includes(q)); }
+  const grupos = {};
+  ls.sort((a,b)=>b.dia-a.dia).forEach(l => (grupos[l.dia] ||= []).push(l));
+  const ordem = Object.keys(grupos).map(Number).sort((a,b)=>a-b);
+  const filtrosAtivos = (UI.filtroCat?`<span class="chip on" data-clr="cat">${esc(cat(UI.filtroCat).nome)} ✕</span>`:'') + (UI.filtroDia!==null?`<span class="chip on" data-clr="dia">${nomeDia(UI.filtroDia)} ✕</span>`:'');
+  return topo() + `<div class="bar-tools" style="margin-top:-40px;background:transparent;position:static">
+      <div class="search" style="box-shadow:var(--shadow)"><svg class="i muted"><use href="#i-search"/></svg><input id="busca" placeholder="Buscar (nome, localizador, loja...)" value="${esc(UI.busca)}"></div>
+      <div class="chips">${filtrosAtivos}${['todos','realizado','pago','apagar','estimado'].map(s=>`<span class="chip ${UI.filtroStatus===s?'on':''}" data-st="${s}">${s==='todos'?'Todos':STN[s]}</span>`).join('')}</div>
+    </div>
+    ${p!=='t' ? `<div class="group">${cardCarteira(p)}</div>` : ''}
+    ${ordem.length? ordem.map(d => { const tot = grupos[d].reduce((s,l)=>s+(l.incluir?val(l,p,UI.moedaVer):0),0);
+      return `<div class="group"><div class="ghead"><span>${nomeDia(d)}</span><span class="num">${fmt(tot,sb)}</span></div>
+      ${grupos[d].map(l=>{ const c=cat(l.cat); const v=val(l,p,UI.moedaVer); const vn = UI.moedaVer==='nativa'?emLocal(l)*parte(l,p):emNativa(l)*parte(l,p);
+        return `<div class="item ${l.incluir?'':'off'}" data-id="${l.id}">${ic(c.icone,c.cor)}
+          <div><div class="t">${esc(l.desc)}</div>${l.obs && UI.busca ? `<div class="obs">${esc(l.obs)}</div>` : ''}<div class="m"><span class="st ${l.status}">${STN[l.status]}</span>${whoBadge(l)}<span>${esc(l.sub)}</span>${(() => { const partes = pagtos(l).filter(pg => (p === 't' || pg.por === p) && fonteObj(pg)).map(pg => seloHTML(fonteObj(pg), p === 't' ? pg.por : null, `data-selo="${l.id}|${pg.por}" title="${esc(nomeP(pg.por) + ' · ' + fonteObj(pg).nome)}"`)).join(''); return partes ? `<span class="selos">${partes}</span>` : ''; })()}${semFormaPgto(l, p) ? `<span class="nopay" data-nopay title="Meio de pagamento não definido" aria-label="Meio de pagamento não definido">${ICONE_SEM_PGTO}</span>` : ''}${dividasVisiveis(l, p).length ? `<span class="divida" data-divida="${l.id}" title="Conta dividida com acerto pendente" aria-label="Conta dividida com acerto pendente">${ICONE_DIVIDA}</span>` : ''}${(!isReal(l) || (pagtos(l).length===1 && l.resp.length===1 && l.resp[0]===l.por)) ? '' : `<span class="pagopor">· ${pagtos(l).length > 1 ? 'pago por ' + pagtos(l).map(pg => esc(nomeP(pg.por))).join(' e ') : 'pago por ' + esc(nomeP(l.por))}</span>`}</div></div>
+          <div class="v num">${fmt(v,sb)}<small>${fmt0(vn, UI.moedaVer==='nativa'?S.viagem.local.simb:S.viagem.nativa.simb)}</small></div></div>`;}).join('')}</div>`; }).join('')
+      : `<div class="empty">Nenhum lançamento com esses filtros.</div>`}`;
+}
+
+function telaCategorias(){
+  const sb = simbVer();
+  const tot = {}; for (const l of ativos()) { tot[l.cat] = (tot[l.cat]||0) + (isPlano(l)?val(l,'t',UI.moedaVer):0); }
+  return `<div class="page-h"><h1>Categorias</h1><p>Organize os gastos do seu jeito. Toque numa categoria para editar e defina um orçamento limite se quiser.</p></div>
+  <div class="list"><div class="card" style="padding:6px 16px">
+    ${S.categorias.map(c=>`<div class="catrow" data-editcat="${c.id}">${ic(c.icone,c.cor)}
+      <div><div class="n">${esc(c.nome)}</div><div class="sub">${c.subs.length} subcategorias${S.viagem.orcamento[c.id]?' · limite '+fmt0(S.viagem.orcamento[c.id],S.viagem.local.simb):''}</div></div>
+      <div class="vals num"><b>${fmt0(tot[c.id]||0,sb)}</b><span class="muted">planejado</span></div></div>
+      <div class="subs">${c.subs.map(s=>`<span class="chip">${esc(s)}</span>`).join('')}<span class="chip" data-addsub="${c.id}" style="color:var(--brand-2)">+ subcategoria</span></div>`).join('')}
+  </div>
+  <button class="btn ghost" id="novaCat">+ Nova categoria</button></div>`;
+}
+
+function telaAjustes(){
+  const v = S.viagem;
+  return `<div class="page-h"><h1>Ajustes</h1><p>Viagem, viajantes, moedas e sincronização entre os celulares.</p></div>
+  <div class="list">
+    <div class="card"><h3>Viagem</h3>
+      <div class="set"><div class="k">Nome</div><input class="field" style="width:170px;text-align:right" data-cfgt="nome" value="${esc(v.nome)}"></div>
+      <div class="set"><div class="k">Primeiro dia</div><input class="field" type="date" style="width:170px" data-cfgt="inicio" value="${esc(v.inicio)}"></div>
+      <div class="set"><div class="k">Número de dias</div><input class="field num" inputmode="numeric" style="width:90px" data-cfgn="dias" value="${v.dias}"></div>
+    </div>
+    <div class="card"><h3>Viajantes <small>${v.viajantes.length} ${v.viajantes.length===1?'pessoa':'pessoas'}</small></h3>
+      ${v.viajantes.map(x=>`<div class="trav"><span data-cor-p="${x.id}">${av(x.id)}</span>
+        <input class="field" data-nome-p="${x.id}" value="${esc(x.nome)}" aria-label="Nome do viajante">
+        <button class="iconbtn" data-cart="${x.id}" aria-label="Carteira de ${esc(x.nome)}" title="Carteira"><svg class="i"><use href="#i-wallet"/></svg></button>
+        <button class="minus" data-rm-p="${x.id}" ${v.viajantes.length<2?'disabled':''} aria-label="Remover ${esc(x.nome)}">−</button></div>`).join('')}
+      <button class="btn ghost" id="addP" style="margin-top:10px">+ Adicionar viajante</button>
+      <div class="hint">Toque no círculo para trocar a cor.</div>
+    </div>
+    <div class="card"><h3>Este aparelho</h3>
+      <div class="set"><div class="k">Pertence a<small>Define quem lançou e o responsável padrão</small></div>
+        <select class="field" id="aparelho" style="width:150px">${v.viajantes.map(x=>`<option value="${x.id}" ${S.aparelho===x.id?'selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
+    </div>
+    <div class="card"><h3>Moedas e câmbio</h3>
+      <div class="set"><div class="k">Moeda do destino<small>código e símbolo</small></div><div style="display:flex;gap:6px"><input class="field" style="width:64px" data-cfg="local.cod" value="${esc(v.local.cod)}"><input class="field" style="width:64px" data-cfg="local.simb" value="${esc(v.local.simb)}"></div></div>
+      <div class="set"><div class="k">Sua moeda<small>código e símbolo</small></div><div style="display:flex;gap:6px"><input class="field" style="width:64px" data-cfg="nativa.cod" value="${esc(v.nativa.cod)}"><input class="field" style="width:64px" data-cfg="nativa.simb" value="${esc(v.nativa.simb)}"></div></div>
+      <div class="set"><div class="k">Cotação<small>1 ${esc(v.local.cod)} = ? ${esc(v.nativa.cod)}</small></div><input class="field num" inputmode="decimal" data-cfg="cotacao" value="${String(v.cotacao).replace('.',',')}"></div>
+      <div class="set"><div class="k">IOF padrão (%)<small>quando o gasto não tem fonte ou câmbio próprio</small></div><input class="field num" inputmode="decimal" data-cfg="iofPadrao" value="${String(v.iofPadrao).replace('.',',')}"></div>
+      <div class="hint">O câmbio e o IOF de cada cartão ou dinheiro ficam na carteira de cada viajante (ícone de carteira acima). Em cada lançamento dá para digitar o valor real da fatura, que substitui qualquer cálculo.</div>
+    </div>
+    <!-- Clé: sincronização e arquivo da viagem agora são do app -->
+
+    <div class="card"><h3>Dados deste aparelho</h3>
+      <div class="set"><div class="k">Simular o dia da viagem<small>para testar; deixe vazio para usar a data real</small></div><input class="field num" style="width:72px" inputmode="numeric" id="hojeSim" placeholder="auto" value="${v.hojeManual??''}"></div>
+      <button class="btn ghost" id="abrirArq" style="margin-top:8px">Abrir outro arquivo de viagem</button>
+      <div class="hint">Abrir um arquivo substitui tudo o que está neste aparelho. Para somar os lançamentos de outro celular, use "Juntar arquivo".</div>
+      <button class="btn danger" id="apagarTudo">Apagar todos os dados deste aparelho</button>
+      <div class="hint">Versão ${VERSAO_APP} · os dados ficam só neste aparelho; faça exportações de segurança de vez em quando.</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- formulário (novo / editar) ---------- */
+let F = null;
+function abrirForm(id){
+  const l = id ? S.lanc.find(x=>x.id===id) : null;
+  F = l ? JSON.parse(JSON.stringify(l)) : { id:null, desc:'', cat:null, sub:null, valor:null, moeda:S.viagem.local.cod,
+    dia:Math.min(S.viagem.dias, diaAtual()), status:'realizado', obs:'', resp:[S.aparelho], partes:null, pagamentos:null, por:S.aparelho, fonte: fontePadrao(S.aparelho), fatura:null, incluir:true, foto:null };
+  F._mais = !!(l && (l.fatura || l.foto || !l.incluir));
+  F.pagamentos ??= null; F._pgAuto = false;
+  renderForm(); abrirSheet();
+}
+// parte de cada responsável no total do formulário (igual ou por valores)
+function parteForm(id, total){
+  if (!F.resp.includes(id) || !(total > 0)) return 0;
+  if (F.partes) return numBR(String(F.partes[id] ?? '')) || 0;
+  return total / F.resp.length;
+}
+// valores automáticos dos pagamentos: cada pagador paga a sua parte; o que sobrar fica com o primeiro
+function autoPagamentos(){
+  if (!F.pagamentos || !F._pgAuto) return;
+  const total = numBR(String(F.valor ?? '')) || 0;
+  const vals = F.pagamentos.map(pg => Math.round(parteForm(pg.por, total) * 100) / 100);
+  const dif = Math.round((total - vals.reduce((a,b) => a + b, 0)) * 100) / 100;
+  vals[0] = Math.round((vals[0] + dif) * 100) / 100;
+  F.pagamentos.forEach((pg, i) => pg.valor = vals[i] > 0 ? vals[i] : 0);
+}
+function somaPg(){ return (F.pagamentos || []).reduce((a,pg) => a + (numBR(String(pg.valor ?? '')) || 0), 0); }
+function textoRestoPg(){
+  const total = numBR(String(F.valor ?? '')) || 0, r = Math.round((total - somaPg()) * 100) / 100;
+  const sb = F.moeda === S.viagem.nativa.cod ? S.viagem.nativa.simb : S.viagem.local.simb;
+  return Math.abs(r) < 0.005 ? ['ok', 'Pagamentos somam o total ✓'] : r > 0 ? ['bad', 'Falta distribuir ' + fmt(r, sb)] : ['bad', 'Passou ' + fmt(-r, sb) + ' do total'];
+}
+function blocoPagamentos(){
+  const pago = F.status === 'realizado' || F.status === 'pago';
+  if (!F.pagamentos) return `<div><div class="flabel">${pago ? 'Pago com' : 'Vai pagar com'} ${fonteDe(F) ? seloHTML(fonteDe(F)) : ''}</div><select class="field" id="fFonte">${((trav(F.por)||{}).fontes||[]).map(fo=>`<option value="${fo.id}" ${F.fonte===fo.id?'selected':''}>${esc(fo.nome)}</option>`).join('')}<option value="" ${!F.fonte?'selected':''}>Não informado</option></select></div>`;
+  autoPagamentos();
+  const total = numBR(String(F.valor ?? '')) || 0;
+  const cadaUmSuaParte = F.pagamentos.every(pg => Math.abs((numBR(pg.valor) || 0) - parteForm(pg.por, total)) < 0.01);
+  const [cls, txt] = textoRestoPg();
+  return `<div class="flabel">${pago ? 'Quanto cada um pagou e com o quê' : 'Quanto cada um vai pagar e com o quê'}</div>
+    <div class="partes">${F.pagamentos.map(pg => `<div class="pgrow"><div class="quem">${av(pg.por)}${esc(nomeP(pg.por))} ${fonteObj(pg) ? seloHTML(fonteObj(pg)) : ''}</div>
+      <input class="field num" inputmode="decimal" data-pgv="${pg.por}" value="${isNaN(numBR(pg.valor)) ? '' : numBR(pg.valor).toFixed(2).replace('.',',')}" placeholder="0,00">
+      <select class="field" data-pgf="${pg.por}">${((trav(pg.por)||{}).fontes||[]).map(fo=>`<option value="${fo.id}" ${pg.fonte===fo.id?'selected':''}>${esc(fo.nome)}</option>`).join('')}<option value="" ${!pg.fonte?'selected':''}>Não informado</option></select></div>`).join('')}
+      <div class="resto ${cls}" id="fPgResto">${txt}</div></div>
+    <div class="hint">${cadaUmSuaParte ? 'Cada um paga a sua parte: não gera acerto entre vocês.' : 'Quem pagar mais que a sua parte fica com crédito no Acerto entre vocês.'} A forma de pagamento de cada um pode ser escolhida depois, no celular de cada um, e sincronizada.</div>`;
+}
+function fontePadrao(p){ if (!p) return null; const fs = (trav(p)||{}).fontes || []; const u = (S.ultFonte||{})[p]; if (u && fs.some(x => x.id === u)) return u; const d = fs.find(x => x.tipo !== 'credito') || fs[0]; return d ? d.id : null; }
+function respPadrao(c){ return respPorRegra(cat(c).regra); }
+function somaPartes(){ return F.resp.reduce((a,id) => a + (numBR(String((F.partes||{})[id] ?? '')) || 0), 0); }
+function blocoDivisao(){
+  if (F.resp.length < 2) return '<div class="hint">Toque em mais de um nome para dividir o valor.</div>';
+  const porValores = !!F.partes, n = numBR(String(F.valor??'')) || 0;
+  const sb = F.moeda===S.viagem.nativa.cod ? S.viagem.nativa.simb : S.viagem.local.simb;
+  let h = `<div class="segl" id="fModo" style="margin-top:10px"><button data-modo="igual" class="${!porValores?'on':''}">Dividir igual</button><button data-modo="valores" class="${porValores?'on':''}">Por valores</button></div>`;
+  if (!porValores) return h + `<div class="hint">${F.resp.length} pessoas: ${fmtParte()} para cada um.</div>`;
+  const resto = n - somaPartes();
+  return h + `<div class="partes">${F.resp.map(id => `<div class="parte-row">${av(id)}<span class="x">${esc(nomeP(id))}</span>
+      <input class="field num" inputmode="decimal" data-parte="${id}" placeholder="0,00" value="${(F.partes[id] ?? '') === '' ? '' : typeof F.partes[id] === 'number' ? F.partes[id].toFixed(2).replace('.',',') : String(F.partes[id])}"></div>`).join('')}
+    <div class="resto ${Math.abs(resto) < 0.005 ? 'ok' : 'bad'}" id="fResto">${Math.abs(resto) < 0.005 ? 'Tudo distribuído ✓' : resto > 0 ? 'Falta distribuir ' + fmt(resto, sb) : 'Passou ' + fmt(-resto, sb) + ' do total'}</div></div>
+    <div class="hint">Use para contas de restaurante em que cada um consumiu um valor. Taxa e gorjeta: some na parte de cada um.</div>`;
+}
+function fmtParte(){ const n = numBR(String(F.valor??'')); if (!(n>0)) return 'a mesma parte'; const sb = F.moeda===S.viagem.nativa.cod?S.viagem.nativa.simb:S.viagem.local.simb; return fmt(n/F.resp.length, sb); }
+function renderForm(){
+  const v = S.viagem, c = F.cat ? cat(F.cat) : null;
+  const num = numBR(String(F.valor??''));
+  let conv = '';
+  if (!isNaN(num) && num>0){
+    const tmp = {...F, valor:num, fatura:null};
+    conv = F.moeda===v.local.cod ? `≈ ${fmt(emNativa(tmp), v.nativa.simb)} ${descConv(fonteDe(F))}` : `≈ ${fmt(emLocal(tmp), v.local.simb)}`;
+  }
+  const opDias = [`<option value="0" ${F.dia===0?'selected':''}>Pré-viagem</option>`].concat(Array.from({length:v.dias},(_,i)=>`<option value="${i+1}" ${F.dia===i+1?'selected':''}>${nomeDia(i+1)}</option>`)).join('');
+  $('#sheetIn').innerHTML = `<div class="grab"></div>
+    <div class="shead"><h2>${F.id?'Editar lançamento':'Novo lançamento'}</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="amount"><input id="fValor" class="num" inputmode="decimal" placeholder="0,00" value="${F.valor!=null?String(F.valor).replace('.',','):''}">
+      <div class="cur" id="fMoeda"><button data-m="${v.local.cod}" class="${F.moeda===v.local.cod?'on':''}">${v.local.simb}</button><button data-m="${v.nativa.cod}" class="${F.moeda===v.nativa.cod?'on':''}">${v.nativa.simb}</button></div></div>
+    <div class="conv num" id="fConv">${conv}</div>
+
+    <div class="flabel">Categoria</div>
+    <div class="catgrid">${S.categorias.map(x=>`<button class="catbtn ${F.cat===x.id?'on':''}" data-fcat="${x.id}">${ic(x.icone,x.cor)}${esc(x.nome)}</button>`).join('')}</div>
+    ${c?`<div class="flabel">Subcategoria</div><div class="chips" style="flex-wrap:wrap;margin:0">${c.subs.map(s=>`<span class="chip ${F.sub===s?'on':''}" data-fsub="${esc(s)}">${esc(s)}</span>`).join('')}</div>`:''}
+
+    <div class="flabel">Descrição</div>
+    <input class="field" id="fDesc" placeholder="Ex.: almoço no Whataburger" value="${esc(F.desc)}">
+    ${F.obs || F._mais ? `<div class="flabel">Observação</div><textarea class="field" id="fObs" rows="2" placeholder="Localizador, regra de pagamento, lembrete...">${esc(F.obs||'')}</textarea>` : ''}
+
+    <div class="flabel">Quem é o responsável por este custo?</div>
+    <div class="pchips" id="fResp">${S.viagem.viajantes.map(x=>`<button class="pchip ${F.resp.includes(x.id)?'on':''}" data-r="${x.id}">${av(x.id)}${esc(x.nome)}</button>`).join('')}${S.viagem.viajantes.length>2?`<button class="pchip all ${F.resp.length===S.viagem.viajantes.length?'on':''}" data-r="*">Todos</button>`:''}</div>
+    ${blocoDivisao()}
+    ${c?`<div class="hint">Padrão para ${esc(c.nome)}: ${esc(nomeRegra(c.regra))}.</div>`:''}
+
+    <div class="flabel">Quem pagou? <span class="muted" style="font-weight:400">· toque em mais de um se cada um pagar a sua parte</span></div>
+    <div class="pchips" id="fPor">${S.viagem.viajantes.map(x=>{ const on = F.pagamentos ? F.pagamentos.some(pg => pg.por === x.id) : F.por === x.id; return `<button class="pchip ${on?'on':''}" data-por="${x.id}">${av(x.id)}${esc(x.nome)}</button>`; }).join('')}</div>
+    ${!F.pagamentos && F.resp.some(id => id !== F.por) ? `<div class="hint">${esc(nomeP(F.por))} pagou a parte dos outros: isso entra no Acerto entre vocês.</div>` : ''}
+
+    ${F.pagamentos ? `<div class="flabel">Dia</div><select class="field" id="fDia">${opDias}</select>${blocoPagamentos()}`
+      : `<div class="row2" style="margin-top:4px"><div><div class="flabel">Dia</div><select class="field" id="fDia">${opDias}</select></div>${blocoPagamentos()}</div>`}
+
+    <div class="flabel">Situação</div>
+    <div class="segl" id="fStatus">${['realizado','apagar','estimado'].concat(F.status==='pago'?['pago']:[]).map(s=>`<button data-s="${s}" class="${F.status===s?'on':''}">${s==='realizado'?'Pago agora':STN[s]}</button>`).join('')}</div>
+
+    ${F._mais ? `
+      <div class="flabel">Valor real na fatura (${v.nativa.simb}) <span class="muted" style="font-weight:400">· opcional</span></div>
+      <input class="field num" id="fFatura" inputmode="decimal" placeholder="Substitui o cálculo pela cotação" value="${F.fatura!=null?String(F.fatura).replace('.',','):''}">
+      <div class="flabel">Foto do recibo <span class="muted" style="font-weight:400">· opcional</span></div>
+      <div class="photo">${F.foto?`<img src="${F.foto}" alt="">`:''}<button class="btn ghost sm" id="fFoto"><svg class="i" style="vertical-align:-4px"><use href="#i-cam"/></svg> ${F.foto?'Trocar foto':'Abrir câmera'}</button>${F.foto?'<button class="btn ghost sm" id="fFotoX">Remover</button>':''}</div>
+      <div class="toggle"><div>Incluir nas despesas<div class="hint" style="margin:0">Desligue para simular um cenário sem este gasto</div></div><button class="sw ${F.incluir?'on':''}" id="fIncl"></button></div>
+    ` : `<button class="more" id="fMais">+ Mais opções (valor da fatura, foto do recibo, simulação)</button>`}
+
+    <button class="btn pri" id="fSalvar">${F.id?'Salvar alterações':'Lançar'}</button>
+    ${F.id?'<button class="btn danger" id="fExcluir">Excluir lançamento</button>':''}`;
+}
+function lerCamposForm(){
+  const g = id => document.getElementById(id);
+  if (g('fValor')) F.valor = g('fValor').value;
+  if (g('fDesc')) F.desc = g('fDesc').value;
+  if (g('fObs')) F.obs = g('fObs').value;
+  if (g('fDia')) F.dia = +g('fDia').value;
+  if (g('fFonte')) F.fonte = g('fFonte').value || null;
+  if (g('fFatura')) F.fatura = g('fFatura').value;
+  document.querySelectorAll('[data-parte]').forEach(i => { F.partes[i.dataset.parte] = i.value; });
+  document.querySelectorAll('[data-pgv]').forEach(i => { const pg = F.pagamentos && F.pagamentos.find(x => x.por === i.dataset.pgv); if (pg) { const n = numBR(i.value); pg.valor = isNaN(n) ? '' : n; } });
+  document.querySelectorAll('[data-pgf]').forEach(i => { const pg = F.pagamentos && F.pagamentos.find(x => x.por === i.dataset.pgf); if (pg) pg.fonte = i.value || null; });
+}
+function salvarForm(){
+  lerCamposForm();
+  const valor = numBR(String(F.valor));
+  if (!(valor > 0)) return toast('Digite o valor');
+  if (!F.cat) return toast('Escolha a categoria');
+  let partes = null;
+  if (F.partes && F.resp.length > 1) {
+    const soma = somaPartes();
+    if (Math.abs(soma - valor) > 0.005) return toast(soma < valor ? 'Ainda falta distribuir parte do valor' : 'As partes passam do valor total');
+    partes = {}; F.resp.forEach(id => partes[id] = numBR(String(F.partes[id] ?? '')) || 0);
+  }
+  let pagamentos = null;
+  if (F.pagamentos && F.pagamentos.length > 1) {
+    const soma = Math.round(somaPg() * 100) / 100;
+    if (Math.abs(soma - valor) > 0.005) return toast(soma < valor ? 'Os pagamentos ainda não somam o total' : 'Os pagamentos passam do total');
+    pagamentos = F.pagamentos.map(pg => ({ por: pg.por, fonte: pg.fonte || null, valor: numBR(String(pg.valor ?? '')) || 0 }));
+  }
+  const fat = numBR(String(F.fatura??''));
+  const reg = {...F, partes, pagamentos, ...(pagamentos ? { por: pagamentos[0].por, fonte: null } : {}), valor, fatura: fat>0?fat:null, sub: F.sub || cat(F.cat).subs[0] || '', desc: F.desc.trim() || F.sub || cat(F.cat).nome};
+  delete reg._mais; delete reg._pgAuto;
+  if (pagamentos) { S.ultFonte ||= {}; for (const pg of pagamentos) if (pg.fonte) S.ultFonte[pg.por] = pg.fonte; }
+  reg.upd = Date.now(); reg.loc = reg.upd; reg.via = null;
+  if (reg.fonte) { S.ultFonte ||= {}; S.ultFonte[reg.por] = reg.fonte; }
+  if (F.id){ const i = S.lanc.findIndex(x=>x.id===F.id); S.lanc[i] = reg; toast('Lançamento atualizado'); }
+  else { reg.id = S.aparelho + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); S.lanc.push(reg); toast('Lançado'); }
+  save(); fecharSheet(); render();
+}
+
+/* ---------- sheets simples ---------- */
+function sheetTexto(titulo, rotulo, cb, extra=''){
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>${titulo}</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="flabel">${rotulo}</div><input class="field" id="sTxt" autocomplete="off">${extra}<button class="btn pri" id="sOk">Salvar</button>`;
+  abrirSheet(); setTimeout(()=>$('#sTxt').focus(),200);
+  $('#sOk').onclick = () => { const t = $('#sTxt').value.trim(); if (!t) return toast('Digite um nome'); cb(t); fecharSheet(); render(); };
+}
+const CORES = ['#3F6FB0','#6C5BA8','#1D5C5D','#4F6470','#B23A32','#8A6A3D','#C2410C','#B8892A','#2E7D4F','#0E7490','#BE185D','#6B7280'];
+function editarCategoria(id){
+  const c = cat(id);
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>${esc(c.nome)}</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="flabel">Nome</div><input class="field" id="cNome" value="${esc(c.nome)}">
+    <div class="flabel">Cor</div><div class="colors" id="cCor">${CORES.map(k=>`<button style="background:${k}" data-cor="${k}" class="${c.cor===k?'on':''}"></button>`).join('')}</div>
+    <div class="flabel">Responsável padrão</div>
+    <select class="field" id="cRegra"><option value="eu" ${(c.regra||'eu')==='eu'?'selected':''}>Quem lança (dono do aparelho)</option><option value="todos" ${c.regra==='todos'?'selected':''}>Dividir entre todos</option>${S.viagem.viajantes.map(v=>`<option value="${v.id}" ${c.regra===v.id?'selected':''}>${esc(v.nome)}</option>`).join('')}</select>
+    <div class="flabel">Orçamento limite (${S.viagem.local.simb}) <span class="muted" style="font-weight:400">· opcional</span></div>
+    <input class="field num" id="cOrc" inputmode="decimal" placeholder="Sem limite" value="${S.viagem.orcamento[id]?String(S.viagem.orcamento[id]).replace('.',','):''}">
+    <div class="flabel">Subcategorias</div><div class="chips" style="flex-wrap:wrap;margin:0">${c.subs.map((s,i)=>`<span class="chip" data-delsub="${i}">${esc(s)} ✕</span>`).join('')}</div>
+    <button class="btn pri" id="cOk">Salvar</button>`;
+  abrirSheet();
+  let cor = c.cor;
+  $('#cCor').onclick = e => { const b = e.target.closest('[data-cor]'); if(!b) return; cor=b.dataset.cor; [...$('#cCor').children].forEach(x=>x.classList.toggle('on',x===b)); };
+  $('#sheetIn').querySelectorAll('[data-delsub]').forEach(b => b.onclick = () => { c.subs.splice(+b.dataset.delsub,1); save(); editarCategoria(id); });
+  $('#cOk').onclick = () => { c.nome = $('#cNome').value.trim() || c.nome; c.cor = cor; c.regra = $('#cRegra').value;
+    const o = numBR($('#cOrc').value); if (o>0) S.viagem.orcamento[id]=o; else delete S.viagem.orcamento[id];
+    save(); fecharSheet(); render(); };
+}
+
+function removerViajante(id){
+  const v = trav(id); if (!v || S.viagem.viajantes.length < 2) return;
+  const outros = S.viagem.viajantes.filter(x => x.id !== id);
+  const usados = S.lanc.filter(l => pagtos(l).some(pg => pg.por === id) || l.resp.includes(id)).length;
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>Remover ${esc(v.nome)}</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    ${usados ? `<p class="sub">${esc(v.nome)} aparece em <b>${usados}</b> lançamento(s). Nos gastos divididos, a parte de ${esc(v.nome)} passa para os demais. Os gastos só de ${esc(v.nome)} ficam com:</p>
+      <select class="field" id="rmPara">${outros.map(o=>`<option value="${o.id}">${esc(o.nome)}</option>`).join('')}</select>`
+      : `<p class="sub">${esc(v.nome)} não tem lançamentos. Pode remover sem perder nada.</p>`}
+    <button class="btn danger" id="rmOk" style="margin-top:18px">Remover do planejamento</button>`;
+  abrirSheet();
+  $('#rmOk').onclick = () => {
+    const para = usados ? $('#rmPara').value : outros[0].id;
+    for (const l of S.lanc){
+      if (l.por === id) { l.por = para; l.fonte = null; }
+      if (l.pagamentos) {
+        for (const pg of l.pagamentos) if (pg.por === id) { pg.por = para; pg.fonte = null; }
+        const junto = {}; for (const pg of l.pagamentos) { if (junto[pg.por]) junto[pg.por].valor = (+junto[pg.por].valor) + (+pg.valor); else junto[pg.por] = {...pg}; }
+        l.pagamentos = Object.values(junto); if (l.pagamentos.length < 2) { l.fonte = l.pagamentos[0].fonte; l.pagamentos = null; }
+      }
+      if (l.partes && l.partes[id] !== undefined) { const x = l.partes[id]; delete l.partes[id]; if (!l.resp.includes(para)) l.resp.push(para); l.partes[para] = (l.partes[para] || 0) + x; }
+      if (l.resp.includes(id)) { l.resp = l.resp.filter(x => x !== id); if (!l.resp.length) l.resp = [para]; }
+      if (l.partes && l.resp.length < 2) l.partes = null;
+      l.upd = l.loc = Date.now(); l.via = null;
+    }
+    for (const c of S.categorias) if (c.regra === id) c.regra = 'eu';
+    S.viagem.viajantes = outros;
+    if (S.aparelho === id) S.aparelho = outros[0].id;
+    if (UI.pessoa === id) UI.pessoa = 't';
+    save(); fecharSheet(); render(); toast(v.nome + ' removido');
+  };
+}
+function abrirSheet(){ $('#scrim').classList.add('on'); $('#sheet').classList.add('on'); }
+function fecharSheet(){ pararSync(); $('#scrim').classList.remove('on'); $('#sheet').classList.remove('on'); }
+
+/* ---------- render e eventos ---------- */
+function render(){
+  const t = {painel:telaPainel, lista:telaLista, categorias:telaCategorias, ajustes:telaAjustes}[UI.tab];
+  $('#app').innerHTML = t();
+  document.querySelectorAll('.nav [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab===UI.tab));
+  const busca = $('#busca'); if (busca) busca.oninput = e => { UI.busca = e.target.value; const pos=e.target.selectionStart; render(); const nb=$('#busca'); nb.focus(); nb.setSelectionRange(pos,pos); };
+}
+function irPara(tab){ UI.tab = tab; render(); window.scrollTo(0,0); }
+
+/* ---------- Clé: ponte com o app e o Marco (só neste módulo; o app financeiro original não tem isto) ----------
+   O Marco lança e desfaz lançamentos por aqui; tudo continua editável à mão na própria Carteira. */
+window.CLE = {
+  pronto(){ return !!(S && S.viagem && S.aparelho); },
+  viajantes(){ return S ? S.viagem.viajantes.map(v => ({ id:v.id, nome:v.nome })) : []; },
+  moedaLocal(){ return S ? S.viagem.local : null; },
+  lancar(dados){
+    if (!this.pronto()) return null;
+    const reg = { desc:'', cat:'out', sub:'', valor:0, moeda:S.viagem.local.cod, dia:Math.min(S.viagem.dias, diaAtual()), status:'realizado', obs:'',
+      resp:[S.aparelho], partes:null, pagamentos:null, por:S.aparelho, fonte:fontePadrao(S.aparelho), fatura:null, incluir:true, foto:null, ...dados };
+    reg.sub = reg.sub || cat(reg.cat).subs[0] || '';
+    reg.upd = Date.now(); reg.loc = reg.upd; reg.via = null;
+    reg.id = S.aparelho + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    S.lanc.push(reg); save(); render(); return reg.id;
+  },
+  desfazer(id){
+    if (!S || !S.lanc.some(x => x.id === id)) return false;
+    S.lanc = S.lanc.filter(x => x.id !== id); S.excluidos[id] = Date.now(); S.local.excLoc[id] = { loc:Date.now(), via:null };
+    save(); render(); return true;
+  },
+  abrir(tab){ irPara(tab || 'painel'); },
+  // memória da viagem: o app guarda a Carteira dentro do arquivo da viagem
+  tem(){ return !!(S && S.viagem); },
+  carregar(d, dono){ const x = JSON.parse(JSON.stringify(d)); delete x.local; S = normalizar(x); S.aparelho = dono || null; UI.pessoa = 't'; UI.tab = 'painel'; save(); iniciar(); return true; },
+  criar(cfg, outros, dono){
+    S = novaViagem(cfg);
+    (outros || []).forEach((nome, i) => S.viagem.viajantes.push({ id:'p' + (Date.now() + i + 1).toString(36), nome, cor:CORES_P[(i + 1) % CORES_P.length], fontes:[] }));
+    const p = S.viagem.viajantes.find(v => v.nome === dono) || S.viagem.viajantes[0];
+    S.aparelho = p.id; save(); iniciar(); return true;
+  },
+  definirDono(id){ if (!S) return; S.aparelho = id; save(); render(); },
+  exportar(){ if (!S) return null; const {local, ...resto} = S; return {...resto, formato:'finviagem', versao:1, exportado:new Date().toISOString()}; },
+  juntar(d){ if (!S) return null; const r = juntar(d, 'arquivo'); save(); render(); return r; },
+  sincronizar(){ abrirSync(); },
+  async apagar(){ await DB.apagar(); S = null; telaBoasVindas(); },
+  async lerPdf(texto){ return lerDadosPdf(texto); },
+  async pdf(json, linhas){ return pdfDeDados(json, linhas); },
+};
+
+document.addEventListener('click', e => {
+  const t = e.target;
+  const q = s => t.closest(s);
+  if (q('.nav [data-tab]')) return irPara(q('.nav [data-tab]').dataset.tab);
+  if (q('#fab')) return abrirForm(null);
+  if (q('#segP button')) { UI.pessoa = q('#segP button').dataset.p; return render(); }
+  if (q('#curVer button')) { UI.moedaVer = q('#curVer button').dataset.m; return render(); }
+  if (q('[data-cat]') && UI.tab==='painel') { UI.filtroCat = q('[data-cat]').dataset.cat; UI.filtroDia=null; UI.filtroStatus='todos'; return irPara('lista'); }
+  if (q('.day')) { UI.filtroDia = +q('.day').dataset.dia; UI.filtroCat=null; UI.filtroStatus='todos'; return irPara('lista'); }
+  if (q('.due')) return abrirForm(q('.due').dataset.id);
+  if (q('[data-st]')) { UI.filtroStatus = q('[data-st]').dataset.st; return render(); }
+  if (q('[data-clr]')) { if (q('[data-clr]').dataset.clr==='cat') UI.filtroCat=null; else UI.filtroDia=null; return render(); }
+  if (q('.acerto[data-dev]')) { const [de, para] = q('.acerto[data-dev]').dataset.dev.split('|'); return abrirDividas(de, para); }
+  if (q('[data-divida]')) { const l = S.lanc.find(x => x.id === q('[data-divida]').dataset.divida); const sb = l.moeda === S.viagem.nativa.cod ? S.viagem.nativa.simb : S.viagem.local.simb;
+    return toast(dividasVisiveis(l, UI.pessoa).map(d => `${nomeP(d.de)} deve ${fmt(d.v, sb)} a ${nomeP(d.para)} nesta conta`).join(' · ') + '. Entra no Acerto entre vocês.'); }
+  if (q('[data-selo]')) { const [lid, por] = q('[data-selo]').dataset.selo.split('|'); const l = S.lanc.find(x => x.id === lid); const pg = l && pagtos(l).find(x => x.por === por); const fo = pg && fonteObj(pg);
+    return toast(fo ? `${nomeP(por)} · ${fo.nome}` : 'Meio de pagamento'); }
+  if (q('[data-nopay]')) return toast('Meio de pagamento não definido. Abra o lançamento e escolha em "Vai pagar com".');
+  if (q('.item')) return abrirForm(q('.item').dataset.id);
+  if (q('[data-close]') || t.id==='scrim') return fecharComAviso();
+  // formulário
+  if (q('#fMoeda button')) { lerCamposForm(); F.moeda = q('#fMoeda button').dataset.m; return renderForm(); }
+  if (q('[data-fcat]')) { lerCamposForm(); const c = q('[data-fcat]').dataset.fcat; if (F.cat!==c){ F.cat=c; F.sub=null; if(!F.id) F.resp=respPadrao(c);} return renderForm(); }
+  if (q('[data-fsub]')) { lerCamposForm(); F.sub = q('[data-fsub]').dataset.fsub; return renderForm(); }
+  if (q('#fResp [data-r]')) { lerCamposForm(); if (F.pagamentos) F._pgAuto = true; const id = q('#fResp [data-r]').dataset.r; const todos = S.viagem.viajantes.map(v=>v.id);
+    if (id === '*') F.resp = todos;
+    else if (F.resp.includes(id)) { if (F.resp.length > 1) F.resp = F.resp.filter(x=>x!==id); }
+    else F.resp = todos.filter(x => F.resp.includes(x) || x === id);
+    if (F.partes) { const p = {}; F.resp.forEach(x => p[x] = F.partes[x] ?? ''); F.partes = F.resp.length > 1 ? p : null; }
+    return renderForm(); }
+  if (q('#fModo [data-modo]') && F.pagamentos) F._pgAuto = true;
+  if (q('#fModo [data-modo]')) { lerCamposForm(); if (q('#fModo [data-modo]').dataset.modo === 'valores') { if (!F.partes) { F.partes = {}; F.resp.forEach(x => F.partes[x] = ''); } } else F.partes = null; return renderForm(); }
+  if (q('#fPor [data-por]')) {
+    lerCamposForm(); const p = q('#fPor [data-por]').dataset.por, todos = S.viagem.viajantes.map(v => v.id);
+    const atuais = F.pagamentos ? F.pagamentos.map(pg => pg.por) : [F.por];
+    let novos = atuais.includes(p) ? atuais.filter(x => x !== p) : todos.filter(x => atuais.includes(x) || x === p);
+    if (!novos.length) return;
+    if (novos.length === 1) {
+      const antigo = F.pagamentos && F.pagamentos.find(pg => pg.por === novos[0]);
+      F.por = novos[0]; F.fonte = antigo ? antigo.fonte : (F.por === novos[0] && F.fonte ? F.fonte : fontePadrao(novos[0])); F.pagamentos = null;
+    } else {
+      const antes = F.pagamentos || [{ por: F.por, fonte: F.fonte, valor: '' }];
+      F.pagamentos = novos.map(id => antes.find(pg => pg.por === id) || { por: id, fonte: fontePadrao(id), valor: '' });
+      F.por = novos[0]; F._pgAuto = true;
+    }
+    return renderForm();
+  }
+  if (q('#fStatus button')) { lerCamposForm(); F.status = q('#fStatus button').dataset.s; return renderForm(); }
+  if (q('#fMais')) { lerCamposForm(); F._mais = true; return renderForm(); }
+  if (q('#fIncl')) { lerCamposForm(); F.incluir = !F.incluir; return renderForm(); }
+  if (q('#fFoto')) { lerCamposForm(); return $('#cam').click(); }
+  if (q('#fFotoX')) { lerCamposForm(); F.foto=null; return renderForm(); }
+  if (q('#fSalvar')) return salvarForm();
+  if (q('#fExcluir')) { if (!confirm('Excluir este lançamento?')) return; S.lanc = S.lanc.filter(x=>x.id!==F.id); S.excluidos[F.id] = Date.now(); S.local.excLoc[F.id] = {loc: Date.now(), via: null}; save(); fecharSheet(); render(); return toast('Lançamento excluído'); }
+  // categorias
+  if (q('[data-addsub]')) { const id = q('[data-addsub]').dataset.addsub; return sheetTexto('Nova subcategoria', 'Nome da subcategoria em '+esc(cat(id).nome), n => { cat(id).subs.push(n); save(); }); }
+  if (q('[data-editcat]')) return editarCategoria(q('[data-editcat]').dataset.editcat);
+  if (q('#novaCat')) return sheetTexto('Nova categoria', 'Nome da categoria', n => { S.categorias.push({id:'c'+Date.now().toString(36), nome:n, icone:'dots', cor:'#6B7280', subs:['Geral'], regra:'eu'}); save(); });
+  // ajustes
+  if (q('#btnSync') || q('#btnSync2')) return abrirSync();
+  if (q('.leg-prev[data-ajuda]')) { UI.ajudaCarteira = !UI.ajudaCarteira; document.querySelectorAll('.wal-ajuda').forEach(e => e.classList.toggle('on', UI.ajudaCarteira)); return; }
+  if (q('[data-verf]')) { const [p, id] = q('[data-verf]').dataset.verf.split('|'); return abrirFonte(p, id); }
+  if (q('[data-cart]')) return abrirCarteira(q('[data-cart]').dataset.cart);
+  if (q('[data-irp]')) { UI.pessoa = q('[data-irp]').dataset.irp; return render(); }
+  if (q('#addP')) {
+    const usadas = S.viagem.viajantes.map(v=>v.cor);
+    const cor = CORES_P.find(c=>!usadas.includes(c)) || CORES_P[S.viagem.viajantes.length % CORES_P.length];
+    S.viagem.viajantes.push({id:'p'+Date.now().toString(36), nome:'Viajante ' + (S.viagem.viajantes.length+1), cor, fontes:[]});
+    save(); render(); const ins = document.querySelectorAll('[data-nome-p]'); const u = ins[ins.length-1]; u.focus(); u.select(); return;
+  }
+  if (q('[data-cor-p]')) { const v = trav(q('[data-cor-p]').dataset.corP); const i = CORES_P.indexOf(v.cor); v.cor = CORES_P[(i+1) % CORES_P.length]; save(); return render(); }
+  if (q('[data-rm-p]')) return removerViajante(q('[data-rm-p]').dataset.rmP);
+  if (q('#swFotos')) return q('#swFotos').classList.toggle('on');
+  if (q('#exp')) { baixarArquivo(arquivoDeDados($('#swFotos')?.classList.contains('on'), 'json')); return toast('Arquivo exportado'); }
+  if (q('#compArq')) return compartilharArquivo();
+  if (q('#impBtn')) return abrirJuntar();
+  if (q('#abrirArq')) { if (confirm('Abrir outro arquivo substitui todos os dados deste aparelho. Exporte antes se quiser guardar. Continuar?')) { MODO_IMP = 'abrir'; $('#imp').click(); } return; }
+  if (q('#apagarTudo')) { if (confirm('Apagar todos os dados deste aparelho? Isso não pode ser desfeito. Exporte antes se quiser guardar.')) { DB.apagar(); S = null; telaBoasVindas(); } return; }
+});
+
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (F && F.pagamentos && (t.dataset.pgv || t.id === 'fValor' || t.dataset.parte)) {
+    if (t.dataset.pgv) { F._pgAuto = false; const pg = F.pagamentos.find(x => x.por === t.dataset.pgv); if (pg) { const v = numBR(t.value); pg.valor = isNaN(v) ? '' : v; } }
+    // mudou o valor total: por padrão redistribui os pagamentos (cada um paga a sua parte); depois dá para ajustar à mão
+    else { if (t.id === 'fValor') { F.valor = t.value; F._pgAuto = true; } else F.partes[t.dataset.parte] = t.value;
+      autoPagamentos(); document.querySelectorAll('[data-pgv]').forEach(i => { const pg = F.pagamentos.find(x => x.por === i.dataset.pgv); if (pg && F._pgAuto) i.value = (+pg.valor).toFixed(2).replace('.',','); }); }
+    const el = $('#fPgResto'); if (el) { const [cls, txt] = textoRestoPg(); el.className = 'resto ' + cls; el.textContent = txt; }
+  }
+  if (t.dataset.parte || (t.id === 'fValor' && F && F.partes)) {
+    if (t.dataset.parte) F.partes[t.dataset.parte] = t.value; else F.valor = t.value;
+    const el = $('#fResto'); if (el) { const n = numBR(String(F.valor??'')) || 0, r = n - somaPartes();
+      const sb = F.moeda===S.viagem.nativa.cod ? S.viagem.nativa.simb : S.viagem.local.simb;
+      el.className = 'resto ' + (Math.abs(r) < 0.005 ? 'ok' : 'bad');
+      el.textContent = Math.abs(r) < 0.005 ? 'Tudo distribuído ✓' : r > 0 ? 'Falta distribuir ' + fmt(r, sb) : 'Passou ' + fmt(-r, sb) + ' do total'; }
+  }
+  if (t.id === 'fValor') { F.valor = t.value; const num = numBR(t.value); const v=S.viagem;
+    $('#fConv').textContent = num>0 ? (F.moeda===v.local.cod ? `≈ ${fmt(emNativa({...F,valor:num,fatura:null}),v.nativa.simb)} ${descConv(fonteDe(F))}` : `≈ ${fmt(num/v.cotacao,v.local.simb)}`) : ''; }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.cfg) { const [a,b] = t.dataset.cfg.split('.'); if (b) S.viagem[a][b] = t.value.trim(); else S.viagem[a] = numBR(t.value) || S.viagem[a]; save(); render(); toast('Ajuste salvo'); }
+  if (t.dataset.nomeP) { const v = trav(t.dataset.nomeP); v.nome = t.value.trim() || v.nome; save(); render(); toast('Nome salvo'); }
+  if (t.id === 'aparelho') { S.aparelho = t.value; save(); render(); toast('Aparelho de ' + nomeP(t.value)); }
+  if (t.id === 'hojeSim') { const n = parseInt(t.value, 10); S.viagem.hojeManual = n >= 0 ? Math.min(S.viagem.dias + 1, n) : null; save(); render(); toast(S.viagem.hojeManual == null ? 'Usando a data real' : 'Simulando o dia D' + S.viagem.hojeManual); }
+  if (t.dataset.cfgt) { if (t.value.trim()) { S.viagem[t.dataset.cfgt] = t.value.trim(); save(); render(); toast('Ajuste salvo'); } }
+  if (t.dataset.cfgn) { const n = parseInt(t.value, 10); if (n > 0 && n < 400) { S.viagem[t.dataset.cfgn] = n; save(); render(); toast('Ajuste salvo'); } }
+  if (t.id === 'fFonte' || t.dataset.pgf) { lerCamposForm(); renderForm(); }
+});
+$('#cam').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image(), rd = new FileReader();
+  rd.onload = () => { img.onload = () => { const k = Math.min(1, 900/Math.max(img.width,img.height)); const c = document.createElement('canvas');
+    c.width = img.width*k; c.height = img.height*k; c.getContext('2d').drawImage(img,0,0,c.width,c.height); F.foto = c.toDataURL('image/jpeg',.7); renderForm(); }; img.src = rd.result; };
+  rd.readAsDataURL(f); e.target.value='';
+};
+let MODO_IMP = 'juntar';
+// arquivo com todos os dados + quem gerou e até quando (a junção usa isso para não reenviar tudo depois pelo QR)
+function arquivoDeDados(incluirFotos, ext){
+  const {local, ...semLocal} = S;
+  const dados = {...semLocal, formato:'finviagem', versao:1, exportado:new Date().toISOString(),
+    de: meuDisp(), nomeDe: nomeP(S.aparelho), ts: Date.now(), acks: {...S.local.recebido},
+    lanc: S.lanc.map(l => incluirFotos ? l : {...l, foto:null})};
+  const slug = t => String(t).toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const nome = `financeiro-${slug(S.viagem.nome)}-${slug(nomeP(S.aparelho))}.${ext}`;
+  return new File([JSON.stringify(dados)], nome, { type: ext === 'txt' ? 'text/plain' : 'application/json' });
+}
+function baixarArquivo(file){ const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; a.click(); }
+// Envio entre celulares num PDF: o Quick Share da Samsung trata .txt como mensagem de texto e descarta o conteúdo,
+// e .json não pode ser compartilhado pela web. O PDF abre como uma página explicando o uso; os dados vão
+// comprimidos num bloco FVDATA dentro dele, e o "Juntar arquivo" lê esse bloco.
+async function paraBase64(bytes){ let s = ''; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)); return btoa(s); }
+async function pdfDeDados(json, linhas){
+  const comp = new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+  const dados = 'FVDATA:' + await paraBase64(comp) + ':FVFIM';
+  // texto da página em WinAnsi: acentos viram escapes octais; o que não existe nessa tabela vira espaço
+  const escPdf = t => t.replace(/[^\x20-\xff]/g, ' ').replace(/[\\()]/g, m => '\\' + m).replace(/[\x80-\xff]/g, c => '\\' + c.charCodeAt(0).toString(8));
+  const texto = linhas.map((l, i) => `BT /F1 ${i ? 12 : 18} Tf 50 ${780 - i * 22} Td (${escPdf(l)}) Tj ET`).join('\n');
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+    `<< /Length ${texto.length} >>\nstream\n${texto}\nendstream`,
+    `<< /Length ${dados.length} >>\nstream\n${dados}\nendstream`
+  ];
+  let pdf = '%PDF-1.4\n'; const pos = [];
+  objs.forEach((o, i) => { pos.push(pdf.length); pdf += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + pos.map(p => String(p).padStart(10, '0') + ' 00000 n \n').join('')
+    + `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return pdf;
+}
+async function lerDadosPdf(texto){
+  const m = /FVDATA:([A-Za-z0-9+/=]+):FVFIM/.exec(texto);
+  if (!m) throw new Error('formato');
+  const bin = atob(m[1]), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return descomprimir(bytes);
+}
+async function arquivoParaEnviar(){
+  const base = arquivoDeDados(false, 'json'), json = await base.text();
+  const quando = new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  const pdf = await pdfDeDados(json, [
+    'Financeiro da Viagem', 'Arquivo de sincronização: ' + S.viagem.nome, 'Enviado por ' + nomeP(S.aparelho) + ' em ' + quando, '',
+    'Para usar: no outro celular, abra o app Financeiro da Viagem, toque no botão', 'de sincronizar (as duas setas, no topo) e em Juntar arquivo recebido.', '',
+    'Os dados da viagem estão guardados dentro deste arquivo.'
+  ]);
+  return new File([pdf], base.name.replace(/\.json$/, '.pdf'), { type: 'application/pdf' });
+}
+async function compartilharArquivo(){
+  const file = await arquivoParaEnviar();
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    // só o arquivo: com título junto, o Quick Share da Samsung envia o título como texto e descarta o arquivo
+    try { await navigator.share({ files: [file] }); toast('No outro celular: sincronizar → Juntar arquivo recebido'); }
+    catch(e){ if (e.name !== 'AbortError') { baixarArquivo(file); toast('Arquivo salvo em Downloads'); } }
+  } else { baixarArquivo(file); toast('Arquivo salvo em Downloads'); }
+}
+function juntar(d, origem = 'arquivo'){
+  const agora = Date.now();
+  let novos = 0, atualizados = 0, removidos = 0;
+  const exc = {...S.excluidos};
+  for (const [id, ts] of Object.entries(d.excluidos || {})) if (!exc[id] || exc[id] < ts) exc[id] = ts;
+  const porId = new Map(S.lanc.map(l => [l.id, l]));
+  for (const l of d.lanc || []) {
+    if (exc[l.id] && exc[l.id] >= (l.upd || 0)) continue;
+    const m = porId.get(l.id);
+    if (!m) { l.loc = agora; l.via = origem; S.lanc.push(l); porId.set(l.id, l); novos++; }
+    else if ((l.upd || 0) > (m.upd || 0)) { Object.assign(m, l, {loc: agora, via: origem}); atualizados++; }
+  }
+  const antes = S.lanc.length;
+  S.lanc = S.lanc.filter(l => !(exc[l.id] && exc[l.id] >= (l.upd || 0)));
+  removidos = antes - S.lanc.length;
+  for (const id of Object.keys(exc)) if (!S.excluidos[id] || S.excluidos[id] < exc[id]) S.local.excLoc[id] = {loc: agora, via: origem};
+  S.excluidos = exc;
+  for (const v of d.viagem?.viajantes || []) {
+    const m = trav(v.id);
+    if (!m) { S.viagem.viajantes.push(v); continue; }
+    for (const fo of v.fontes || []) { const x = m.fontes.find(y => y.id === fo.id); if (!x) m.fontes.push(fo); else if ((fo.upd||0) > (x.upd||0)) Object.assign(x, fo); }
+  }
+  for (const c of d.categorias || []) { const m = S.categorias.find(x => x.id === c.id); if (!m) S.categorias.push(c); else c.subs.forEach(sb => { if (!m.subs.includes(sb)) m.subs.push(sb); }); }
+  return {novos, atualizados, removidos};
+}
+function perguntarDono(){
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>De quem é este celular?</h2></div>
+    <p class="sub">Os lançamentos feitos aqui ficam registrados em nome desta pessoa, e as regras "quem lança" usam este nome.</p>
+    <div class="pchips" style="margin-top:12px">${S.viagem.viajantes.map(v => `<button class="pchip" data-dono="${v.id}">${av(v.id)}${esc(v.nome)}</button>`).join('')}</div>`;
+  abrirSheet();
+  $('#sheetIn').querySelectorAll('[data-dono]').forEach(b => b.onclick = () => { S.aparelho = b.dataset.dono; save(); fecharSheet(); render(); toast('Pronto! Celular de ' + nomeP(S.aparelho)); });
+}
+$('#imp').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = async () => { try {
+      const txt = String(rd.result);
+      const d = txt.startsWith('%PDF') ? await lerDadosPdf(txt) : JSON.parse(txt);
+      if (!d.viagem || !Array.isArray(d.lanc)) throw new Error('formato');
+      if (MODO_IMP === 'abrir' || !S) {
+        delete d.local; S = normalizar(d); S.aparelho = null; UI.pessoa = 't'; UI.tab = 'painel'; save(); iniciar(); perguntarDono(); return;
+      }
+      normalizar(d);
+      const deOutro = d.de && d.de !== meuDisp();
+      const r = juntar(d, deOutro ? d.de : 'arquivo');
+      if (deOutro && d.ts) {
+        const L = S.local; L.recebido[d.de] = Math.max(L.recebido[d.de] || 0, d.ts);
+        const ack = d.acks && d.acks[meuDisp()]; if (ack) L.enviadoOk[d.de] = Math.max(L.enviadoOk[d.de] || 0, ack);
+        L.ultimaSync[d.de] = { quando: Date.now(), nome: d.nomeDe || 'outro celular' };
+      }
+      save(); render();
+      const txtR = r.novos + r.atualizados + r.removidos ? `${r.novos} novo(s) · ${r.atualizados} atualizado(s) · ${r.removidos} removido(s)` : 'Nada novo para juntar';
+      if (!deOutro) return toast(txtR);
+      // arquivo de outro celular: mostra o resultado e já oferece o QR de conclusão (começando por este celular)
+      SYNC.meio = null;
+      $('#sheetIn').innerHTML = `<div class="grab"></div><div class="ok-grande"><div class="ico">✓</div><h2 style="margin:0 0 4px">Arquivo de ${esc(d.nomeDe || 'outro celular')} juntado</h2><p class="sub">${txtR}</p></div>
+        <div class="aviso-grande"><b>Para terminar:</b> faça uma sincronização rápida por QR começando por <b>este</b> celular. Assim o outro também recebe o que só existe aqui e os dois são conferidos.</div>
+        <button class="btn pri" id="syHost">Começar (mostrar meu código)</button>
+        <button class="btn ghost" data-close style="margin-top:8px">Agora não</button>`;
+      abrirSheet();
+      $('#syHost').onclick = async () => mostrarCodigo(await codificar(montarPacote(null)), 'host');
+    } catch(err){ toast('Arquivo inválido. Escolha o PDF recebido do outro celular.'); } };
+  rd.readAsText(f); e.target.value='';
+};
+// antes de abrir o seletor do Android: explica onde o arquivo recebido costuma ficar
+function abrirJuntar(){
+  pararSync(); SYNC.meio = null;
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>Juntar arquivo recebido</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <p class="sub" style="margin:0 0 6px">Use o PDF que o outro celular enviou (nome parecido com <b>financeiro-${esc(S.viagem.nome.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''))}-nome.pdf</b>).</p>
+    <div class="passo"><b>1</b><span>Toque em <b style="all:unset;font-weight:700">Escolher o arquivo</b>. Abre a lista de arquivos do celular.</span></div>
+    <div class="passo"><b>2</b><span>Veio pelo <b style="all:unset;font-weight:700">Quick Share</b>: procure em <b style="all:unset;font-weight:700">Recentes</b> ou na pasta <b style="all:unset;font-weight:700">Download › Quick Share</b>.</span></div>
+    <div class="passo"><b>3</b><span>Veio pelo <b style="all:unset;font-weight:700">WhatsApp</b>: antes, toque no arquivo na conversa para baixar; depois procure em <b style="all:unset;font-weight:700">Recentes</b>.</span></div>
+    <div class="passo"><b>4</b><span>Toque no PDF. O app junta os dados e mostra o que mudou; os lançamentos repetidos não duplicam.</span></div>
+    <button class="btn pri" id="jEscolher">Escolher o arquivo</button>`;
+  abrirSheet();
+  $('#jEscolher').onclick = () => { MODO_IMP = 'juntar'; $('#imp').click(); };
+}
+$('#scrim').onclick = fecharComAviso;
+
+/* ============ Sincronização por QR Code ============
+   Protocolo (dois celulares, sem rede):
+   1) HOST mostra o pacote P1 (o que mudou aqui desde a última confirmação do outro).
+   2) CLIENT lê P1, junta, e mostra P2 (o que mudou lá desde a confirmação que veio em P1).
+   3) HOST lê P2 e junta. Cada pacote leva "ack": até que hora (do relógio do outro) já foi recebido,
+      assim cada lado sabe o que o outro já tem e envia só o que falta.
+   ================================================== */
+const SYNC = { timer:null, stream:null, loop:null, lock:null, meio:null };
+// fechar no meio da sincronização: avisa o que fica faltando (meio = 'host' | 'client' | 'ajuste')
+const AVISO_MEIO = {
+  host: 'A sincronização ficou pela metade: falta ler a resposta do outro celular, e as mudanças dele não chegam aqui. Sair mesmo assim?',
+  client: 'O outro celular ainda precisa ler este código; sem isso, as mudanças deste celular não chegam lá. Sair mesmo assim?',
+  ajuste: 'Os dois celulares ainda estão diferentes. Sair sem fazer o ajuste?'
+};
+function fecharComAviso(){
+  if (SYNC.meio && $('#sheet').classList.contains('on') && !confirm(AVISO_MEIO[SYNC.meio])) return;
+  SYNC.meio = null; fecharSheet();
+}
+function meuDisp(){
+  try { let d = localStorage.getItem('finviagem-disp'); if (!d) { d = 'd' + Math.random().toString(36).slice(2, 10); localStorage.setItem('finviagem-disp', d); } return d; }
+  catch(e){ S.local.disp ||= 'd' + Math.random().toString(36).slice(2, 10); return S.local.disp; }
+}
+// chaves curtas no QR (o pacote fica bem menor); expandir() desfaz
+const CHAVE = {id:'i',desc:'d',cat:'c',sub:'s',valor:'v',moeda:'m',dia:'y',status:'t',resp:'r',partes:'q',pagamentos:'g',por:'p',fonte:'f',fatura:'x',incluir:'n',obs:'o',upd:'u'};
+const CHAVE_INV = Object.fromEntries(Object.entries(CHAVE).map(([a, b]) => [b, a]));
+const ST_C = {estimado:'E', apagar:'A', pago:'P', realizado:'R'}, ST_INV = {E:'estimado', A:'apagar', P:'pago', R:'realizado'};
+function compactar(l){
+  const o = {};
+  for (const [k, v] of Object.entries(l)) {
+    if (k === 'foto' || k === 'loc' || k === 'via' || v === null || v === '' || v === undefined) continue;
+    if (k === 'incluir' && v === true) continue;
+    if (k === 'moeda' && v === S.viagem.local.cod) continue;
+    let x = v;
+    if (k === 'status') x = ST_C[v] || v;
+    if (k === 'pagamentos') x = v.map(pg => [pg.por, pg.fonte || 0, pg.valor]);
+    o[CHAVE[k] || k] = x;
+  }
+  return o;
+}
+function expandir(o){
+  const l = {};
+  for (const [k, v] of Object.entries(o)) {
+    const kk = CHAVE_INV[k] || k; let x = v;
+    if (kk === 'status') x = ST_INV[v] || v;
+    if (kk === 'pagamentos') x = v.map(a => ({ por: a[0], fonte: a[1] || null, valor: a[2] }));
+    l[kk] = x;
+  }
+  l.moeda ??= S.viagem.local.cod; l.incluir ??= true;
+  return l;
+}
+function enxugar(l){ const o = {}; for (const [k, v] of Object.entries(l)) { if (k === 'foto' || k === 'loc' || k === 'via') continue; if (v === null || v === '' || v === undefined) continue; o[k] = v; } return o; }
+function hashNum(t){ let h = 5381; for (let i = 0; i < t.length; i++) h = (h * 33 + t.charCodeAt(i)) | 0; return h >>> 0; }
+function hashTxt(t){ return hashNum(t).toString(36); }
+// Conferência: os lançamentos (e exclusões) são divididos em 16 grupos e cada grupo vira um código curto.
+// No fim da sincronização os dois celulares comparam os códigos; grupo diferente = algo não chegou, e só ele é reenviado.
+const N_GRUPOS = 16;
+const grupoDe = id => hashNum(id) % N_GRUPOS;
+function resumoGrupos(){
+  const g = Array.from({length: N_GRUPOS}, () => []);
+  for (const l of S.lanc) g[grupoDe(l.id)].push(l.id + ':' + (l.upd || 0));
+  for (const id of Object.keys(S.excluidos)) g[grupoDe(id)].push(id + ':x');
+  return g.map(a => (hashNum(a.sort().join('|')) % 1679616).toString(36).padStart(4, '0')).join('');
+}
+function gruposDiferentes(outro){
+  if (!outro) return [];
+  const meu = resumoGrupos(), dif = [];
+  for (let i = 0; i < N_GRUPOS; i++) if (meu.slice(i * 4, i * 4 + 4) !== outro.slice(i * 4, i * 4 + 4)) dif.push(i);
+  return dif;
+}
+// ajuste = lista de grupos a reenviar por inteiro (quando a conferência acusou diferença)
+function montarPacote(peer, ajuste){
+  const L = S.local, eu = meuDisp();
+  // host não sabe quem vai ler: com um único parceiro conhecido (o caso de 2 celulares), usa ele
+  const pares = [...new Set([...Object.keys(L.recebido), ...Object.keys(L.enviadoOk)])];
+  if (!peer && pares.length === 1) peer = pares[0];
+  // com mais de um parceiro, parte do que o menos atualizado confirmou (quem nunca confirmou conta como zero)
+  const desde = peer ? (L.enviadoOk[peer] || 0) : (pares.length ? Math.min(...pares.map(k => L.enviadoOk[k] || 0)) : 0);
+  const noAjuste = id => ajuste.includes(grupoDe(id));
+  const lanc = (ajuste ? S.lanc.filter(l => noAjuste(l.id)) : S.lanc.filter(l => (l.loc || 0) > desde && (!peer || l.via !== peer))).map(compactar);
+  const exc = {};
+  if (ajuste) { for (const [id, ts] of Object.entries(S.excluidos)) if (noAjuste(id)) exc[id] = ts; }
+  else for (const [id, x] of Object.entries(L.excLoc)) if (x.loc > desde && (!peer || x.via !== peer)) exc[id] = S.excluidos[id] || x.loc;
+  // viajantes/carteiras e categorias só vão se mudaram desde a última vez que o outro CONFIRMOU ter recebido
+  const vh = hashTxt(JSON.stringify([S.viagem.viajantes, S.categorias])), ts = Date.now();
+  L.estrEnviada ||= {};
+  const e = peer ? L.estrEnviada[peer] : null;
+  const mandarEstrutura = !(e && e.hash === vh && (L.enviadoOk[peer] || 0) >= e.ts);
+  if (mandarEstrutura && peer) L.estrEnviada[peer] = { hash: vh, ts };
+  return { t:'fvs', v:2, viagem:S.viagem.id, de:eu, nome:nomeP(S.aparelho), ts, acks:{...L.recebido}, vh,
+    lanc, exc, ...(ajuste ? { aj: ajuste } : {}), ...(mandarEstrutura ? { via:S.viagem.viajantes, cats:S.categorias } : {}), rg: resumoGrupos() };
+}
+function aplicarPacote(P){
+  if (!P || P.t !== 'fvs') throw new Error('Código não reconhecido');
+  if (P.viagem !== S.viagem.id) throw new Error('Este código é de outra viagem');
+  if (P.de === meuDisp()) throw new Error('Este é o código deste próprio celular');
+  if (P.v === 2) P.lanc = P.lanc.map(expandir);
+  for (const l of P.lanc) { l.partes ??= null; l.obs ??= ''; l.fatura ??= null; l.fonte ??= null; l.pagamentos ??= null; l.foto = null; l.incluir ??= true; }
+  const r = juntar({ lanc:P.lanc, excluidos:P.exc, viagem:{viajantes:P.via || []}, categorias:P.cats || [] }, P.de);
+  const L = S.local;
+  L.hashOutro ||= {}; if (P.vh) L.hashOutro[P.de] = P.vh;
+  L.recebido[P.de] = Math.max(L.recebido[P.de] || 0, P.ts);
+  const ack = P.acks && P.acks[meuDisp()];
+  if (ack) L.enviadoOk[P.de] = Math.max(L.enviadoOk[P.de] || 0, ack);
+  L.ultimaSync[P.de] = { quando: Date.now(), nome: P.nome || 'outro celular' };
+  save(); render();
+  return r;
+}
+// pacote → partes para QR: JSON → deflate → base45 (modo alfanumérico do QR, ~25% mais compacto) → pedaços
+// Cada parte: "FV2:SESS:i:n:dados". Pedaços pequenos (249 caracteres) = QR com pontos grandes, fácil de ler.
+const B45 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
+const TAM_PARTE = 249; // múltiplo de 3 (cada 2 bytes viram 3 caracteres)
+function b45enc(b){ let t = ''; for (let i = 0; i < b.length; i += 2) { if (i + 1 < b.length) { const n = b[i] * 256 + b[i + 1]; t += B45[n % 45] + B45[Math.floor(n / 45) % 45] + B45[Math.floor(n / 2025)]; } else { const n = b[i]; t += B45[n % 45] + B45[Math.floor(n / 45)]; } } return t; }
+function b45dec(t){ const out = []; for (let i = 0; i < t.length; i += 3) { const c = B45.indexOf(t[i]), d = B45.indexOf(t[i + 1]);
+  if (c < 0 || d < 0) throw new Error('Código inválido');
+  if (i + 2 < t.length) { const e = B45.indexOf(t[i + 2]); if (e < 0) throw new Error('Código inválido'); const n = c + d * 45 + e * 2025; out.push(n >> 8, n & 255); } else out.push(c + d * 45); }
+  return new Uint8Array(out); }
+async function codificar(P){
+  const bytes = new Uint8Array(await new Response(new Blob([JSON.stringify(P)]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+  const txt = b45enc(bytes), n = Math.max(1, Math.ceil(txt.length / TAM_PARTE));
+  let sid = ''; for (let i = 0; i < 4; i++) sid += '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 36)];
+  return Array.from({length:n}, (_, i) => `FV2:${sid}:${i + 1}:${n}:${txt.slice(i * TAM_PARTE, (i + 1) * TAM_PARTE)}`);
+}
+async function descomprimir(bytes){ return JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()); }
+async function decodificar(pedacos, versao){
+  if (versao === 1) { const bin = atob(pedacos.join('')), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return descomprimir(bytes); }
+  return descomprimir(b45dec(pedacos.join('')));
+}
+function desenharQR(canvas, texto){
+  const qr = qrcode(0, 'M'); qr.addData(texto, /^[0-9A-Z $%*+\-./:]*$/.test(texto) ? 'Alphanumeric' : 'Byte'); qr.make();
+  const n = qr.getModuleCount(), borda = 4;
+  const alvo = Math.min(380, (document.getElementById('sheetIn')?.clientWidth || 360) - 56);
+  const px = Math.max(3, Math.floor(alvo / (n + borda * 2)));
+  canvas.width = canvas.height = (n + borda * 2) * px;
+  const g = canvas.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, canvas.width, canvas.height); g.fillStyle = '#000';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) g.fillRect((c + borda) * px, (r + borda) * px, px, px);
+}
+async function manterTelaAcesa(){ try { if ('wakeLock' in navigator && !SYNC.lock) SYNC.lock = await navigator.wakeLock.request('screen'); } catch(e){} }
+function pararSync(){
+  clearInterval(SYNC.timer); SYNC.timer = null; cancelAnimationFrame(SYNC.loop); SYNC.loop = null;
+  if (SYNC.stream) { SYNC.stream.getTracks().forEach(t => t.stop()); SYNC.stream = null; }
+  if (SYNC.lock) { SYNC.lock.release().catch(() => {}); SYNC.lock = null; }
+}
+function resumo(r){ return r.novos + r.atualizados + r.removidos ? `${r.novos} novo(s) · ${r.atualizados} atualizado(s) · ${r.removidos} removido(s)` : 'nenhuma mudança nova'; }
+const PARTES_GRANDE = 8; // acima disso, sugere enviar por arquivo
+
+function abrirSync(){
+  pararSync(); SYNC.meio = null;
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>Sincronizar celulares</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <p class="sub" style="margin:0 0 6px">Os dois celulares lado a lado, com o app aberto. Não precisa de internet.</p>
+    <div class="passo"><b>1</b><span>Neste celular, toque em <b style="all:unset;font-weight:700">Começar</b>. Ele mostra um QR Code.</span></div>
+    <div class="passo"><b>2</b><span>No outro, toque em <b style="all:unset;font-weight:700">Ler o código do outro</b> e aponte a câmera, a uns 20 cm.</span></div>
+    <div class="passo"><b>3</b><span>O outro celular mostra o código dele. Aqui, toque em <b style="all:unset;font-weight:700">Ler a resposta</b>. Quem começa também termina; não precisa inverter.</span></div>
+    <button class="btn pri" id="syHost">Começar (mostrar meu código)</button>
+    <button class="btn ghost" id="syCli" style="margin-top:8px">Ler o código do outro</button>
+    <div class="hint" style="margin-top:12px">Muita coisa mudou desde a última vez (ex.: a primeira sincronização)? Envie por arquivo e, no outro celular, toque em <b>Juntar arquivo recebido</b> aqui nesta tela.</div>
+    <button class="btn ghost" id="compArq" style="margin-top:8px">Enviar (Quick Share / WhatsApp)</button>
+    <button class="btn ghost" id="impBtn" style="margin-top:8px"><svg class="i" style="vertical-align:-4px"><use href="#i-down"/></svg> Juntar arquivo recebido (PDF)</button>`;
+  abrirSheet();
+  $('#syHost').onclick = async () => mostrarCodigo(await codificar(montarPacote(null)), 'host');
+  $('#syCli').onclick = () => lerCodigo(async P => {
+    const r = aplicarPacote(P);
+    // código de ajuste: responde com os mesmos grupos por inteiro (o que só este celular tiver também volta)
+    mostrarCodigo(await codificar(montarPacote(P.de, P.aj)), 'client', r, P.nome);
+  });
+}
+// host leu a resposta: confere se os dois ficaram iguais; se não, oferece o código de ajuste (só os grupos diferentes)
+async function concluirSync(P, tentativa){
+  const r2 = aplicarPacote(P);
+  const dif = gruposDiferentes(P.rg), nome = esc(P.nome || 'o outro celular');
+  SYNC.meio = dif.length ? 'ajuste' : null;
+  if (!dif.length) {
+    $('#sheetIn').innerHTML = `<div class="grab"></div><div class="ok-grande"><div class="ico">✓</div><h2 style="margin:0 0 4px">Sincronizado com ${nome}</h2><p class="sub">${resumo(r2)}${P.rg ? '<br>Conferido: os dois celulares estão iguais.' : ''}</p></div><button class="btn pri" data-close>Concluir</button>`;
+    return;
+  }
+  const partes = await codificar(montarPacote(P.de, dif));
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>Falta um ajuste</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <p class="sub" style="margin:0 0 10px">Recebido: ${resumo(r2)}. Na conferência final, alguns lançamentos ainda estão diferentes entre os dois celulares.
+    ${tentativa > 1 ? 'O ajuste pelo QR não resolveu; envie o arquivo completo (Quick Share ou WhatsApp) e, no outro celular, use <b>Juntar arquivo</b>.' : `Mostre o código de ajuste para ${nome} ler (${partes.length} parte${partes.length > 1 ? 's' : ''}); depois leia a resposta dele aqui.`}</p>
+    ${tentativa > 1 ? '<button class="btn pri" id="compArq">Enviar arquivo completo</button>' : '<button class="btn pri" id="syAjuste">Mostrar código de ajuste</button>'}`;
+  if ($('#syAjuste')) $('#syAjuste').onclick = () => mostrarCodigo(partes, 'host', null, null, tentativa + 1);
+}
+function mostrarCodigo(partes, papel, r, nomeOutro, tentativa = 1){
+  pararSync(); manterTelaAcesa();
+  const host = papel === 'host', varias = partes.length > 1;
+  SYNC.meio = papel;
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>${host ? 'Mostre ao outro celular' : 'Recebido de ' + esc(nomeOutro || 'outro celular')}</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    ${host ? '' : `<p class="sub" style="margin:0">✓ ${resumo(r)}.</p><div class="aviso-grande"><b>Falta 1 passo:</b> no outro celular, toque em <b>Ler a resposta do outro celular</b> e aponte para este código. Só assim as mudanças deste celular chegam lá.</div>`}
+    ${partes.length > PARTES_GRANDE ? `<div class="aviso-grande">Sincronização grande: <b>${partes.length} partes</b> (normal quando muita coisa mudou). Pelo QR leva alguns minutos; <b>mais rápido: enviar por arquivo</b>. <button class="btn ghost sm" id="compArq" style="margin-top:8px;width:100%">Enviar por Quick Share / WhatsApp</button></div>` : ''}
+    <div class="qrbox"><canvas id="qrc"></canvas></div>
+    <div class="qrinfo" id="qri"></div>
+    ${varias ? '<div class="qrctl"><button id="qAnt" aria-label="Parte anterior">◀</button><button id="qPausa">Pausar</button><button id="qProx" aria-label="Próxima parte">▶</button></div>' : ''}
+    ${host ? '<button class="btn pri" id="syLerResp">Ler a resposta do outro celular</button>' : '<button class="btn pri" id="syCliOk">Pronto, o outro já leu</button>'}`;
+  const cv = $('#qrc'); let i = 0, pausado = false;
+  const mostra = () => { desenharQR(cv, partes[i]); $('#qri').textContent = varias ? `Parte ${i + 1} de ${partes.length}${pausado ? ' · pausado' : ''}` : 'Aponte a câmera do outro celular para este código'; };
+  const avanca = d => { i = (i + d + partes.length) % partes.length; mostra(); };
+  mostra();
+  if (varias) {
+    SYNC.timer = setInterval(() => { if (!pausado) avanca(1); }, 1500);
+    $('#qAnt').onclick = () => { pausado = true; $('#qPausa').textContent = 'Continuar'; avanca(-1); };
+    $('#qProx').onclick = () => { pausado = true; $('#qPausa').textContent = 'Continuar'; avanca(1); };
+    $('#qPausa').onclick = () => { pausado = !pausado; $('#qPausa').textContent = pausado ? 'Continuar' : 'Pausar'; mostra(); };
+  }
+  if (host) $('#syLerResp').onclick = () => lerCodigo(P => concluirSync(P, tentativa));
+  else $('#syCliOk').onclick = () => { SYNC.meio = null; fecharSheet(); };
+}
+async function carregarJsQR(){
+  if (window.jsQR) return window.jsQR;
+  await new Promise((ok, erro) => { const sc = document.createElement('script'); sc.src = 'lib/jsQR.js'; sc.onload = ok; sc.onerror = erro; document.head.appendChild(sc); });
+  return window.jsQR;
+}
+async function lerCodigo(aoTerminar){
+  pararSync(); manterTelaAcesa();
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>Aponte para o código</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="cam"><video id="vid" playsinline muted></video><div class="mira"></div></div>
+    <div class="qrinfo" id="lst">Abrindo a câmera…</div><div class="progresso"><i id="lpr"></i></div><div class="pontos" id="lpt"></div>
+    <div class="hint" style="text-align:center">Segure a uns 20 cm. Se faltar alguma parte, use ◀ ▶ no outro celular para mostrá-la.</div>`;
+  abrirSheet();
+  const info = t => { const e = $('#lst'); if (e) e.textContent = t; };
+  try { SYNC.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false }); }
+  catch(e){ info('Não foi possível abrir a câmera. Permita o acesso à câmera para o app e tente de novo.'); return; }
+  // foco contínuo quando o aparelho permite
+  try { const tr = SYNC.stream.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {}; if (cap.focusMode && cap.focusMode.includes('continuous')) await tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch(e){}
+  const vid = $('#vid'); vid.srcObject = SYNC.stream; await vid.play().catch(() => {});
+  let detector = null, jsqr = null;
+  if ('BarcodeDetector' in window) { try { if ((await BarcodeDetector.getSupportedFormats()).includes('qr_code')) detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch(e){} }
+  if (!detector) { try { jsqr = await carregarJsQR(); } catch(e){ info('Leitor de QR indisponível neste aparelho.'); return; } }
+  const tela = document.createElement('canvas'), ctx = tela.getContext('2d', { willReadFrequently: true });
+  let sid = null, total = 0, versao = 2; const partes = {};
+  info('Procurando o código…');
+  const desenharPontos = ultima => { const el = $('#lpt'); if (!el || total < 2) return; el.innerHTML = Array.from({length: total}, (_, k) => `<i class="${partes[k + 1] ? 'ok' : ''}${ultima === k + 1 ? ' at' : ''}"></i>`).join(''); };
+  const tratar = async texto => {
+    let m = /^FV2:([0-9A-Z]{4}):(\d+):(\d+):([\s\S]*)$/.exec(texto || ''), v = 2;
+    if (!m) { m = /^FV1\|(\w+)\|(\d+)\|(\d+)\|([\s\S]*)$/.exec(texto || ''); v = 1; }
+    if (!m) return false;
+    if (sid !== m[1]) { sid = m[1]; total = +m[3]; versao = v; for (const k in partes) delete partes[k]; }
+    partes[+m[2]] = m[4];
+    const n = Object.keys(partes).length;
+    const faltam = Array.from({length: total}, (_, k) => k + 1).filter(k => !partes[k]);
+    info(total > 1 ? (faltam.length ? `Recebidas ${n} de ${total}${faltam.length <= 6 ? ' · faltam: ' + faltam.join(', ') : ''}` : 'Todas as partes recebidas!') : 'Lido!');
+    const pr = $('#lpr'); if (pr) pr.style.width = (n / total * 100) + '%';
+    desenharPontos(+m[2]);
+    if (n < total) return false;
+    pararSync();
+    try { const P = await decodificar(Array.from({length: total}, (_, k) => partes[k + 1]), versao); await aoTerminar(P); }
+    catch(e){ info(e.message || 'Código inválido'); toast(e.message || 'Código inválido'); }
+    return true;
+  };
+  let ocupado = false;
+  const rodar = async () => {
+    if (!SYNC.stream) return;
+    if (!ocupado && vid.readyState >= 2) {
+      ocupado = true;
+      try {
+        if (detector) { const cods = await detector.detect(vid); for (const c of cods) if (await tratar(c.rawValue)) return; }
+        else { tela.width = vid.videoWidth; tela.height = vid.videoHeight; ctx.drawImage(vid, 0, 0); const img = ctx.getImageData(0, 0, tela.width, tela.height);
+          const c = jsqr(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' }); if (c && await tratar(c.data)) return; }
+      } catch(e){}
+      ocupado = false;
+    }
+    SYNC.loop = requestAnimationFrame(rodar);
+  };
+  rodar();
+}
+
+function telaBoasVindas(){
+  document.querySelector('.nav').style.display = 'none';
+  $('#app').innerHTML = `<div class="welcome">
+    <div class="logo"><svg class="i"><use href="#i-wallet"/></svg></div>
+    <h1>Carteira</h1>
+    <p>Controle de gastos da viagem, em duas moedas, funcionando sem internet. Os dados ficam só neste celular.</p>
+    <button class="btn pri" id="wAbrir">Abrir arquivo da viagem</button>
+    <button class="btn ghost" id="wNova">Criar uma viagem nova</button>
+    <div class="hint" style="margin-top:16px">O arquivo da viagem (.json) vem de quem organizou a viagem ou da exportação de outro celular.</div>
+  </div>`;
+  $('#wAbrir').onclick = () => { MODO_IMP = 'abrir'; $('#imp').click(); };
+  $('#wNova').onclick = formNovaViagem;
+}
+function formNovaViagem(){
+  const hojeISO = new Date().toISOString().slice(0,10);
+  $('#sheetIn').innerHTML = `<div class="grab"></div><div class="shead"><h2>Nova viagem</h2><button class="iconbtn" data-close><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="flabel">Nome da viagem</div><input class="field" id="nNome" placeholder="Ex.: Férias no Chile">
+    <div class="row2"><div><div class="flabel">Primeiro dia</div><input class="field" type="date" id="nIni" value="${hojeISO}"></div>
+      <div><div class="flabel">Número de dias</div><input class="field num" inputmode="numeric" id="nDias" value="10"></div></div>
+    <div class="flabel">Seu nome</div><input class="field" id="nEu" placeholder="Ex.: Ana">
+    <div class="row2"><div><div class="flabel">Moeda do destino</div><div style="display:flex;gap:6px"><input class="field" id="nLc" value="USD"><input class="field" id="nLs" value="US$"></div></div>
+      <div><div class="flabel">Sua moeda</div><div style="display:flex;gap:6px"><input class="field" id="nNc" value="BRL"><input class="field" id="nNs" value="R$"></div></div></div>
+    <div class="flabel">Cotação (1 moeda do destino = ? sua moeda)</div><input class="field num" inputmode="decimal" id="nCot" value="5,18">
+    <button class="btn pri" id="nOk">Criar viagem</button>`;
+  abrirSheet();
+  $('#nOk').onclick = () => {
+    const g = id => $('#' + id).value.trim();
+    const cfg = { nome:g('nNome'), inicio:g('nIni'), dias:parseInt(g('nDias'),10), seuNome:g('nEu'), localCod:g('nLc'), localSimb:g('nLs'), nativaCod:g('nNc'), nativaSimb:g('nNs'), cotacao:numBR(g('nCot')) };
+    if (!cfg.nome || !cfg.inicio || !(cfg.dias > 0) || !cfg.seuNome || !(cfg.cotacao > 0)) return toast('Preencha todos os campos');
+    S = novaViagem(cfg); S.aparelho = S.viagem.viajantes[0].id; save(); fecharSheet(); iniciar(); toast('Viagem criada');
+  };
+}
+function avisarVersaoNova(){
+  if (document.querySelector('.atualizar')) return;
+  const b = document.createElement('div'); b.className = 'atualizar';
+  b.innerHTML = '<span>Nova versão do app disponível. Seus dados continuam como estão.</span><button>Atualizar</button>';
+  b.querySelector('button').onclick = () => location.reload();
+  document.body.appendChild(b);
+}
+function iniciar(){ document.querySelector('.nav').style.display = ''; render(); }
+
+(async () => {
+  const d = await DB.ler();
+  if (d && d.viagem) { S = normalizar(d); iniciar(); if (!S.aparelho && !window.CLE_APP) perguntarDono(); }
+  else telaBoasVindas();
+  window.CLE_INICIADO = true; // Clé: o app só conversa com a Carteira depois da leitura inicial
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  if ('serviceWorker' in navigator && location.protocol !== 'file:' && !window.CLE_APP) { // Clé: dentro do app, quem cuida do offline é o app
+    // quando uma versão nova assume o controle, oferece atualizar (sem recarregar sozinho no meio de um lançamento)
+    const jaTinha = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (jaTinha) avisarVersaoNova(); });
+    navigator.serviceWorker.register('sw.js').then(r => r.update()).catch(() => {});
+    // ao voltar para o app (ele fica aberto em segundo plano no celular), procura versão nova de novo
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {}); });
+  }
+})();
+</script>
+</body>
+</html>
