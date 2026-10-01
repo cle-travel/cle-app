@@ -17,9 +17,15 @@ O app é instalado vazio. Cada pessoa cria a sua viagem com o Marco ou abre um a
 | `prototipo/servidor.mjs` | Servidor local para testar em `http://localhost:8090` |
 | `app/` | O app publicado (gerado; não editar à mão) |
 
+Primeira vez, logo depois de baixar o projeto, ligue a trava de publicação:
+
+```
+git config core.hooksPath .githooks
+```
+
 Fluxo:
 1. Edite `prototipo/app.html` (ou a Carteira).
-2. Rode `node prototipo/montar.mjs` e teste com `node prototipo/servidor.mjs`.
-3. Crie um branch, faça o commit e abra um Pull Request. A publicação acontece quando o Pull Request é aprovado.
+2. Rode `node prototipo/montar.mjs` e teste com `node prototipo/servidor.mjs` (http://localhost:8090).
+3. Faça o commit e envie para o `main`. O app publicado se atualiza sozinho em cerca de 2 minutos.
 
-Antes de cada commit, `prototipo/verificar-publico.mjs` confere que nenhuma chave de API ou dado pessoal vai para este repositório público.
+Antes de cada commit, `prototipo/verificar-publico.mjs` confere que nenhuma chave de API ou dado pessoal vai para este repositório público. Arquivos de viagem para testes ficam na pasta `exemplos/` (que nunca é publicada); a trava usa esses arquivos para saber o que não pode sair.

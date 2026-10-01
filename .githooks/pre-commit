@@ -1,0 +1,3 @@
+#!/bin/sh
+# Trava do repositório público: confere o que vai ser publicado antes de cada commit.
+node prototipo/verificar-publico.mjs
