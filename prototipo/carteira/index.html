@@ -1303,6 +1303,7 @@ window.CLE = {
     if (!this.pronto()) return null;
     const reg = { desc:'', cat:'out', sub:'', valor:0, moeda:S.viagem.local.cod, dia:Math.min(S.viagem.dias, diaAtual()), status:'realizado', obs:'',
       resp:[S.aparelho], partes:null, pagamentos:null, por:S.aparelho, fonte:fontePadrao(S.aparelho), fatura:null, incluir:true, foto:null, ...dados };
+    if (!('fonte' in dados) && dados.por) reg.fonte = fontePadrao(dados.por); // pago por outro viajante: fonte padrão de quem pagou
     reg.sub = reg.sub || cat(reg.cat).subs[0] || '';
     reg.upd = Date.now(); reg.loc = reg.upd; reg.via = null;
     reg.id = S.aparelho + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);

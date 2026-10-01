@@ -11,8 +11,11 @@ import { fileURLToPath } from "node:url";
 const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arquivos = execSync("git ls-files --cached --others --exclude-standard", { cwd: RAIZ, encoding: "utf8" }).split("\n").filter(Boolean);
 
-const CAMINHOS_PROIBIDOS = [/(^|\/)\.env/, /^exemplos\//, /^validacoes\//, /ESPECIFICACAO/i, /ONBOARDING\.md$/, /^seguranca\//, /recovery-codes/i, /^design\//, /\.bak$/];
+// .env.exemplo pode (é o modelo vazio); qualquer outro .env, nunca
+const CAMINHOS_PROIBIDOS = [/(^|\/)\.env(?!\.exemplo$)/, /(^|\/)node_modules\//, /^servidor-marco\/consumo\//, /^ANALISE/i, /^exemplos\//, /^validacoes\//, /ESPECIFICACAO/i, /ONBOARDING\.md$/, /^seguranca\//, /recovery-codes/i, /^design\//, /\.bak$/];
 const CONTEUDO_PROIBIDO = [
+  [/sk-ant-[A-Za-z0-9_-]{8,}/, "chave da Anthropic"],
+  [/^[A-Z_]+_(KEY|TOKEN)=\S+/m, "chave preenchida num arquivo de modelo"],
   [/sk_car_[A-Za-z0-9]{8,}/, "chave da Cartesia"],
   [/AIza[0-9A-Za-z_-]{30,}/, "chave do Google"],
   [/\bpk\.[A-Za-z0-9_-]{40,}/, "chave do Mapbox"],
@@ -35,7 +38,7 @@ if (fs.existsSync(termosEx)) for (const l of fs.readFileSync(termosEx, "utf8").s
 const problemas = [];
 for (const f of arquivos) {
   if (CAMINHOS_PROIBIDOS.some((re) => re.test(f))) { problemas.push(`${f}: arquivo que não pode ser público`); continue; }
-  if (!/\.(html|js|mjs|json|md|txt|webmanifest|yml|yaml)$/i.test(f)) continue;
+  if (!/\.(html|js|mjs|json|md|txt|webmanifest|yml|yaml|exemplo)$/i.test(f)) continue;
   const txt = fs.readFileSync(path.join(RAIZ, f), "utf8");
   for (const [re, motivo] of CONTEUDO_PROIBIDO) {
     if (f.endsWith("verificar-publico.mjs")) break; // este arquivo descreve os padrões

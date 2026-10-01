@@ -1,5 +1,5 @@
 // Clé: funciona sem internet depois da primeira abertura (gerado por prototipo/montar.mjs)
-const VERSAO = "cle-328c532982";
+const VERSAO = "cle-f036a25530";
 const ARQUIVOS = ["./","./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./carteira/lib/qrcode.js","./carteira/lib/jsQR.js","./carteira/icon-192.png"];
 const FONTES = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(VERSAO).then((c) => c.addAll(ARQUIVOS)).then(() => self.skipWaiting())); });

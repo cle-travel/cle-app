@@ -70,6 +70,7 @@ h1{font-size:30px;font-weight:700;letter-spacing:-.8px;line-height:1.1;margin:2p
 .trip i{width:6px;height:6px;border-radius:3px;background:var(--ok)}
 #wallet{flex:1;width:100%;border:0;display:block;background:var(--bg)}
 .row{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:48px;width:100%;text-align:left;position:relative}
+a.row{color:inherit;text-decoration:none}
 .row+.row::before{content:"";position:absolute;top:0;left:14px;right:0;border-top:.5px solid var(--sep)}
 .row .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .row .main b{font-weight:500;font-size:16px}
@@ -179,9 +180,47 @@ h1{font-size:30px;font-weight:700;letter-spacing:-.8px;line-height:1.1;margin:2p
 .demo{border:1px dashed var(--fg3);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:12px}
 .mono{font-variant-numeric:tabular-nums}
 .sel{user-select:all}
+/* conversa real: texto sempre disponível ao lado da voz */
+.entrada{display:flex;gap:8px;padding:0 16px 2px;align-items:center}
+.entrada input{flex:1;min-width:0;height:44px;border-radius:22px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:16px;padding:0 16px}
+.entrada .enviar{background:var(--accent);color:var(--accent-fg);width:44px;height:44px;border-radius:22px}
+.msg-m p{margin:0 0 8px}.msg-m p:last-child{margin:0}
+.ptopo{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.motivo{font-size:14px;color:var(--fg2);line-height:1.45;border-left:3px solid var(--accent-soft);padding-left:10px}
+.mini{display:flex;flex-direction:column;gap:6px}
+.mini div{display:flex;gap:8px;font-size:14px;align-items:baseline}
+.mini b{width:44px;flex-shrink:0;font-variant-numeric:tabular-nums}
+/* formulários (onboarding, perfil, ficha médica) */
+.campo{display:flex;flex-direction:column;gap:6px;min-width:0}
+.campo label{font-size:13px;color:var(--fg2)}
+.campo input,.campo select,.campo textarea{height:46px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:16px;padding:0 12px;width:100%;min-width:0}
+.campo textarea{height:auto;min-height:96px;padding:12px;line-height:1.45;resize:vertical}
+.dois{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.slider{display:flex;flex-direction:column;gap:2px}
+.slider .l{display:flex;justify-content:space-between;font-size:13px;color:var(--fg2)}
+.slider input{width:100%;accent-color:var(--accent)}
+.grupo-op{display:flex;flex-direction:column;gap:8px}
+/* guia impresso: só aparece na impressão / "Salvar como PDF" */
+#print{display:none}
+@media print{
+  html,body{height:auto;overflow:visible;background:#fff}
+  .app{display:none!important}
+  #print{display:block!important;color:#111;font-family:Georgia,"Times New Roman",serif;font-size:11pt;
+    --map:#ECEAE4;--map2:#E3E0D8;--road:#fff;--accent:#24476B;--accent-fg:#fff;--card:#fff;--fg:#1D1D1F;--fg2:#6E6E73;--bg:#fff;--line:rgba(0,0,0,.12);--warn:#8A4F00;--bad:#B42318;--font:Georgia,serif}
+  #print .pg{page-break-after:always;padding:4mm 2mm}
+  #print .k{font-size:9pt;letter-spacing:.08em;text-transform:uppercase;color:#555}
+  #print h1{font-size:24pt;margin:4px 0}#print h2{font-size:15pt;margin:4px 0}
+  #print table{width:100%;border-collapse:collapse;margin-top:6px}
+  #print td{border-top:.5pt solid #bbb;padding:5px 4px;vertical-align:top}
+  #print td.h{width:46px;font-weight:700}
+  #print .c{font-size:9pt;color:#555}
+  #print .mp svg{width:100%;height:auto;max-height:80mm}
+  #print .obs{border:1pt solid #8A4F00;padding:6px;color:#8A4F00}
+}
 </style>
 
 <div class="app" id="app"></div>
+<div id="print" aria-hidden="true"></div>
 
 <script>
 // O app é "virgem": nenhuma viagem vem embutida. A Western é só um arquivo de exemplo (exemplos/), aberto pelo usuário.
@@ -195,12 +234,36 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtData = (iso, o = { weekday: "short", day: "numeric", month: "short" }) => new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", o).replace(/\./g, "");
 const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m} min`);
-const usd = (c) => "US$ " + (c / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const brl = (c) => "R$ " + (c / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDur = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, "0") : ""}` : `${m}min`);
+const durMin = (s) => { if (!s) return 0; if (typeof s === "number") return s; const h = String(s).match(/(\d+)\s*h/), m = String(s).match(/(\d+)\s*min/) || (h ? String(s).match(/h\s*(\d+)/) : String(s).match(/^\s*(\d+)\s*$/)); return (h ? +h[1] * 60 : 0) + (m ? +m[1] : 0); };
 const hmin = (h) => { if (!h) return 9999; const m = h.match(/(\d+)h(\d+)?/); return m ? +m[1] * 60 + +(m[2] || 0) : 9999; };
-const nomeLimpo = (n) => n.replace(/^(Jantar|Almoco|Almoço|Cafe|Café)\s*-\s*/i, "").replace(/\s*\((?:[^()]|\([^)]*\))*\)\s*/g, " ").replace(/\s+-\s+(check-in|check-out|bag drop|chegada).*$/i, "").trim();
+const nomeLimpo = (n) => String(n || "").replace(/^(Jantar|Almoco|Almoço|Cafe|Café)\s*-\s*/i, "").replace(/\s*\((?:[^()]|\([^)]*\))*\)\s*/g, " ").replace(/\s+-\s+(check-in|check-out|bag drop|chegada).*$/i, "").trim();
 const cidade = (d) => (d.titulo.split("→").pop() || "").trim();
 const gmaps = (lat, lng) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+const waze = (lat, lng) => `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+const satelite = (lat, lng) => `https://www.google.com/maps/@?api=1&map_action=map&center=${lat},${lng}&zoom=18&basemap=satellite`;
+const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const agoraHM = () => { const d = new Date(); return `${d.getHours()}h${String(d.getMinutes()).padStart(2, "0")}`; };
+const novoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const numBR = (s) => { const t = String(s || "").trim().replace(/\s/g, ""); return parseFloat(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t); };
+const dinheiro = (v, simb) => `${simb} ${(+v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function kmEntre(a, b) { const R = 6371, r = (x) => (x * Math.PI) / 180, dLat = r(b.lat - a.lat), dLng = r(b.lng - a.lng); const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+// texto do Marco: negrito e parágrafos (o resto vai escapado)
+const md = (t) => esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
+
+// países: moeda local da Carteira, número de emergência e idioma das frases prontas (o Marco confere na web quando há dúvida)
+const PAISES = [
+  ["US", "Estados Unidos", "USD", "US$", "911", "en"], ["CA", "Canadá", "CAD", "C$", "911", "en"], ["MX", "México", "MXN", "MX$", "911", "es"],
+  ["AR", "Argentina", "ARS", "AR$", "107", "es"], ["CL", "Chile", "CLP", "CLP$", "131", "es"], ["UY", "Uruguai", "UYU", "$U", "911", "es"],
+  ["BR", "Brasil", "BRL", "R$", "192", "pt"], ["PT", "Portugal", "EUR", "€", "112", "pt"], ["ES", "Espanha", "EUR", "€", "112", "es"],
+  ["FR", "França", "EUR", "€", "112", "fr"], ["IT", "Itália", "EUR", "€", "112", "it"], ["DE", "Alemanha", "EUR", "€", "112", "de"],
+  ["AT", "Áustria", "EUR", "€", "112", "de"], ["CH", "Suíça", "CHF", "CHF", "112", "de"], ["NL", "Holanda", "EUR", "€", "112", "en"],
+  ["BE", "Bélgica", "EUR", "€", "112", "fr"], ["GR", "Grécia", "EUR", "€", "112", "en"], ["IE", "Irlanda", "EUR", "€", "112", "en"],
+  ["GB", "Reino Unido", "GBP", "£", "999", "en"], ["JP", "Japão", "JPY", "¥", "119", "en"], ["AU", "Austrália", "AUD", "A$", "000", "en"], ["NZ", "Nova Zelândia", "NZD", "NZ$", "111", "en"],
+].map(([cod, nome, moeda, simb, sos, lang]) => ({ cod, nome, moeda, simb, sos, lang }));
+const paisDe = (cod) => PAISES.find((p) => p.cod === cod) || null;
+const LINGUAS = { en: "inglês", es: "espanhol", fr: "francês", it: "italiano", de: "alemão", pt: "português" };
 
 const I = {
   back: '<path d="M15 5l-7 7 7 7"/>', chev: '<path d="M9 6l6 6-6 6"/>', mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
@@ -219,35 +282,111 @@ const I = {
   upload: '<path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>', plus: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
   heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   compass: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>', translate: '<path d="M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M11 5c0 3-3 7-7 8M13 21l4-9 4 9M14.5 18h5"/>',
+  send: '<path d="M5 12l14-7-5 15-3-6z"/>', history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  share: '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.9l7.6-3.8M8.2 13.1l7.6 3.8"/>',
+  speaker: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>', cross: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
 };
 const ic = (n, s = 22, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n] || ""}</svg>`;
 const TIPO = { inicio: ["flag", "Saída"], pernoite: ["bed", "Hospedagem"], passeio: ["cam", "Passeio"], refeicao: ["fork", "Refeição"], abastecimento: ["fuel", "Abastecimento"], transito: ["arrow", "Trânsito"] };
+const CATS = { pass: "Passagens", seg: "Seguros e documentos", hosp: "Hospedagem", loc: "Locação do carro", comb: "Combustível", desl: "Deslocamentos", pas: "Passeios e ingressos", ali: "Alimentação", comp: "Compras", con: "Conectividade", out: "Outros" };
+const SITUACAO = { estimado: "Estimado", apagar: "A pagar no local", pago: "Pré-pago", realizado: "Pago na viagem" };
 
 // ---------- estado ----------
 const S = {
-  fase: "planejamento", tela: "conversa", hist: [], diaSel: 1, diaHoje: 1, agora: "10h05",
-  lugar: null, confirmados: {}, tarefas: {}, extras: {}, chat: null, pensando: false, voz: "parado", transc: "",
-  carteiraVista: "total", onb: null, overlay: null, toast: null, viagem: null, listas: null,
+  fase: "planejamento", faseManual: false, tela: "conversa", hist: [], diaSel: 1, diaHoje: 1, agora: "10h05",
+  lugar: null, confirmados: {}, tarefas: {}, extras: {}, chat: null, fios: null, notas: [], recursos: {}, consumo: null, historico: [], pensando: false, voz: "parado", transc: "",
+  onb: null, overlay: null, toast: null, viagem: null, listas: null, guiaAceito: false, clima: {}, cofreDocs: [], rascunho: "",
+  marcoOn: null, rotasOn: false, marcoFaltam: [],
 };
 let DIAS = [];
+const climaPedido = {};
 const outros = () => { const v = S.viagem; const o = v ? v.viajantes.filter((n) => n !== v.dono) : []; return o.length ? o.join(" e ") : "o grupo"; };
-const exemploWestern = () => !!(S.viagem && S.viagem.exemplo === "western" && DIAS.length);
+const exemploWestern = () => !!(S.viagem && S.viagem.exemplo === "western" && DIAS.some((d) => d.paradas.length));
 const nomeViagem = () => (S.viagem ? S.viagem.nome : "Clé");
 const fimViagem = () => { if (!S.viagem) return null; const d = new Date(S.viagem.inicio + "T12:00:00"); d.setDate(d.getDate() + (S.viagem.dias || 1) - 1); return d.toISOString().slice(0, 10); };
-const diasAte = () => (S.viagem ? Math.ceil((new Date(S.viagem.inicio + "T12:00:00") - new Date()) / 864e5) : 0);
+const diasAte = () => (S.viagem ? Math.ceil((new Date(S.viagem.inicio + "T12:00:00") - new Date(hojeISO() + "T12:00:00")) / 864e5) : 0);
 const tripSub = () => S.viagem ? `${fmtData(S.viagem.inicio, { day: "numeric", month: "short" })} – ${fmtData(fimViagem(), { day: "numeric", month: "short" })} · ${S.viagem.viajantes.join(" e ")}` : "";
-const vazio = (titulo, texto) => `<div class="card" style="align-items:flex-start"><span class="ico" style="width:44px;height:44px;border-radius:12px">${ic("compass", 24)}</span><div style="font-size:19px;font-weight:600">${esc(titulo)}</div><div style="font-size:15px;line-height:1.45;color:var(--fg2)">${esc(texto)}</div><button class="btn" data-a="ir" data-t="conversa">${ic("mic", 18)} Falar com o Marco</button></div>`;
+const vazio = (titulo, texto) => `<div class="card" style="align-items:flex-start"><span class="ico" style="width:44px;height:44px;border-radius:12px">${ic("compass", 24)}</span><div style="font-size:19px;font-weight:600">${esc(titulo)}</div><div style="font-size:15px;line-height:1.45;color:var(--fg2)">${esc(texto)}</div><button class="btn" data-a="ir" data-t="conversa">${ic("chat", 18)} Falar com o Marco</button></div>`;
 const diaObj = (n) => DIAS.find((d) => d.dia === +n);
 const paradasDo = (d) => [...d.paradas, ...(S.extras[d.dia] || [])].slice().sort((a, b) => (a.t === "inicio" ? -1 : b.t === "inicio" ? 1 : hmin(a.h) - hmin(b.h)));
-const seloDe = (p) => (S.confirmados[p.n] ? "verde" : p.selo);
-const aConfirmar = () => { const s = new Set(); for (const d of DIAS) for (const p of d.paradas) if (seloDe(p) !== "verde") s.add(p.n); return s.size; };
-const seloPill = (p) => { const c = seloDe(p); return c === "verde" ? "" : c === "amarelo" ? '<span class="pill warn">A confirmar</span>' : '<span class="pill bad">Confirmar local</span>'; };
+const seloDe = (p) => (S.confirmados[p.n] ? "verde" : p.selo || "vermelho");
+const aConfirmar = () => { const s = new Set(); for (const d of DIAS) for (const p of paradasDo(d)) if (seloDe(p) !== "verde") s.add(p.n); return s.size; };
+// selo de confiança (especificação, seção 22): verde confirmado, amarelo aproximado, vermelho a confirmar
+const seloPill = (p) => { const c = typeof p === "string" ? p : seloDe(p); return c === "verde" ? "" : c === "amarelo" ? '<span class="pill warn">Aproximado</span>' : '<span class="pill bad">A confirmar</span>'; };
+const seloPillSempre = (c) => (c === "verde" ? `<span class="pill ok">${ic("check", 12, 2.5)} Confirmado</span>` : seloPill(c));
+
+// cada viagem tem seus dias desde a criação, mesmo vazios: o Marco preenche dia a dia
+function garantirDias() {
+  if (!S.viagem) return;
+  for (let n = 1; n <= S.viagem.dias; n++) {
+    if (diaObj(n)) continue;
+    const dt = new Date(S.viagem.inicio + "T12:00:00"); dt.setDate(dt.getDate() + n - 1);
+    DIAS.push({ dia: n, data: dt.toISOString().slice(0, 10), titulo: `Dia ${n}`, km: 0, min: 0, paradas: [], postos: [], poly: [], pernoite: null });
+  }
+  DIAS.sort((a, b) => a.dia - b.dia);
+  for (const d of DIAS) { d.paradas = d.paradas || []; d.postos = d.postos || []; d.poly = d.poly || []; }
+}
+// a tela inicial muda com a fase (seção 16): pela data, a não ser que o teste tenha fixado a fase
+function faseAuto() {
+  if (!S.viagem || S.faseManual) return;
+  const h = hojeISO(), fim = fimViagem();
+  if (h >= S.viagem.inicio && h <= fim) { S.fase = "viagem"; S.diaHoje = Math.round((new Date(h + "T12:00:00") - new Date(S.viagem.inicio + "T12:00:00")) / 864e5) + 1; }
+  else S.fase = "planejamento";
+}
+
+// ---------- travas automáticas do roteiro (seção 10: trava automática, não promessa) ----------
+const HORAS_RITMO = { tranquilo: 8, equilibrado: 10, intenso: 12 };
+function travasDia(d) {
+  const a = [], pf = (S.viagem && S.viagem.perfil) || null, ps = paradasDo(d).filter((p) => p.t !== "inicio");
+  if (pf && +pf.maxDirecao > 0 && d.min > +pf.maxDirecao * 60) a.push(`Direção acima do limite: ${fmtMin(d.min)} (limite de ${pf.maxDirecao} h por dia)`);
+  if (pf && HORAS_RITMO[pf.ritmo]) {
+    const ativo = d.min + ps.reduce((s, p) => s + durMin(p.dur), 0), lim = HORAS_RITMO[pf.ritmo] * 60;
+    if (ativo > lim) a.push(`Dia sobrecarregado: ${fmtMin(ativo)} entre direção e atividades (ritmo ${pf.ritmo}: até ${HORAS_RITMO[pf.ritmo]} h)`);
+  }
+  const vistos = {};
+  for (const p of ps) if (p.h && !["transito", "pernoite", "abastecimento"].includes(p.t)) { if (vistos[p.h]) a.push(`Dois compromissos às ${p.h}: ${nomeLimpo(vistos[p.h])} e ${nomeLimpo(p.n)}`); else vistos[p.h] = p.n; }
+  return a;
+}
+
+// ---------- clima (Open-Meteo, aberto e sem chave): previsão até 16 dias antes ----------
+const CLIMA_TXT = (c) => (c === 0 ? "Céu limpo" : c <= 3 ? "Parcialmente nublado" : c <= 48 ? "Neblina" : c <= 57 ? "Garoa" : c <= 67 ? "Chuva" : c <= 77 ? "Neve" : c <= 82 ? "Pancadas de chuva" : "Trovoadas");
+function climaDe(d) {
+  const k = d.data; if (S.clima[k]) return S.clima[k];
+  const dist = Math.round((new Date(k + "T12:00:00") - new Date(hojeISO() + "T12:00:00")) / 864e5);
+  if (dist < 0 || dist > 15 || navigator.onLine === false || climaPedido[k]) return null;
+  const ps = paradasDo(d).filter((p) => p.lat != null), ref = ps.find((p) => p.t === "pernoite") || ps[ps.length - 1];
+  if (!ref) return null;
+  climaPedido[k] = true;
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${(+ref.lat).toFixed(3)}&longitude=${(+ref.lng).toFixed(3)}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&start_date=${k}&end_date=${k}`)
+    .then((r) => r.json()).then((j) => { const x = j.daily; if (!x || !x.time || !x.time.length) return; S.clima[k] = { max: Math.round(x.temperature_2m_max[0]), min: Math.round(x.temperature_2m_min[0]), chuva: x.precipitation_probability_max[0], txt: CLIMA_TXT(x.weather_code[0]), ref: nomeLimpo(ref.n) }; render(); }).catch(() => {});
+  return null;
+}
+const climaTxt = (c) => `${c.txt} · ${c.min}° a ${c.max}°C${c.chuva != null ? ` · chuva ${c.chuva}%` : ""}`;
+
+// ---------- histórico de alterações com desfazer (seção 4: cada versão é rollback) ----------
+function registrar(desc, tipo, dados) { const h = { id: novoId(), quando: new Date().toISOString(), quem: (S.viagem && S.viagem.dono) || "", desc, tipo, dados }; S.historico.unshift(h); return h.id; }
+function desfazerHist(id) {
+  const h = S.historico.find((x) => x.id === id); if (!h || h.desfeito) return false;
+  const d = h.dados || {};
+  if (h.tipo === "parada") { const dia = diaObj(d.dia); if (dia) { dia.paradas = dia.paradas.filter((p) => p.id !== d.id); if (d.pernoiteAntes !== undefined) dia.pernoite = d.pernoiteAntes; recalcRota(dia); } }
+  else if (h.tipo === "dia") { const i = DIAS.findIndex((x) => x.dia === d.dia); if (i >= 0) DIAS[i] = d.antes; }
+  else if (h.tipo === "lanc") { const c = cle(); if (!c || !c.desfazer(d.lancId)) { toast("Abra a Carteira para desfazer este lançamento."); return false; } }
+  else if (h.tipo === "tarefa") { S.listas.tarefas = S.listas.tarefas.filter((t) => t.id !== d.id); }
+  else if (h.tipo === "concluir") { S.tarefas[d.id] = false; }
+  else if (h.tipo === "desejo") { S.listas.desejos = S.listas.desejos.filter((x) => x.id !== d.id); }
+  else if (h.tipo === "info") { S.viagem.info = S.viagem.info || {}; if (d.antes == null) delete S.viagem.info[d.campo]; else S.viagem.info[d.campo] = d.antes; }
+  else if (h.tipo === "confirmar") { delete S.confirmados[d.n]; }
+  else if (h.tipo === "guia") { S.guiaAceito = false; }
+  h.desfeito = new Date().toISOString();
+  return true;
+}
 
 // ---------- conversa ----------
 const SYLVAN = { n: "Sylvan Lake", t: "passeio", h: "18h00", dur: "45min", lat: 43.84659, lng: -103.55943, end: "Sylvan Lake, Custer State Park, SD", tel: null, site: null, selo: "verde", est: { n: "Estacionamento do lago", lat: 43.84752, lng: -103.55868, km: 0.15, min: 3 }, novo: true };
 function chatInicial() {
   const dono = (S.viagem && S.viagem.dono) || "";
-  if (exemploWestern()) {
+  if (exemploWestern() && !marcoDisponivel()) {
     const n = aConfirmar(), f = diasAte();
     return [
       { de: "m", txt: `Olá${dono ? ", " + dono : ""}. ${f > 0 ? `Faltam ${f} dias para a ${nomeViagem()}.` : `Esta é a ${nomeViagem()}.`} O roteiro dos ${DIAS.length} dias está montado; ainda há ${n} locais para você conferir no mapa e algumas reservas em aberto.` },
@@ -255,29 +394,317 @@ function chatInicial() {
       { de: "m", txt: "O Sylvan Lake fica a 15 minutos do hotel em Custer, e a volta é curta. Veja a proposta:", card: "proposta" },
     ];
   }
-  return [{ de: "m", txt: `Olá${dono ? ", " + dono : ""}. Vamos planejar a ${nomeViagem()}? Me conte o que vocês querem ver e fazer. Eu monto o roteiro dia a dia, com rotas, horários e custos, e lanço tudo na Carteira.` }];
+  const f = diasAte(), vazioRot = !DIAS.some((d) => d.paradas.length);
+  return [{ de: "m", txt: `Olá${dono ? ", " + dono : ""}. ${f > 0 ? `Faltam ${f} dias para a ${nomeViagem()}. ` : ""}${vazioRot ? "Me conte o que vocês querem ver e fazer. Eu monto o roteiro dia a dia, com rotas, horários e custos, e lanço tudo na Carteira." : "Em que posso ajudar? Posso ajustar o roteiro, procurar lugares, lançar gastos ou ler comprovantes."}` }];
 }
+// respostas de demonstração: só para o exemplo da Western quando o Marco não está ligado
 const RESP = {
   falta: () => ({ txt: `Temos ${pendentes()} tarefas abertas no checklist.${DIAS.length ? ` Há ${aConfirmar()} locais para conferir no mapa.` : ""}`, card: "link:checklist:Abrir checklist" }),
   gasto: () => ({ txt: "Está tudo na Carteira: o planejado e o realizado por categoria, a carteira de cada um e o acerto de contas entre os viajantes.", card: "link:carteira:Abrir carteira" }),
   lanca: () => ({ txt: `Entendi: almoço de US$ 38,50, pago por você, dividido igual com ${outros()}. Confere antes de eu lançar na Carteira:`, card: "lanc" }),
-  roteiro: () => ({ txt: "Montar o roteiro de verdade exige que eu esteja conectado à inteligência do Marco, e isso entra na construção. Por enquanto, abra o arquivo de exemplo da Western para ver como um roteiro pronto fica no app.", card: "link:arquivo:Abrir arquivo da viagem" }),
-  posto: () => { const d = diaObj(S.diaHoje); const p = d && d.postos[0]; return p ? { txt: `No roteiro do dia ${d.dia}, o próximo posto recomendado é o ${p.n}.`, card: "posto" } : { txt: "Não encontrei postos no trajeto de hoje." }; },
+  posto: () => { const d = diaObj(S.diaHoje); const p = d && (d.postos || [])[0]; return p ? { txt: `No roteiro do dia ${d.dia}, o próximo posto recomendado é o ${p.n}.`, card: "posto" } : { txt: "Não encontrei postos no trajeto de hoje." }; },
 };
 const tarefasLista = () => (S.listas && S.listas.tarefas) || TAREFAS_PADRAO;
 const textoTarefa = (t) => (t.id === "conf" ? `Conferir ${aConfirmar()} locais no mapa` : t.t);
-function pendentes() { return tarefasLista().filter((t) => !S.tarefas[t.id]).length; }
+// "conferir locais" se conclui sozinha quando não há mais nada a conferir
+const feitaTarefa = (t) => !!S.tarefas[t.id] || (t.id === "conf" && aConfirmar() === 0);
+function pendentes() { return tarefasLista().filter((t) => !feitaTarefa(t)).length; }
 
-// ---------- tarefas (uma viagem nova começa com estas; o arquivo da viagem pode trazer outras) ----------
+// ---------- tarefas padrão (prazos da seção 8; o Marco acrescenta as que o plano gerar) ----------
 const TAREFAS_PADRAO = [
-  { id: "conf", g: "Fazer agora", t: "Conferir locais no mapa", s: "Pontos em que as fontes discordam ou que não existem em base nenhuma", ir: "confirmar" },
-  { id: "seg", g: "Fazer agora", t: "Anexar comprovante do seguro viagem", s: "O Marco lê o documento e preenche tudo", comp: "seguro" },
-  { id: "off", g: "Fazer agora", t: "Baixar mapas para usar sem sinal", s: "Do roteiro inteiro" },
-  { id: "checkin", g: "Até a viagem", t: "Check-in online do voo de ida", s: "Abre 24 h antes do embarque" },
-  { id: "guia", g: "Até a viagem", t: "Imprimir o guia em duas vias", s: "PDF gerado a partir do roteiro", ir: "guia" },
-  { id: "docs", g: "Até a viagem", t: "Separar passaportes e documentos", s: "Todos os viajantes" },
+  { id: "conf", g: "Fazer agora", t: "Conferir locais no mapa", s: "Pontos aproximados ou a confirmar: bloqueiam o guia impresso", ir: "confirmar" },
+  { id: "seg", g: "Fazer agora", t: "Anexar comprovante do seguro viagem", s: "O Marco lê o documento e preenche Carteira, Cofre e Emergência", comp: "Seguro viagem" },
+  { id: "docs", g: "Até 30 dias antes", t: "Conferir passaportes, vistos e validade", s: "Todos os viajantes" },
+  { id: "off", g: "Véspera", t: "Baixar mapas para usar sem sinal", s: "Do roteiro inteiro" },
+  { id: "checkin", g: "Véspera", t: "Check-in online do voo de ida", s: "Abre 24 h antes do embarque" },
+  { id: "guia", g: "Véspera", t: "Imprimir o guia em duas vias", s: "PDF gerado a partir do roteiro", ir: "guia" },
 ];
-const COFRE_PADRAO = [{ n: "Passaportes e vistos", s: "Todos os viajantes" }, { n: "Voos", s: "Ida e volta" }, { n: "Hospedagens", s: "Reservas" }, { n: "Seguro viagem", s: "", seguro: true }];
+const ORDEM_GRUPOS = ["Fazer agora", "Até 30 dias antes", "Até a viagem", "Véspera", "Durante a viagem"];
+const COFRE_CATS = ["Passaportes e vistos", "Voos", "Hospedagens", "Seguro viagem", "Locação do carro", "Passeios e ingressos", "Outros"];
+function garantirListas() {
+  S.listas = S.listas || {};
+  if (!S.listas.tarefas) S.listas.tarefas = TAREFAS_PADRAO.map((x) => ({ ...x }));
+  if (!S.listas.desejos) S.listas.desejos = [];
+}
+
+// ---------- o Marco de verdade (servidor com o Claude) ----------
+// No computador de testes (localhost) o servidor é prototipo/servidor.mjs; na nuvem será o Supabase.
+// Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
+// e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
+// o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
+const API = ["localhost", "127.0.0.1"].includes(location.hostname) ? "/api" : null;
+const marcoDisponivel = () => !!API && S.marcoOn !== false;
+function checarMarco() {
+  if (!API) { S.marcoOn = false; return; }
+  fetch(API + "/estado").then((r) => r.json()).then((j) => { S.marcoOn = !!j.marco; S.rotasOn = !!j.rotas; S.marcoFaltam = j.faltam || []; S.recursos = j.recursos || {}; render(); }).catch(() => { S.marcoOn = false; render(); });
+}
+const msgMarcoOff = () => !API
+  ? "Neste endereço eu ainda não estou ligado: chego aqui quando o servidor na nuvem estiver no ar. Por enquanto converso no computador de testes. Roteiro, mapa, Carteira, Cofre e checklist funcionam normalmente."
+  : `Estou desligado neste computador${S.marcoFaltam.length ? `: falta ${S.marcoFaltam.join(", ")}` : ""}. Roteiro, mapa, Carteira, Cofre e checklist funcionam normalmente.`;
+
+const fioVazio = () => ({ versao: null, msgs: [], tamanho: 0, resumo: null });
+const garantirFios = () => { S.fios = S.fios || {}; for (const k of ["conversa", "planejamento"]) S.fios[k] = S.fios[k] || fioVazio(); };
+// pedidos de planejamento vão ao Opus; o resto fica no Sonnet (que também pode encaminhar ao planejador)
+const PLANEJAR = /\b(mont(e|ar|a)\b[^.?!]*\b(roteiro|dias?\b)|reotimiz|otimiz[ae]|replanej|planej[ae]\b|reorganiz|refa(ç|z)a o (roteiro|dia)|troque o d\d|trocar o d\d|revise o roteiro|corrij[ae] os alertas|primeira vers[aã]o do roteiro|concili)/i;
+const rotaModo = (t) => (PLANEJAR.test(t) ? "planejamento" : "conversa");
+const LIMITE_FIO = { conversa: 60000, planejamento: 90000 }; // sem compactação no servidor, recomeça com resumo acima disto
+
+// resumo da viagem para UM turno: uma linha por dia; paradas só dos dias em foco (o resto, por consultar_dia)
+function contextoTexto(pedido) {
+  const v = S.viagem; if (!v) return "(sem viagem aberta)";
+  const c = cle(), ml = (c && c.moedaLocal()) || v.moeda || {}, pf = v.perfil || {}, L = [];
+  L.push(`Hoje: ${hojeISO()} ${agoraHM()} · ${S.fase === "viagem" ? `na viagem, dia ${S.diaHoje}` : "fase de planejamento"}`);
+  L.push(`Viagem: ${v.nome}${v.destino && v.destino !== v.nome ? ` (${v.destino})` : ""} · ${v.inicio} a ${fimViagem()} (${v.dias} dias) · país ${v.pais || "?"} · moeda ${ml.cod || "?"}${v.cotacao ? ` (1 ${ml.cod} = R$ ${String(v.cotacao).replace(".", ",")})` : ""} · emergência ${v.emergencia || "?"}`);
+  L.push(`Viajantes: ${v.viajantes.map((n, i) => n + (i === 0 ? " (organizador" + (n === v.dono ? ", este celular)" : ")") : n === v.dono ? " (este celular)" : "")).join(", ")}`);
+  const nomes = (x) => INTERESSES.filter((n) => (pf.int || {})[n] === x).join(", ");
+  const perfil = [pf.ritmo && `ritmo ${pf.ritmo}`, pf.maxDirecao && `máx ${pf.maxDirecao} h dirigindo/dia`, pf.acordar && `acorda ${pf.acordar}`, pf.regras && `regras: ${pf.regras}`, pf.alimentacao && `alimentação: ${pf.alimentacao}`, pf.limites && `limites: ${pf.limites}`,
+    nomes(2) && `amam: ${nomes(2)}`, nomes(1) && `curtem: ${nomes(1)}`, nomes(3) && `não curtem: ${nomes(3)}`, pf.sl && Object.keys(pf.sl).length && `personalidade (0-100): ${SLIDERS.map(([k, a, b]) => `${a}→${b} ${pf.sl[k] ?? 50}`).join(", ")}`,
+    pf.ocasiao && `ocasião: ${pf.ocasiao}`, pf.orcamento && `orçamento: ${pf.orcamento}`, pf.reservado && `já reservado: ${pf.reservado}`].filter(Boolean);
+  if (perfil.length) L.push("Perfil: " + perfil.join("; "));
+  const info = Object.entries(v.info || {}); if (info.length) L.push("Apoio: " + info.map(([k, x]) => `${k}=${x}`).join("; "));
+  // dias em foco: os citados no pedido e, na viagem, hoje e amanhã
+  const foco = new Set([...String(pedido || "").matchAll(/\b(?:d|dia)\s?(\d{1,3})\b/gi)].map((x) => +x[1]).slice(0, 3));
+  if (S.fase === "viagem") { foco.add(S.diaHoje); foco.add(S.diaHoje + 1); }
+  L.push("Roteiro (detalhes de outros dias: consultar_dia):");
+  let vazios = [];
+  const fechaVazios = () => { if (vazios.length) L.push(vazios.length > 1 ? `D${vazios[0]} a D${vazios[vazios.length - 1]}: vazios` : `D${vazios[0]}: vazio`); vazios = []; };
+  for (const d of DIAS) {
+    const ps = paradasDo(d);
+    if (!ps.length) { vazios.push(d.dia); continue; }
+    fechaVazios();
+    const n = ps.filter((p) => seloDe(p) !== "verde").length, tv = travasDia(d);
+    L.push(`D${d.dia} ${d.data.slice(8)}/${d.data.slice(5, 7)} · ${d.titulo} · ${d.km} km ${fmtMin(d.min)} · pernoite ${nomeLimpo(d.pernoite || "a definir")} · ${ps.length} paradas${n ? `, ${n} a conferir` : ""}${tv.length ? " · ALERTAS: " + tv.join("; ") : ""}`);
+    if (foco.has(d.dia)) for (const p of ps) L.push(`  ${p.h || "--"} ${nomeLimpo(p.n)} (${p.t}${p.dur ? ", " + p.dur : ""}, selo ${seloDe(p)}) ${(+p.lat).toFixed(5)},${(+p.lng).toFixed(5)}`);
+  }
+  fechaVazios();
+  const abertas = tarefasLista().filter((t) => !feitaTarefa(t));
+  if (abertas.length) L.push("Checklist aberto: " + abertas.slice(0, 15).map((t) => `[${t.id}] ${textoTarefa(t)} (${t.g})`).join("; ") + (abertas.length > 15 ? ` …e mais ${abertas.length - 15}` : ""));
+  const des = (S.listas && S.listas.desejos) || [];
+  if (des.length) L.push("Desejos: " + des.slice(0, 20).map((x) => `${x.n} (${estadoDesejo(x)})`).join("; ") + (des.length > 20 ? ` …e mais ${des.length - 20}` : ""));
+  L.push(`Locais a conferir no mapa: ${aConfirmar()}`);
+  return L.join("\n");
+}
+// roteiro completo para a ferramenta consultar_dia (vai no corpo do pedido, não no prompt)
+const dadosRoteiro = () => ({ dias: DIAS.map((d) => ({ dia: d.dia, data: d.data, titulo: d.titulo, km: d.km, min: d.min, paradas: paradasDo(d).map((p) => ({ h: p.h || "", n: nomeLimpo(p.n), t: p.t, dur: p.dur || "", selo: seloDe(p), lat: +(+p.lat).toFixed(5), lng: +(+p.lng).toFixed(5) })) })) });
+async function lerSSE(resp, cada) {
+  const leitor = resp.body.getReader(), dec = new TextDecoder(); let buf = "";
+  for (;;) {
+    const { value, done } = await leitor.read(); if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let k; while ((k = buf.indexOf("\n\n")) >= 0) { const l = buf.slice(0, k); buf = buf.slice(k + 2); if (l.startsWith("data: ")) { let ev = null; try { ev = JSON.parse(l.slice(6)); } catch (e) {} if (ev) cada(ev); } }
+  }
+}
+let rT = null;
+const renderLogo = () => { if (rT) return; rT = setTimeout(() => { rT = null; render(); }, 80); };
+const resultadosDe = (m) => m.toolUses.map((id) => ({ type: "tool_result", tool_use_id: id, content: id in m.servidor ? m.servidor[id] : ((m.cards || []).find((k) => k.id === id) || {}).resultado || "Sem resposta do viajante." }));
+// numa conversa recomeçada, resultados de cartões antigos viram texto (os ids antigos não existem mais)
+const semIdsAntigos = (novas) => novas.map((b) => (b.type === "tool_result" ? { type: "text", text: `Resultado de proposta anterior: ${b.content}` } : b));
+// fotos reduzidas antes do primeiro envio (depois nada é alterado): até 1568 px, JPEG
+async function reduzirImagem(file) {
+  try {
+    const img = await createImageBitmap(file), k = Math.min(1, 1568 / Math.max(img.width, img.height));
+    if (k === 1 && file.size < 1.5e6) return file;
+    const cv = document.createElement("canvas"); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+    cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+    const blob = await new Promise((ok) => cv.toBlob(ok, "image/jpeg", 0.85));
+    return blob ? new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }) : file;
+  } catch (e) { return file; }
+}
+
+async function enviarTexto(txt, opc = {}) {
+  txt = (txt || "").trim(); if (!txt && !opc.anexo) return false;
+  if (S.pensando) { toast("Espere o Marco terminar de responder."); render(); return false; }
+  if (!S.chat) S.chat = chatInicial();
+  S.rascunho = ""; garantirFios();
+  const modo = opc.modo || rotaModo(txt);
+  if (!opc.semBalao) S.chat.push({ de: "u", txt, anexo: opc.anexo && opc.anexo.nome });
+  if (!marcoDisponivel()) { S.chat.push({ de: "m", txt: msgMarcoOff() }); S.rolarFim = true; render(); return false; }
+  const novas = [];
+  let pend = null, notasUsadas = 0;
+  if (modo !== "comprovante") {
+    // cartões desta conversa ainda sem resposta: o viajante mudou de assunto, e o Marco precisa saber
+    pend = [...S.chat].reverse().find((x) => x.fio === modo && x.toolUses && !x.respondido);
+    if (pend) { for (const k of pend.cards || []) if (k.estado === "aguardando") { k.estado = "ignorado"; k.resultado = "O viajante não respondeu a este cartão e mudou de assunto."; } novas.push(...resultadosDe(pend)); }
+    if (modo === "conversa" && S.notas.length) { notasUsadas = S.notas.length; novas.push({ type: "text", text: S.notas.join("\n") }); }
+  }
+  if (opc.anexo) novas.push(opc.anexo.bloco);
+  novas.push({ type: "text", text: txt });
+  const ok = await rodarTurno(modo, novas, { reenvio: { txt, opc: { ...opc, semBalao: true, modo } } });
+  if (ok) { if (pend) pend.respondido = true; if (notasUsadas) S.notas = S.notas.slice(notasUsadas); render(); }
+  return ok;
+}
+async function rodarTurno(modo, novas, ctrl = {}) {
+  const avulso = modo === "comprovante", fio = avulso ? fioVazio() : S.fios[modo];
+  // conversa grande sem compactação no servidor: recomeça com resumo antes de crescer mais
+  if (!avulso && fio.msgs.length && S.recursos && (S.recursos.compactacao === false || S.recursos.gatilhoCompactacao === false) && fio.tamanho > LIMITE_FIO[modo]) await recomecarFio(modo);
+  let envio = novas;
+  if (!avulso && !fio.msgs.length && fio.resumo) envio = [{ type: "text", text: "[Resumo da conversa anterior, feito para economizar]\n" + fio.resumo }, ...semIdsAntigos(novas)];
+  else if (!avulso && !fio.msgs.length) envio = semIdsAntigos(novas);
+  const m = { de: "m", txt: "", vivo: true, status: modo === "planejamento" ? "Planejando com calma…" : modo === "comprovante" ? "Lendo o comprovante…" : "Pensando…", fio: modo };
+  S.chat.push(m); S.pensando = true; S.rolarFim = true; render();
+  let ok = false, codigo = null;
+  try {
+    const r = await fetch(API + "/marco", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ modo, versao: fio.versao, historico: fio.msgs, novas: envio, contexto: contextoTexto(envio.filter((b) => b.type === "text").map((b) => b.text).join(" ")), dados: dadosRoteiro() }) });
+    if (r.status === 409) codigo = "versao";
+    else if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.erro || "O Marco não respondeu."); }
+    else await lerSSE(r, (ev) => { if (tratarEvento(ev, m, fio, modo)) ok = true; if (ev.tipo === "erro" && ev.codigo) codigo = ev.codigo; });
+  } catch (e) { m.erro = navigator.onLine === false ? "Sem internet: o Marco precisa de conexão. Roteiro, mapa, Carteira e Cofre continuam funcionando." : e.message || "O Marco não respondeu."; }
+  m.vivo = false; m.status = null; S.pensando = false;
+  // trava: versão nova do prefixo ou histórico recusado → recomeça a conversa com resumo e tenta uma vez
+  if (!ok && (codigo === "versao" || codigo === "historico_invalido") && !avulso && !ctrl.recomecou) {
+    S.chat.splice(S.chat.indexOf(m), 1);
+    await recomecarFio(modo);
+    return rodarTurno(modo, novas, { ...ctrl, recomecou: true });
+  }
+  if (ok && !avulso && fio.resumo && fio.msgs.length) fio.resumo = null;
+  if (!ok && !m.erro) m.erro = "O Marco não respondeu. Tente de novo.";
+  if (!ok) m.reenvio = ctrl.reenvio;
+  S.rolarFim = true; render();
+  if (ok) checarMarco();
+  if (ok && m.encaminhar) await enviarTexto(m.encaminhar, { modo: "planejamento", semBalao: true });
+  return ok;
+}
+// devolve true quando o turno terminou bem (fim ou propostas)
+function tratarEvento(ev, m, fio, modo) {
+  const avulso = modo === "comprovante";
+  if (ev.consumo) m.consumo = ev.consumo;
+  if (ev.tipo === "inicio") { if (!fio.msgs.length) fio.versao = ev.versao; m.modelo = ev.modelo; }
+  else if (ev.tipo === "texto") { m.txt += ev.texto; m.status = null; S.rolarFim = true; renderLogo(); }
+  else if (ev.tipo === "buscando") { m.status = ev.ferramenta === "calcular_rota" ? "Calculando a rota…" : ev.ferramenta === "buscar_lugar" ? `Procurando ${ev.consulta || "o lugar"} nas bases de mapas…` : ev.ferramenta === "consultar_dia" ? `Consultando o ${ev.consulta || "dia"}…` : "Pesquisando…"; renderLogo(); }
+  else if (ev.tipo === "propostas" || ev.tipo === "fim") {
+    if (!avulso) fio.msgs.push(...ev.anexadas); // R2: guardado exatamente como foi; nunca editado depois
+    const c = ev.consumo; if (c && c.chamadas) fio.tamanho = Math.round((c.entrada + c.cacheLido + c.cacheEscrito) / c.chamadas);
+    if (ev.aviso) m.txt += (m.txt ? "\n\n" : "") + ev.aviso;
+    if (ev.tipo === "propostas") {
+      const asst = ev.anexadas[ev.anexadas.length - 1].content;
+      m.servidor = ev.resultadosServidor || {};
+      m.toolUses = asst.filter((b) => b.type === "tool_use").map((b) => b.id);
+      m.cards = asst.filter((b) => b.type === "tool_use" && !(b.id in m.servidor)).map((b) => ({ id: b.id, name: b.name, input: b.input || {}, estado: "aguardando" }));
+      for (const k of m.cards) if (k.name === "encaminhar_ao_planejador") { k.estado = "aprovado"; k.resultado = "Encaminhado ao planejador; o resultado aparece na conversa."; m.encaminhar = k.input.pedido; }
+      if (!m.txt.trim() && m.cards.some((k) => k.estado === "aguardando")) m.txt = m.cards.length > 1 ? "Preparei estas propostas para você decidir:" : "Preparei esta proposta para você decidir:";
+      if (avulso) m.respondido = true; // comprovante: conversa avulsa, não continua
+    }
+    return true;
+  }
+  else if (ev.tipo === "erro") { m.erro = ev.mensagem; }
+  return false;
+}
+// "simple compaction": resume o que foi conversado e começa uma conversa nova (nada antigo é reenviado)
+async function recomecarFio(modo) {
+  const linhas = S.chat.filter((x) => x.fio === modo || (x.de === "u" && modo === "conversa")).slice(-40).map((x) => x.de === "u" ? `Viajante: ${x.txt}` : `Marco: ${x.txt}${(x.cards || []).map((k) => ` [${k.name}: ${k.estado}${k.resultado ? " · " + k.resultado : ""}]`).join("")}`).join("\n");
+  let resumo = null;
+  try { const r = await fetch(API + "/resumir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto: linhas }) }); if (r.ok) resumo = (await r.json()).resumo; } catch (e) {}
+  for (const x of S.chat) if (x.fio === modo && x.toolUses) x.respondido = true;
+  S.fios[modo] = { ...fioVazio(), resumo };
+}
+
+// ---------- cartões de proposta (Aprovar / Ajustar / Recusar; desejos: Quero / Talvez / Não) ----------
+function cardMarco(k, mi, ci) {
+  const i = k.input || {}, d = i.dia ? diaObj(i.dia) : null;
+  const bt = (v, l, cls = "sec") => `<button class="btn ${cls}" data-a="decidir" data-m="${mi}" data-c="${ci}" data-v="${v}">${l}</button>`;
+  const botoes = k.name === "propor_desejo" ? `<div class="btns">${bt("recusar", "Não")}${bt("talvez", "Talvez")}${bt("aprovar", "Quero", "")}</div>`
+    : `<div class="btns">${bt("aprovar", k.name === "propor_lancamento" ? "Lançar" : "Aprovar", "")}${bt("ajustar", "Ajustar")}${bt("recusar", "Recusar")}</div>`;
+  const h = k.hist && S.historico.find((x) => x.id === k.hist);
+  const desf = h && !h.desfeito ? `<button class="btn ghost" style="height:34px;width:auto;padding:0 10px" data-a="desfazerHist" data-id="${h.id}">Desfazer</button>` : h && h.desfeito ? '<span class="small">Desfeito</span>' : "";
+  const rod = { aguardando: botoes,
+    aprovado: `<div class="btns" style="align-items:center"><span class="pill ok" style="font-size:14px;padding:8px 12px">${ic("check", 14, 2.5)} ${k.name === "propor_desejo" ? "Na lista de desejos" : k.name === "propor_lancamento" ? "Lançado na Carteira" : "Aplicado"}</span>${desf}</div>`,
+    talvez: `<div class="btns" style="align-items:center"><span class="pill neu" style="font-size:14px;padding:8px 12px">Guardado como ideia</span>${desf}</div>`,
+    recusado: '<span class="pill neu" style="align-self:flex-start">Recusado</span>', ajustar: '<span class="pill acc" style="align-self:flex-start">Você pediu ajuste</span>',
+    ignorado: '<span class="pill neu" style="align-self:flex-start">Sem resposta</span>', erro: `<span class="pill bad" style="align-self:flex-start;white-space:normal">${esc(k.resultado || "Não aplicado")}</span>` }[k.estado] || "";
+  const kv = (a, b) => (b ? `<div class="kv"><span>${a}</span><span style="max-width:64%">${esc(b)}</span></div>` : "");
+  let topo = "", pill = "", corpo = "";
+  if (k.name === "propor_parada") {
+    topo = `Proposta para o D${i.dia}${d ? " · " + fmtData(d.data) : ""}`; pill = seloPillSempre(i.selo);
+    corpo = `<div><div style="font-size:20px;font-weight:600">${esc(i.nome)} · ${esc(i.horario || "")}</div><div class="small" style="font-size:15px">${esc((TIPO[i.tipo] || TIPO.passeio)[1])}${i.duracao_min ? ` · ${fmtDur(i.duracao_min)} no local` : ""}</div></div>
+      <div>${kv("Impacto no dia", i.impacto)}${kv("Endereço", i.endereco)}${i.chegada_nome ? kv("Chegada de carro", `${i.chegada_nome}${i.trecho_pe_min ? ` · ${i.trecho_pe_min} min a pé` : ""}`) : ""}</div>
+      ${i.selo && i.selo !== "verde" ? '<div class="small">Este ponto precisa ser conferido no mapa: entra como pendência no checklist.</div>' : ""}`;
+  } else if (k.name === "propor_dia") {
+    topo = `Montagem do D${i.dia}${d ? " · " + fmtData(d.data) : ""}`; pill = d && d.paradas.length ? '<span class="pill warn">Substitui o dia</span>' : "";
+    corpo = `<div style="font-size:20px;font-weight:600">${esc(i.titulo)}</div><div class="mini">${(i.paradas || []).map((p) => `<div><b>${esc(p.horario || "")}</b><span style="flex:1;min-width:0">${esc(p.nome)}</span>${seloPill(p.selo || "vermelho")}</div>`).join("")}</div>${kv("Impacto", i.impacto)}`;
+  } else if (k.name === "propor_lancamento") {
+    const c = cle(), ml = c && c.moedaLocal(), simb = i.moeda === "BRL" ? "R$" : ml && ml.cod === i.moeda ? ml.simb : i.moeda;
+    const n = (i.dividir_com || []).length || 1;
+    topo = "Lançamento na Carteira"; pill = `<span class="pill acc">${esc(SITUACAO[i.situacao] || i.situacao || "")}</span>`;
+    corpo = `<div style="font-size:28px;font-weight:700;letter-spacing:-.4px" class="mono">${esc(dinheiro(i.valor, simb))}</div>
+      <div>${kv("Descrição", i.descricao)}${kv("Categoria", CATS[i.categoria] || i.categoria)}${kv("Quem pagou", i.quem_pagou)}${kv("Divisão", n > 1 ? `${(i.dividir_com || []).join(", ")} · ${dinheiro(Math.round((i.valor / n) * 100) / 100, simb)} cada` : (i.dividir_com || [])[0])}${i.dia != null ? kv("Dia", i.dia === 0 ? "Antes da viagem" : `D${i.dia}`) : ""}</div>`;
+  } else if (k.name === "propor_tarefa") {
+    topo = "Nova tarefa no checklist"; pill = `<span class="pill neu">${esc(i.grupo)}</span>`;
+    corpo = `<div style="font-size:18px;font-weight:600">${esc(i.titulo)}</div>${i.detalhe ? `<div class="small" style="font-size:15px">${esc(i.detalhe)}</div>` : ""}`;
+  } else if (k.name === "propor_concluir_tarefa") {
+    const t = tarefasLista().find((x) => x.id === i.id);
+    topo = "Concluir tarefa"; corpo = `<div style="font-size:18px;font-weight:600">${esc(t ? textoTarefa(t) : i.id)}</div>`;
+  } else if (k.name === "propor_desejo") {
+    topo = "Para a lista de desejos";
+    corpo = `<div class="swipe" style="min-height:0;box-shadow:none;padding:0"><div class="ph">${esc(i.cidade || nomeViagem())}</div><div style="font-size:20px;font-weight:600">${esc(i.nome)}</div><div style="font-size:15px;color:var(--fg2);line-height:1.4">${esc(i.detalhe || "")}</div></div>`;
+  } else if (k.name === "propor_info_viagem") {
+    const rot = { seguro_central: "Central 24 h do seguro", seguro_apolice: "Apólice do seguro", seguro_nome: "Seguradora", locadora_telefone: "Telefone da locadora", consulado: "Consulado do Brasil" };
+    topo = "Informação de apoio"; corpo = `<div>${kv(rot[i.campo] || i.campo, i.valor)}</div><div class="small">Fica no Cofre, na tela Emergência e no guia impresso.</div>`;
+  } else { topo = "Proposta"; corpo = `<div class="small">${esc(k.name)}</div>`; }
+  return `<div class="card${k.visto ? "" : " fade"}" style="border:.5px solid var(--sep)"><div class="ptopo"><span class="small">${esc(topo)}</span>${pill}</div>${corpo}${i.motivo ? `<div class="motivo">${esc(i.motivo)}</div>` : ""}${rod}</div>`;
+}
+
+// aplica uma proposta aprovada; devolve o texto que volta ao Marco e a entrada do histórico
+function paradaDeInput(i) {
+  const est = i.chegada_lat != null && i.chegada_lng != null ? (() => { const km = kmEntre({ lat: i.chegada_lat, lng: i.chegada_lng }, { lat: i.lat, lng: i.lng }); return { n: i.chegada_nome || "Ponto de chegada", lat: i.chegada_lat, lng: i.chegada_lng, km: Math.round(km * 100) / 100, min: i.trecho_pe_min || Math.max(1, Math.round(km * 15)) }; })() : null;
+  return { id: novoId(), n: i.nome, t: i.tipo || "passeio", h: i.horario || "", dur: i.duracao_min ? fmtDur(i.duracao_min) : "", lat: +i.lat, lng: +i.lng, end: i.endereco || "", tel: i.telefone || null, site: i.site || null, selo: i.selo || "vermelho", est, marco: true };
+}
+function aplicarProposta(k, v) {
+  const i = k.input || {};
+  if (k.name === "propor_parada") {
+    const d = diaObj(i.dia); if (!d) throw new Error(`a viagem não tem o dia ${i.dia}`);
+    if (!Number.isFinite(+i.lat) || !Number.isFinite(+i.lng)) throw new Error("a parada veio sem coordenadas");
+    const p = paradaDeInput(i), pernoiteAntes = p.t === "pernoite" ? d.pernoite || null : undefined;
+    d.paradas.push(p); if (p.t === "pernoite") d.pernoite = p.n; recalcRota(d);
+    return { texto: `Aprovado e aplicado: ${p.n} no D${d.dia} às ${p.h}.`, hist: registrar(`D${d.dia}: ${p.n} incluído às ${p.h}`, "parada", { dia: d.dia, id: p.id, pernoiteAntes }) };
+  }
+  if (k.name === "propor_dia") {
+    const idx = DIAS.findIndex((x) => x.dia === +i.dia); if (idx < 0) throw new Error(`a viagem não tem o dia ${i.dia}`);
+    const antes = JSON.parse(JSON.stringify(DIAS[idx])), d = DIAS[idx];
+    d.titulo = i.titulo; d.paradas = (i.paradas || []).filter((p) => Number.isFinite(+p.lat)).map(paradaDeInput);
+    const pn = d.paradas.find((p) => p.t === "pernoite"); d.pernoite = pn ? pn.n : null; d.poly = []; recalcRota(d);
+    return { texto: `Aprovado e aplicado: D${d.dia} montado (${d.paradas.length} paradas).`, hist: registrar(`D${d.dia} montado: ${d.titulo}`, "dia", { dia: d.dia, antes }) };
+  }
+  if (k.name === "propor_lancamento") {
+    const c = cle(); if (!c) throw new Error("a Carteira ainda está carregando");
+    const vs = c.viajantes(), acha = (n) => vs.find((x) => norm(x.nome) === norm(n));
+    const por = acha(i.quem_pagou), resp = (i.dividir_com || []).map(acha);
+    if (!por || resp.some((x) => !x)) throw new Error(`viajante não encontrado na Carteira (${[i.quem_pagou, ...(i.dividir_com || [])].filter((n) => !acha(n)).join(", ")})`);
+    const ml = c.moedaLocal(), moeda = i.moeda === ml.cod ? ml.cod : i.moeda === "BRL" ? "BRL" : null;
+    if (!moeda) throw new Error(`a Carteira usa ${ml.cod} e BRL; ${i.moeda} precisa ser convertido`);
+    const dados = { desc: i.descricao, cat: CATS[i.categoria] ? i.categoria : "out", valor: Math.round(+i.valor * 100) / 100, moeda, status: SITUACAO[i.situacao] ? i.situacao : "realizado", por: por.id, resp: resp.map((x) => x.id), obs: "Lançado pelo Marco" + (i.motivo ? ": " + i.motivo : "") };
+    if (i.dia != null) dados.dia = +i.dia;
+    const id = c.lancar(dados); if (!id) throw new Error("a Carteira recusou o lançamento");
+    return { texto: `Lançado na Carteira: ${i.descricao}, ${moeda} ${dados.valor.toFixed(2)}.`, hist: registrar(`Carteira: ${i.descricao} (${dinheiro(dados.valor, moeda === "BRL" ? "R$" : ml.simb)})`, "lanc", { lancId: id }) };
+  }
+  if (k.name === "propor_tarefa") {
+    garantirListas(); const id = novoId();
+    S.listas.tarefas.push({ id, g: i.grupo || "Fazer agora", t: i.titulo, s: i.detalhe || "" });
+    return { texto: `Tarefa criada (id ${id}).`, hist: registrar(`Checklist: ${i.titulo}`, "tarefa", { id }) };
+  }
+  if (k.name === "propor_concluir_tarefa") {
+    if (!tarefasLista().some((t) => t.id === i.id)) throw new Error("tarefa não encontrada");
+    S.tarefas[i.id] = true;
+    return { texto: "Tarefa marcada como concluída.", hist: registrar(`Checklist: concluída "${textoTarefa(tarefasLista().find((t) => t.id === i.id))}"`, "concluir", { id: i.id }) };
+  }
+  if (k.name === "propor_desejo") {
+    garantirListas(); const id = novoId(), st = v === "talvez" ? "Ideia" : "Desejo";
+    S.listas.desejos.push({ id, n: i.nome, s: [i.detalhe, i.cidade].filter(Boolean).join(" · "), st });
+    return { texto: v === "talvez" ? "O viajante marcou Talvez: guardado como Ideia." : "O viajante quer: entrou na lista de desejos.", hist: registrar(`${st}: ${i.nome}`, "desejo", { id }) };
+  }
+  if (k.name === "propor_info_viagem") {
+    S.viagem.info = S.viagem.info || {}; const antes = S.viagem.info[i.campo] ?? null; S.viagem.info[i.campo] = i.valor;
+    return { texto: "Informação gravada.", hist: registrar(`Informação: ${i.campo.replace(/_/g, " ")} = ${i.valor}`, "info", { campo: i.campo, antes }) };
+  }
+  throw new Error("proposta desconhecida");
+}
+// traçado e tempos reais do dia (Mapbox, pelo servidor); sem servidor, o mapa liga as paradas em linha reta
+function recalcRota(d) {
+  if (!API || !S.rotasOn) return;
+  const pts = paradasDo(d).filter((p) => Number.isFinite(+p.lat)).map((p) => (p.est ? { lat: p.est.lat, lng: p.est.lng } : { lat: +p.lat, lng: +p.lng }));
+  if (pts.length < 2) { d.poly = []; d.km = 0; d.min = 0; return; }
+  fetch(API + "/rota", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pontos: pts.slice(0, 25), modo: "carro" }) })
+    .then((r) => r.json()).then((j) => { if (j.erro) return; d.poly = j.poly; d.km = Math.round(j.km); d.min = j.min; render(); }).catch(() => {});
+}
 
 // ---------- renderização ----------
 function header(opts) {
@@ -288,75 +715,82 @@ function header(opts) {
 
 function telaConversa() {
   if (!S.chat) S.chat = chatInicial();
-  const msgs = S.chat.map((m) => {
-    if (m.de === "u") return `<div class="msg-u">${esc(m.txt)}</div>`;
+  const msgs = S.chat.map((m, mi) => {
+    const anim = m.visto ? "" : " fade";
+    if (m.de === "u") return `<div class="msg-u${anim}">${esc(m.txt)}${m.anexo ? `<div style="font-size:13px;opacity:.85;margin-top:4px;display:flex;gap:4px;align-items:center">${ic("doc", 13)} ${esc(m.anexo)}</div>` : ""}</div>`;
     let c = "";
     if (m.card === "proposta") c = cardProposta();
     else if (m.card === "lanc") c = cardLanc();
     else if (m.card === "posto") { const p = diaObj(S.diaHoje).postos[0]; c = `<div class="card"><div class="kv"><span>Posto</span><span>${esc(p.n)}</span></div><a class="btn sec" href="${gmaps(p.lat, p.lng)}" target="_blank" rel="noopener">${ic("compass", 18)} Navegar até o posto</a></div>`; }
     else if (m.card && m.card.startsWith("link:")) { const [, t, l] = m.card.split(":"); c = `<button class="btn sec" data-a="ir" data-t="${t}">${esc(l)}</button>`; }
-    return `<div class="fade" style="display:flex;flex-direction:column;gap:10px"><div class="who"><span class="avatar">${ic("compass", 16, 2)}</span>Marco</div><div class="msg-m">${esc(m.txt)}</div>${c}</div>`;
+    if (m.cards) c += m.cards.map((k, ci) => cardMarco(k, mi, ci)).join("");
+    const st = m.vivo && m.status ? `<div class="small">${esc(m.status)}</div>` : "";
+    const err = m.erro ? `<div class="card" style="background:var(--bad-bg);gap:10px"><div style="color:var(--bad);font-weight:600;font-size:15px">${esc(m.erro)}</div>${m.retry && mi === S.chat.length - 1 ? '<button class="btn sec" data-a="retry">Tentar de novo</button>' : ""}</div>` : "";
+    if (!m.txt && !c && !st && !err) return "";
+    return `<div class="${anim}" style="display:flex;flex-direction:column;gap:10px"><div class="who"><span class="avatar">${ic("compass", 16, 2)}</span>Marco</div>${m.txt ? `<div class="msg-m">${md(m.txt)}</div>` : ""}${st}${c}${err}</div>`;
   }).join("");
   const orbCls = S.pensando ? "pensando" : S.voz === "ouvindo" ? "ouvindo" : "";
-  const status = S.pensando ? "Pensando…" : S.voz === "ouvindo" ? "Ouvindo" : "Toque para falar";
-  const chips = exemploWestern()
-    ? [["lanca", `Lança: almoço US$ 38,50 dividido com ${outros()}`], ["falta", "O que falta resolver?"], ["gasto", "Quanto já gastamos?"], ["posto", "Tem posto no caminho hoje?"]]
-    : [["roteiro", "Monta um primeiro roteiro"], ["falta", "O que falta resolver?"], ["gasto", "Quanto já gastamos?"]];
+  const status = S.pensando ? "Pensando…" : S.voz === "ouvindo" ? "Ouvindo" : marcoDisponivel() ? "Toque para falar ou escreva" : "Marco desligado neste endereço";
+  const chips = marcoDisponivel()
+    ? [["O que falta resolver?"], [DIAS.some((d) => d.paradas.length) ? "Revise o roteiro e aponte problemas" : "Monte uma primeira versão do roteiro"], ["Sugira atrações para a lista de desejos"], ["Quanto já gastamos?"]].map(([t]) => ["txt", t])
+    : exemploWestern() ? [["lanca", `Lança: almoço US$ 38,50 dividido com ${outros()}`], ["falta", "O que falta resolver?"], ["gasto", "Quanto já gastamos?"], ["posto", "Tem posto no caminho hoje?"]] : [];
   return `${header({ titulo: nomeViagem(), sub: tripSub() })}
-  <main id="main"><div class="chat">${msgs}${S.pensando ? '<div class="small">Marco está pensando…</div>' : ""}</div></main>
-  <div class="chips" role="group" aria-label="Sugestões">${chips.map(([k, l]) => `<button class="chip" data-a="perg" data-k="${k}">${esc(l)}</button>`).join("")}</div>
+  <main id="main"><div class="chat">${msgs}</div></main>
+  ${chips.length ? `<div class="chips" role="group" aria-label="Sugestões">${chips.map(([k, l]) => `<button class="chip" data-a="perg" data-k="${k}">${esc(l)}</button>`).join("")}</div>` : ""}
+  <form class="entrada" data-f="marco"><input id="txtMarco" value="${esc(S.rascunho)}" placeholder="Escreva para o Marco" enterkeyhint="send" autocomplete="off" aria-label="Mensagem para o Marco"><button type="submit" class="iconbtn enviar" aria-label="Enviar">${ic("send", 20)}</button></form>
   <div class="voz"><div class="transc">${esc(S.transc || "")}</div>
-    <div class="linha"><button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="toast" data-m="No app, o teclado abre aqui para quem prefere digitar." aria-label="Digitar">${ic("kb")}</button>
+    <div class="linha"><button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="comprovante" aria-label="Enviar comprovante">${ic("upload", 20)}</button>
     <div class="orb ${orbCls}"><i></i><i></i><button data-a="falar" aria-label="Falar com o Marco">${ic("mic", 24)}</button></div>
-    <button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="toast" data-m="Conversa pausada. O Marco para de ouvir até você tocar de novo." aria-label="Pausar">${ic("pause", 20)}</button></div>
+    <button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="toast" data-m="O botão de pausa interrompe a escuta da conversa por voz, que entra na etapa de voz (ElevenLabs)." aria-label="Pausar">${ic("pause", 20)}</button></div>
     <span class="small">${status}</span></div>`;
 }
 function cardProposta() {
   const aplicada = (S.extras[3] || []).length > 0;
   return `<div class="card" style="border:.5px solid var(--sep)">
-    <div style="display:flex;justify-content:space-between;align-items:center"><span class="small">Proposta para o D3 · ${esc(fmtData(diaObj(3).data))}</span><span class="pill ok">${ic("check", 12, 2.5)} Local confirmado</span></div>
+    <div class="ptopo"><span class="small">Proposta para o D3 · ${esc(fmtData(diaObj(3).data))}</span><span class="pill ok">${ic("check", 12, 2.5)} Confirmado</span></div>
     <div><div style="font-size:20px;font-weight:600">Pôr do sol no Sylvan Lake · 18h00</div><div class="small" style="font-size:15px">Custer State Park · 45 min no local</div></div>
     <div><div class="kv"><span>Impacto no dia</span><span>+25 min de direção</span></div><div class="kv"><span>Chegada ao hotel</span><span>19h10</span></div><div class="kv"><span>Custo extra</span><span>US$ 0,00</span></div></div>
-    ${aplicada ? `<div class="btns"><span class="pill ok" style="font-size:14px;padding:8px 12px">${ic("check", 14, 2.5)} Adicionado ao D3</span><button class="btn ghost" style="height:34px;width:auto" data-a="desfazer">Desfazer</button></div>`
-      : `<div class="btns"><button class="btn" data-a="aprovar">Aprovar</button><button class="btn sec" data-a="toast" data-m="O Marco pergunta o que ajustar: horário, lugar ou duração.">Ajustar</button></div>`}
+    <div class="motivo">Lago cercado de rochas de granito, com o sol se pondo atrás delas; fica no caminho de volta ao hotel.</div>
+    ${aplicada ? `<div class="btns" style="align-items:center"><span class="pill ok" style="font-size:14px;padding:8px 12px">${ic("check", 14, 2.5)} Adicionado ao D3</span><button class="btn ghost" style="height:34px;width:auto" data-a="desfazer">Desfazer</button></div>`
+      : `<div class="btns"><button class="btn" data-a="aprovar">Aprovar</button><button class="btn sec" data-a="toast" data-m="O Marco pergunta o que ajustar: horário, lugar ou duração.">Ajustar</button><button class="btn sec" data-a="toast" data-m="Proposta recusada. Nada mudou no roteiro.">Recusar</button></div>`}
   </div>`;
 }
-
 function cardLanc() {
   const feito = S.lancId;
   return `<div class="card" style="border:.5px solid var(--sep)">
-    <div style="display:flex;justify-content:space-between;align-items:center"><span class="small">Lançamento na Carteira</span><span class="pill acc">Por voz</span></div>
+    <div class="ptopo"><span class="small">Lançamento na Carteira</span><span class="pill acc">Pago na viagem</span></div>
     <div style="font-size:28px;font-weight:700;letter-spacing:-.4px" class="mono">US$ 38,50</div>
     <div><div class="kv"><span>Descrição</span><span>Almoço</span></div><div class="kv"><span>Categoria</span><span>Alimentação</span></div>
-      <div class="kv"><span>Quem pagou</span><span>${esc((S.viagem && S.viagem.dono) || "você")} · fonte padrão</span></div><div class="kv"><span>Divisão</span><span>Igual · US$ 19,25 cada</span></div><div class="kv"><span>Situação</span><span>Realizado</span></div></div>
+      <div class="kv"><span>Quem pagou</span><span>${esc((S.viagem && S.viagem.dono) || "você")} · fonte padrão</span></div><div class="kv"><span>Divisão</span><span>Igual · US$ 19,25 cada</span></div></div>
     ${feito ? `<div class="btns"><button class="btn sec" data-a="verLanc">${ic("check", 16, 2.5)} Lançado · ver na Carteira</button><button class="btn ghost" style="width:auto;padding:0 10px" data-a="desfazerLanc">Desfazer</button></div>`
-      : `<div class="btns"><button class="btn" data-a="aprovarLanc">Lançar</button><button class="btn sec" data-a="toast" data-m="O Marco pergunta o que mudar: valor, categoria, quem pagou ou a divisão. Na Carteira tudo continua editável à mão.">Ajustar</button></div>`}
+      : `<div class="btns"><button class="btn" data-a="aprovarLanc">Lançar</button><button class="btn sec" data-a="toast" data-m="O Marco pergunta o que mudar: valor, categoria, quem pagou ou a divisão. Na Carteira tudo continua editável à mão.">Ajustar</button><button class="btn sec" data-a="toast" data-m="Lançamento recusado.">Recusar</button></div>`}
   </div>`;
 }
 
 function telaHoje() {
   const d = diaObj(S.diaHoje);
   if (!d) return `${header({ titulo: nomeViagem(), sub: tripSub() })}<main id="main"><div class="pad"><div class="hero"><span class="kick">Na viagem</span><h1>Hoje</h1></div>${vazio("O roteiro ainda está vazio", "Quando o Marco montar o roteiro, aqui aparece o dia de hoje: a próxima atividade, a rota, o pernoite e as pendências.")}</div></main>`;
-  const ps = paradasDo(d);
-  const agora = hmin(S.agora);
+  const ps = paradasDo(d), agoraTxt = S.faseManual ? S.agora : agoraHM(), agora = hmin(agoraTxt);
   const prox = ps.find((p) => p.t !== "inicio" && hmin(p.h) >= agora) || ps[ps.length - 1];
-  const idx = ps.indexOf(prox);
+  const idx = prox ? ps.indexOf(prox) : -1, cl = climaDe(d), tv = travasDia(d);
   return `${header({ titulo: nomeViagem(), sub: tripSub() })}<main id="main"><div class="pad">
     <div class="hero"><span class="kick">Dia ${d.dia} de ${DIAS.length} · ${esc(fmtData(d.data, { weekday: "long", day: "numeric", month: "long" }))}</span><h1>${esc(cidade(d))}</h1>
       <div class="progress" style="margin-top:6px"><i style="width:${((d.dia / DIAS.length) * 100).toFixed(1)}%"></i></div></div>
     <div class="stats"><div class="stat"><b>${d.km}</b><span>km hoje</span></div><div class="stat"><b>${fmtMin(d.min)}</b><span>dirigindo</span></div><div class="stat"><b>${ps.length}</b><span>paradas</span></div></div>
-    <div class="card"><div><div class="small">Próxima atividade · agora ${esc(S.agora.replace("h", ":"))}</div>
+    ${tv.length ? `<div class="card" style="background:var(--warn-bg);gap:6px">${tv.map((t) => `<div style="color:var(--warn);font-size:15px;font-weight:500">${esc(t)}</div>`).join("")}<button class="btn sec" data-a="pedirMarco" data-q="Corrija os alertas do dia ${d.dia}.">Pedir ao Marco para corrigir</button></div>` : ""}
+    ${prox ? `<div class="card"><div><div class="small">Próxima atividade · agora ${esc(agoraTxt.replace("h", ":"))}</div>
       <div style="font-size:22px;font-weight:600;margin-top:2px">${esc(nomeLimpo(prox.n))}</div>
       <div class="small" style="font-size:15px">${esc(prox.h || "")}${prox.dur ? " · " + esc(prox.dur) : ""}${prox.est ? " · estacionamento a " + Math.round(prox.est.km * 1000) + " m a pé" : ""}</div></div>
       <div class="mapa">${svgMapa(d, { alto: 130, foco: idx })}</div>
-      <div class="btns"><a class="btn" href="${gmaps(prox.est ? prox.est.lat : prox.lat, prox.est ? prox.est.lng : prox.lng)}" target="_blank" rel="noopener">${ic("compass", 18)} Navegar</a><button class="btn sec" data-a="lugar" data-d="${d.dia}" data-i="${idx}">Detalhes</button></div></div>
+      <div class="btns"><a class="btn" href="${gmaps(prox.est ? prox.est.lat : prox.lat, prox.est ? prox.est.lng : prox.lng)}" target="_blank" rel="noopener">${ic("compass", 18)} Navegar</a><button class="btn sec" data-a="lugar" data-d="${d.dia}" data-i="${idx}">Detalhes</button></div></div>`
+      : vazio(`O dia ${d.dia} ainda está vazio`, "Peça ao Marco para montar este dia.")}
     <div class="list">
-      <div class="row"><span class="ico">${ic("bed", 17)}</span><div class="main"><b>Pernoite</b><span>${esc(nomeLimpo(d.pernoite || "—"))}</span></div></div>
-      <div class="row"><span class="ico">${ic("sun", 17)}</span><div class="main"><b>Clima</b><span>Previsão aparece 5 dias antes</span></div></div>
+      <div class="row"><span class="ico">${ic("bed", 17)}</span><div class="main"><b>Pernoite</b><span>${esc(nomeLimpo(d.pernoite || "a definir"))}</span></div></div>
+      <div class="row"><span class="ico">${ic("sun", 17)}</span><div class="main"><b>Clima</b><span>${cl ? esc(climaTxt(cl)) : "A previsão aparece até 16 dias antes, com internet"}</span></div></div>
       <button class="row" data-a="tab" data-t="carteira"><span class="ico">${ic("wallet", 17)}</span><div class="main"><b>Carteira</b><span>Gastos do dia e saldo de cada um</span></div>${ic("chev", 18)}</button>
       <button class="row" data-a="ir" data-t="checklist"><span class="ico">${ic("check", 17)}</span><div class="main"><b>Pendências</b><span>${pendentes()} tarefas abertas</span></div>${ic("chev", 18)}</button>
     </div>
-    <p class="eyebrow">Roteiro do dia</p>${timeline(d)}
+    ${ps.length ? `<p class="eyebrow">Roteiro do dia</p>${timeline(d)}` : ""}
   </div></main>
   <div style="padding:8px 16px"><button class="row" style="background:var(--card);border-radius:26px;min-height:52px" data-a="ir" data-t="conversa"><div class="main"><span style="font-size:16px">Fale com o Marco</span></div><span class="num" style="width:36px;height:36px;border-radius:18px">${ic("mic", 18)}</span></button></div>`;
 }
@@ -373,32 +807,37 @@ function timeline(d) {
 function telaRoteiro() {
   const kmTot = DIAS.reduce((s, d) => s + d.km, 0), minTot = DIAS.reduce((s, d) => s + d.min, 0);
   const datas = S.viagem ? `${fmtData(S.viagem.inicio, { day: "numeric", month: "long" })} – ${fmtData(fimViagem(), { day: "numeric", month: "long" })}` : "";
-  if (!DIAS.length) return `${header({ titulo: "Roteiro", sub: nomeViagem() })}<main id="main"><div class="pad"><div class="hero"><span class="kick">${esc(datas)}</span><h1>Roteiro</h1></div>${vazio("O Marco ainda não montou o roteiro", "Conte a ele o que vocês querem fazer. O roteiro aparece aqui dia a dia, com as rotas reais, os horários e os locais conferidos no mapa.")}</div></main>`;
+  const montado = DIAS.some((d) => d.paradas.length);
   return `${header({ titulo: "Roteiro", sub: nomeViagem() })}<main id="main"><div class="pad">
     <div class="hero"><span class="kick">${esc(datas)}</span><h1>Roteiro</h1></div>
-    <div class="stats"><div class="stat"><b>${DIAS.length}</b><span>dias</span></div><div class="stat"><b>${kmTot.toLocaleString("pt-BR")}</b><span>km de estrada</span></div><div class="stat"><b>${Math.round(minTot / 60)} h</b><span>dirigindo</span></div></div>
+    ${montado ? `<div class="stats"><div class="stat"><b>${DIAS.length}</b><span>dias</span></div><div class="stat"><b>${kmTot.toLocaleString("pt-BR")}</b><span>km de estrada</span></div><div class="stat"><b>${Math.round(minTot / 60)} h</b><span>dirigindo</span></div></div>`
+      : vazio("O Marco ainda não montou o roteiro", "Conte a ele o que vocês querem fazer. Cada dia abaixo se preenche com as rotas reais, os horários e os locais conferidos no mapa.")}
     <div class="list">${DIAS.map((d) => {
-      const n = d.paradas.filter((p) => seloDe(p) !== "verde").length;
+      const n = paradasDo(d).filter((p) => seloDe(p) !== "verde").length, tv = travasDia(d);
       return `<button class="row" data-a="dia" data-d="${d.dia}"><span class="datebox"><small>${esc(fmtData(d.data, { weekday: "short" }))}</small><b>${new Date(d.data + "T12:00:00").getDate()}</b></span>
-        <div class="main"><span style="font-size:12px;font-weight:600;color:var(--accent)">DIA ${d.dia}</span><b>${esc(d.titulo)}</b><span>${d.km} km · ${fmtMin(d.min)} dirigindo${n ? ` · <span style="color:var(--warn);font-weight:600">${n} a confirmar</span>` : ""}</span></div>
+        <div class="main"><span style="font-size:12px;font-weight:600;color:var(--accent)">DIA ${d.dia}</span><b>${esc(d.titulo)}</b><span>${d.paradas.length ? `${d.km} km · ${fmtMin(d.min)} dirigindo` : "Ainda vazio"}${n ? ` · <span style="color:var(--warn);font-weight:600">${n} a conferir</span>` : ""}${tv.length ? ` · <span style="color:var(--warn);font-weight:600">${tv.length} alerta${tv.length > 1 ? "s" : ""}</span>` : ""}</span></div>
         <span class="thumb">${miniRota(d)}</span></button>`;
     }).join("")}</div></div></main>`;
 }
 function telaDia() {
   const d = diaObj(S.diaSel);
   if (!d) return telaRoteiro();
+  const tv = travasDia(d), cl = climaDe(d);
   return `${header({ titulo: `Dia ${d.dia}`, sub: fmtData(d.data, { weekday: "long", day: "numeric", month: "long" }), voltar: true })}<main id="main"><div class="pad">
     <div><h1 style="font-size:26px">${esc(d.titulo)}</h1></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill neu">${d.km} km</span><span class="pill neu">${fmtMin(d.min)} dirigindo</span><span class="pill neu">${paradasDo(d).length} paradas</span></div>
-    <button class="mapa" data-a="mapa" data-d="${d.dia}" aria-label="Abrir no mapa">${svgMapa(d, { alto: 200 })}</button>
-    ${timeline(d)}</div></main>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill neu">${d.km} km</span><span class="pill neu">${fmtMin(d.min)} dirigindo</span><span class="pill neu">${paradasDo(d).length} paradas</span>${cl ? `<span class="pill neu">${esc(climaTxt(cl))}</span>` : ""}</div>
+    ${tv.length ? `<div class="card" style="background:var(--warn-bg);gap:6px">${tv.map((t) => `<div style="color:var(--warn);font-size:15px;font-weight:500">${esc(t)}</div>`).join("")}<button class="btn sec" data-a="pedirMarco" data-q="Corrija os alertas do dia ${d.dia}.">Pedir ao Marco para corrigir</button></div>` : ""}
+    ${paradasDo(d).length ? `<button class="mapa" data-a="mapa" data-d="${d.dia}" aria-label="Abrir no mapa">${svgMapa(d, { alto: 200 })}</button>${timeline(d)}`
+      : `<div class="card"><div style="font-weight:600">Dia ainda vazio</div><span class="small">O Marco monta o dia com as rotas reais e o selo de cada local.</span><button class="btn" data-a="pedirMarco" data-q="Monte o dia ${d.dia}.">Pedir ao Marco para montar</button></div>`}</div></main>`;
 }
 
-// ---------- mapa em SVG (traçado real da estrada) ----------
+// ---------- mapa em SVG (traçado real da estrada quando houver; senão, paradas ligadas em linha reta) ----------
 function svgMapa(d, { alto = 330, foco = -1, zoom = null } = {}) {
   const W = 360, H = alto, P = 22;
-  const ps = paradasDo(d);
-  let pts = zoom ? zoom : [...d.poly, ...ps.map((p) => [p.lat, p.lng])];
+  const ps = paradasDo(d).filter((p) => Number.isFinite(+p.lat));
+  const linha = d.poly && d.poly.length > 1 ? d.poly : ps.map((p) => [+p.lat, +p.lng]);
+  let pts = zoom ? zoom : [...linha, ...ps.map((p) => [+p.lat, +p.lng])];
+  if (!pts.length) return `<svg viewBox="0 0 ${W} ${Math.min(H, 120)}" role="img" aria-label="Mapa vazio"><rect width="${W}" height="${Math.min(H, 120)}" fill="var(--map)"/><text x="${W / 2}" y="${Math.min(H, 120) / 2 + 4}" text-anchor="middle" font-size="13" font-family="var(--font)" fill="var(--fg2)">Sem locais neste dia</text></svg>`;
   const lat0 = pts.reduce((s, p) => s + p[0], 0) / pts.length;
   const kx = Math.cos((lat0 * Math.PI) / 180);
   const xs = pts.map((p) => p[1] * kx), ys = pts.map((p) => -p[0]);
@@ -406,18 +845,19 @@ function svgMapa(d, { alto = 330, foco = -1, zoom = null } = {}) {
   const span = Math.max((x1 - x0) / (W - 2 * P), (y1 - y0) / (H - 2 * P), 1e-4);
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
   const X = (lng) => W / 2 + (lng * kx - cx) / span, Y = (lat) => H / 2 + (-lat - cy) / span;
-  const path = d.poly.map((p, i) => `${i ? "L" : "M"}${X(p[1]).toFixed(1)} ${Y(p[0]).toFixed(1)}`).join("");
+  const path = linha.map((p, i) => `${i ? "L" : "M"}${X(p[1]).toFixed(1)} ${Y(p[0]).toFixed(1)}`).join("");
+  const reta = !(d.poly && d.poly.length > 1);
   const uid = "m" + (++svgN);
-  // régua de escala: 1 grau de latitude ≈ 111 km
   const kmPorPx = span * 111;
   const esc0 = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200].find((k) => k / kmPorPx >= 40) || 200;
   const escPx = esc0 / kmPorPx, escTxt = esc0 < 1 ? `${esc0 * 1000} m` : `${esc0} km`;
-  const postos = zoom ? "" : d.postos.map((p) => `<g transform="translate(${X(p.lng).toFixed(1)} ${Y(p.lat).toFixed(1)})"><circle r="7" fill="var(--card)" stroke="var(--line)" stroke-width="1" filter="url(#${uid}s)"/><path d="M-2.6 -3.4h3.6v6.6h-3.6zM1 -1.6l1.8 1.3v2.6" fill="none" stroke="var(--fg2)" stroke-width="1.1" stroke-linejoin="round"/></g>`).join("");
-  const ini = d.poly[0], fim = d.poly[d.poly.length - 1];
-  const marcas = zoom ? "" : `<circle cx="${X(ini[1]).toFixed(1)}" cy="${Y(ini[0]).toFixed(1)}" r="5" fill="var(--card)" stroke="var(--accent)" stroke-width="2.5"/><g transform="translate(${X(fim[1]).toFixed(1)} ${Y(fim[0]).toFixed(1)})"><rect x="-6" y="-6" width="12" height="12" rx="3" fill="var(--fg)"/><path d="M-3 2V-2.5M-3 0h6v2M3 0a1.6 1.6 0 0 0-1.6-1.6h-2" stroke="var(--bg)" stroke-width="1.1" fill="none"/></g>`;
-  const pins = ps.map((p, i) => {
-    if (p.t === "inicio" && i > 0) return "";
-    const c = seloDe(p), x = X(p.lng).toFixed(1), y = Y(p.lat).toFixed(1);
+  const postos = zoom ? "" : (d.postos || []).map((p) => `<g transform="translate(${X(p.lng).toFixed(1)} ${Y(p.lat).toFixed(1)})"><circle r="7" fill="var(--card)" stroke="var(--line)" stroke-width="1" filter="url(#${uid}s)"/><path d="M-2.6 -3.4h3.6v6.6h-3.6zM1 -1.6l1.8 1.3v2.6" fill="none" stroke="var(--fg2)" stroke-width="1.1" stroke-linejoin="round"/></g>`).join("");
+  const ini = linha[0], fim = linha[linha.length - 1];
+  const marcas = zoom || !ini ? "" : `<circle cx="${X(ini[1]).toFixed(1)}" cy="${Y(ini[0]).toFixed(1)}" r="5" fill="var(--card)" stroke="var(--accent)" stroke-width="2.5"/><g transform="translate(${X(fim[1]).toFixed(1)} ${Y(fim[0]).toFixed(1)})"><rect x="-6" y="-6" width="12" height="12" rx="3" fill="var(--fg)"/><path d="M-3 2V-2.5M-3 0h6v2M3 0a1.6 1.6 0 0 0-1.6-1.6h-2" stroke="var(--bg)" stroke-width="1.1" fill="none"/></g>`;
+  const todas = paradasDo(d);
+  const pins = todas.map((p, i) => {
+    if ((p.t === "inicio" && i > 0) || !Number.isFinite(+p.lat)) return "";
+    const c = seloDe(p), x = X(+p.lng).toFixed(1), y = Y(+p.lat).toFixed(1);
     const fill = c === "verde" ? "var(--accent)" : c === "amarelo" ? "var(--warn)" : "var(--bad)";
     const tc = c === "verde" ? "var(--accent-fg)" : "var(--card)";
     const s = i === foco ? 1.25 : 1;
@@ -428,13 +868,15 @@ function svgMapa(d, { alto = 330, foco = -1, zoom = null } = {}) {
     <linearGradient id="${uid}g" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" style="stop-color:var(--map)"/><stop offset="1" style="stop-color:var(--map2)"/></linearGradient>
     <filter id="${uid}s" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="1.2" stdDeviation="1.2" flood-color="#000" flood-opacity=".28"/></filter></defs>
     <rect width="${W}" height="${H}" fill="url(#${uid}g)"/>
-    <path d="${path}" fill="none" stroke="var(--road)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>${marcas}${postos}${pins}
-    ${H >= 120 ? `<g transform="translate(14 ${H - 14})"><path d="M0 -4V0H${escPx.toFixed(1)}V-4" fill="none" stroke="var(--fg2)" stroke-width="1.4"/><text x="${(escPx + 6).toFixed(1)}" y="1" font-size="10" font-family="var(--font)" fill="var(--fg2)">${escTxt}</text></g>` : ""}</svg>`;
+    ${path ? `<path d="${path}" fill="none" stroke="var(--road)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"${reta ? ' stroke-dasharray="2 7"' : ""}/>` : ""}${marcas}${postos}${pins}
+    ${H >= 120 ? `<g transform="translate(14 ${H - 14})"><path d="M0 -4V0H${escPx.toFixed(1)}V-4" fill="none" stroke="var(--fg2)" stroke-width="1.4"/><text x="${(escPx + 6).toFixed(1)}" y="1" font-size="10" font-family="var(--font)" fill="var(--fg2)">${escTxt}${reta && path ? " · trajeto ainda sem estradas" : ""}</text></g>` : ""}</svg>`;
 }
 let svgN = 0;
 function miniRota(d) {
-  const pts = d.poly, lat0 = pts[0][0], kx = Math.cos((lat0 * Math.PI) / 180);
+  const pts = d.poly && d.poly.length > 1 ? d.poly : paradasDo(d).filter((p) => Number.isFinite(+p.lat)).map((p) => [+p.lat, +p.lng]);
+  if (!pts.length) return '<svg viewBox="0 0 54 54" aria-hidden="true"></svg>';
+  const lat0 = pts[0][0], kx = Math.cos((lat0 * Math.PI) / 180);
   const xs = pts.map((p) => p[1] * kx), ys = pts.map((p) => -p[0]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   const sp = Math.max(x1 - x0, y1 - y0, 1e-4) / 40;
@@ -447,15 +889,15 @@ function telaMapa() {
   const d = diaObj(S.diaSel);
   if (!d) return `${header({ titulo: "Mapa", sub: nomeViagem() })}<main id="main"><div class="pad"><div class="hero"><span class="kick">Rotas e lugares</span><h1>Mapa</h1></div>${vazio("Nada no mapa ainda", "Cada lugar da viagem vira um pino com coordenadas, endereço, telefone e o selo de confiança. A rota de cada dia aparece com o traçado real das estradas.")}</div></main>`;
   const ps = paradasDo(d);
-  return `${header({ titulo: "Mapa", sub: "Traçado real das estradas" })}<main id="main"><div class="pad">
+  return `${header({ titulo: "Mapa", sub: d.poly && d.poly.length > 1 ? "Traçado real das estradas" : nomeViagem() })}<main id="main"><div class="pad">
     <div class="daynav"><button class="iconbtn" data-a="diaMapa" data-v="-1" aria-label="Dia anterior">${ic("back")}</button>
       <div class="t"><b>Dia ${d.dia} · ${esc(fmtData(d.data))}</b><span>${esc(d.titulo)}</span></div>
       <button class="iconbtn" data-a="diaMapa" data-v="1" aria-label="Próximo dia">${ic("chev")}</button></div>
     <div class="mapa">${svgMapa(d)}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" class="small"><span class="num" style="width:18px;height:18px;font-size:10px">1</span> confirmado
-      <span class="num warn" style="width:18px;height:18px;font-size:10px">2</span> a confirmar <span class="num bad" style="width:18px;height:18px;font-size:10px">3</span> fontes discordam · ⛽ postos a cada ~200 km</div>
-    <div class="list">${ps.map((p, i) => `<button class="row" data-a="lugar" data-d="${d.dia}" data-i="${i}"><span class="num ${seloDe(p) === "amarelo" ? "warn" : seloDe(p) === "vermelho" ? "bad" : ""}">${i + 1}</span>
-      <div class="main"><b>${esc(p.h ? p.h + " · " : "")}${esc(nomeLimpo(p.n))}</b><span>${p.est ? esc(p.est.n) + " · " + Math.round(p.est.km * 1000) + " m a pé" : esc(p.end || "")}</span></div>${seloPill(p) || ic("chev", 18)}</button>`).join("")}</div>
+      <span class="num warn" style="width:18px;height:18px;font-size:10px">2</span> aproximado <span class="num bad" style="width:18px;height:18px;font-size:10px">3</span> a confirmar${(d.postos || []).length ? " · ⛽ postos a cada ~200 km" : ""}</div>
+    ${ps.length ? `<div class="list">${ps.map((p, i) => `<button class="row" data-a="lugar" data-d="${d.dia}" data-i="${i}"><span class="num ${seloDe(p) === "amarelo" ? "warn" : seloDe(p) === "vermelho" ? "bad" : ""}">${i + 1}</span>
+      <div class="main"><b>${esc(p.h ? p.h + " · " : "")}${esc(nomeLimpo(p.n))}</b><span>${p.est ? esc(p.est.n) + " · " + Math.round(p.est.km * 1000) + " m a pé" : esc(p.end || "")}</span></div>${seloPill(p) || ic("chev", 18)}</button>`).join("")}</div>` : '<div class="card"><span class="small">Nenhum local neste dia ainda.</span></div>'}
   </div></main>`;
 }
 
@@ -464,109 +906,203 @@ function telaLugar() {
   if (!p) return telaRoteiro();
   const c = seloDe(p);
   const [icn, lab] = TIPO[p.t] || TIPO.passeio;
-  const aviso = c === "verde" ? `<div class="card" style="flex-direction:row;align-items:center;gap:10px"><span class="pill ok">${ic("check", 12, 2.5)} Local confirmado</span><span class="small">${S.confirmados[p.n] ? "Confirmado por você" : "Fontes concordam no ponto"}</span></div>`
-    : `<div class="card" style="background:${c === "amarelo" ? "var(--warn-bg)" : "var(--bad-bg)"}"><div style="font-weight:600;color:${c === "amarelo" ? "var(--warn)" : "var(--bad)"}">${c === "amarelo" ? "Local a confirmar" : "As fontes discordam deste ponto"}</div>
-      <div style="font-size:15px;line-height:1.4">${c === "amarelo" ? "Só uma fonte encontrou este lugar. Confira no mapa antes de contar com ele." : "As bases de mapas apontam lugares diferentes, ou o ponto não existe em nenhuma delas. Marque o ponto certo no mapa."}</div>
+  const nav = p.est ? p.est : p;
+  const aviso = c === "verde" ? `<div class="card" style="flex-direction:row;align-items:center;gap:10px"><span class="pill ok">${ic("check", 12, 2.5)} Confirmado</span><span class="small">${S.confirmados[p.n] ? "Confirmado por você no mapa" : "As fontes de mapas concordam neste ponto"}</span></div>`
+    : `<div class="card" style="background:${c === "amarelo" ? "var(--warn-bg)" : "var(--bad-bg)"}"><div style="font-weight:600;color:${c === "amarelo" ? "var(--warn)" : "var(--bad)"}">${c === "amarelo" ? "Local aproximado" : "Local a confirmar"}</div>
+      <div style="font-size:15px;line-height:1.4">${c === "amarelo" ? "Provavelmente certo, mas só uma fonte encontrou este ponto. Confira no mapa antes de contar com ele." : "As fontes apontam lugares diferentes, o resultado é uma área e não um ponto, ou ele não existe em base nenhuma. Confirme o ponto certo no mapa."}</div>
       <button class="btn" data-a="confirmarLocal">Conferir no mapa</button></div>`;
   return `${header({ titulo: nomeLimpo(p.n), sub: `Dia ${d.dia} · ${lab}`, voltar: true })}<main id="main"><div class="pad">
     <div style="display:flex;gap:12px;align-items:center"><span class="ico" style="width:44px;height:44px;border-radius:12px">${ic(icn, 24)}</span><div style="min-width:0"><h1 style="font-size:24px">${esc(nomeLimpo(p.n))}</h1><p class="sub">${esc(p.h || "")}${p.dur ? " · " + esc(p.dur) + " no local" : ""}</p></div></div>
     ${aviso}
-    <div class="mapa">${svgMapa(d, { alto: 170, foco: S.lugar.i, zoom: [[p.lat, p.lng], ...(p.est ? [[p.est.lat, p.est.lng]] : []), [p.lat + 0.004, p.lng + 0.006], [p.lat - 0.004, p.lng - 0.006]] })}</div>
+    <div class="mapa">${svgMapa(d, { alto: 170, foco: S.lugar.i, zoom: [[+p.lat, +p.lng], ...(p.est ? [[p.est.lat, p.est.lng]] : []), [+p.lat + 0.004, +p.lng + 0.006], [+p.lat - 0.004, +p.lng - 0.006]] })}</div>
     <div class="card" style="gap:0">
       ${p.end ? `<div class="kv"><span>Endereço</span><span class="sel" style="max-width:62%">${esc(p.end)}</span></div>` : ""}
       ${p.tel ? `<div class="kv"><span>Telefone</span><span class="sel">${esc(p.tel)}</span></div>` : ""}
       ${p.site ? `<div class="kv"><span>Site</span><span><a href="${esc(p.site)}" target="_blank" rel="noopener">abrir</a></span></div>` : ""}
-      <div class="kv"><span>Coordenadas</span><span class="sel mono">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</span></div>
-      ${p.est ? `<div class="kv"><span>Chegada de carro</span><span style="max-width:62%">${esc(p.est.n)}</span></div><div class="kv"><span>Trecho a pé</span><span>${Math.round(p.est.km * 1000)} m · ${p.est.min} min</span></div>` : ""}
+      <div class="kv"><span>Coordenadas</span><span class="sel mono">${(+p.lat).toFixed(5)}, ${(+p.lng).toFixed(5)}</span></div>
+      ${p.est ? `<div class="kv"><span>Chegada de carro</span><span style="max-width:62%">${esc(p.est.n)}</span></div><div class="kv"><span>Último trecho a pé</span><span>${Math.round(p.est.km * 1000)} m · ~${p.est.min} min</span></div>` : ""}
     </div>
-    <a class="btn" href="${gmaps(p.est ? p.est.lat : p.lat, p.est ? p.est.lng : p.lng)}" target="_blank" rel="noopener">${ic("compass", 18)} Navegar ${p.est ? "até o estacionamento" : "até aqui"}</a>
-    <p class="small" style="margin:0">A navegação usa as coordenadas, nunca o nome do lugar, para o GPS não refazer a busca e errar de novo.</p>
+    <div class="btns"><a class="btn" href="${gmaps(nav.lat, nav.lng)}" target="_blank" rel="noopener">${ic("compass", 18)} Google Maps</a><a class="btn sec" href="${waze(nav.lat, nav.lng)}" target="_blank" rel="noopener">Waze</a></div>
+    <p class="small" style="margin:0">A navegação vai ${p.est ? "até o estacionamento, " : ""}pelas coordenadas, nunca pelo nome do lugar: assim o GPS não refaz a busca e não erra de novo.</p>
   </div></main>`;
 }
 
-function telaCarteira() { return ""; } // a Carteira é o app financeiro original, exibido em #wallet
+function telaCarteira() { return ""; } // a Carteira é o app financeiro, exibido em #wallet
 
 function telaMais() {
   const it = (t, ico, lab, sub, extra = "") => `<button class="row" data-a="ir" data-t="${t}"><span class="ico">${ic(ico, 18)}</span><div class="main"><b>${lab}</b>${sub ? `<span>${sub}</span>` : ""}</div>${extra}${ic("chev", 18)}</button>`;
   const dH = diaObj(S.diaHoje), sos = (S.viagem && S.viagem.emergencia) || "112";
+  const ativos = S.historico.filter((h) => !h.desfeito).length;
   return `${header({ titulo: "Mais", sub: nomeViagem() })}<main id="main"><div class="pad"><h1>Mais</h1>
-    <div class="list"><button class="row" data-a="ajustesViagem"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Ajustes da viagem</b><span>Datas, viajantes, moedas, câmbio e carteiras · preenchidos pelo Marco</span></div>${ic("chev", 18)}</button></div>
-    <div class="list"><button class="row" data-a="ir" data-t="arquivo"><span class="ico">${ic("doc", 18)}</span><div class="main"><b>Arquivo da viagem e sincronização</b><span>QR, Quick Share, WhatsApp, exportar e juntar</span></div>${ic("chev", 18)}</button></div>
+    <div class="list">${it("perfil", "user", "Perfil da viagem", "Ritmo, limites, interesses e regras · sempre editável")}<button class="row" data-a="ajustesViagem"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Ajustes da viagem</b><span>Datas, viajantes, moedas, câmbio e carteiras · preenchidos na criação</span></div>${ic("chev", 18)}</button></div>
+    <div class="list">${it("arquivo", "doc", "Arquivo da viagem e sincronização", "QR, Quick Share, WhatsApp, exportar e juntar")}${it("historico", "history", "Histórico de alterações", ativos ? `${ativos} alteração(ões) com desfazer` : "Tudo o que for aprovado aparece aqui")}${it("consumo", "wallet", "Consumo do Marco", "Gasto com a inteligência artificial, hoje e no mês")}</div>
     <div class="list">${it("checklist", "check", "Checklist", `${pendentes()} tarefas abertas`)}${it("desejos", "heart", "Desejos", "Lugares, restaurantes e compras")}${it("cofre", "lock", "Cofre", "Documentos disponíveis sem sinal")}${it("grupo", "people", "Viajantes", esc(S.viagem ? S.viagem.viajantes.join(" e ") : ""))}${it("guia", "printer", "Guia impresso", "PDF para imprimir em duas vias")}</div>
-    <div class="list">${it("emergencia", "sos", '<span style="color:var(--bad)">Emergência</span>', `${sos}, tradutor, ficha médica`)}${it("viagens", "globe", "Minhas viagens", "")}</div>
+    <div class="list">${it("emergencia", "sos", '<span style="color:var(--bad)">Emergência</span>', `${sos}, frases, ficha médica, localização`)}${it("viagens", "globe", "Minhas viagens", "")}</div>
     <p class="eyebrow">Ferramentas de teste</p>
-    <div class="demo"><div class="small">Fase da viagem (a tela inicial muda)</div>
-      <div class="seg">${[["planejamento", "Planejamento"], ["viagem", "Na viagem"]].map(([k, l]) => `<button class="${S.fase === k ? "on" : ""}" data-a="fase" data-v="${k}">${l}</button>`).join("")}</div>
-      ${dH ? `<div class="daynav"><button class="iconbtn" data-a="diaHoje" data-v="-1" aria-label="Dia anterior">${ic("back")}</button><div class="t"><b>Dia simulado: D${S.diaHoje}</b><span>${esc(fmtData(dH.data))} · ${esc(cidade(dH))}</span></div><button class="iconbtn" data-a="diaHoje" data-v="1" aria-label="Próximo dia">${ic("chev")}</button></div>` : ""}
+    <div class="demo"><div class="small">Fase da viagem (a tela inicial muda; normalmente vem da data)</div>
+      <div class="seg">${[["auto", "Pela data"], ["planejamento", "Planejamento"], ["viagem", "Na viagem"]].map(([k, l]) => `<button class="${(S.faseManual ? S.fase : "auto") === k ? "on" : ""}" data-a="fase" data-v="${k}">${l}</button>`).join("")}</div>
+      ${dH && S.faseManual ? `<div class="daynav"><button class="iconbtn" data-a="diaHoje" data-v="-1" aria-label="Dia anterior">${ic("back")}</button><div class="t"><b>Dia simulado: D${S.diaHoje}</b><span>${esc(fmtData(dH.data))} · ${esc(cidade(dH))}</span></div><button class="iconbtn" data-a="diaHoje" data-v="1" aria-label="Próximo dia">${ic("chev")}</button></div>` : ""}
       <div class="btns"><button class="btn sec" data-a="alerta">Alerta urgente</button><button class="btn sec" data-a="notif">Notificação</button></div>
+      <div class="small">Marco: ${S.marcoOn ? "ligado" : API ? "desligado" + (S.marcoFaltam.length ? ` (falta ${esc(S.marcoFaltam.join(", "))})` : "") : "chega com o servidor na nuvem"}</div>
       <button class="btn ghost" style="color:var(--bad)" data-a="pedirFechar">Fechar esta viagem neste aparelho</button></div>
   </div></main>`;
 }
 
 function telaChecklist() {
-  const L = tarefasLista(), grupos = [...new Set(L.map((t) => t.g))];
+  const L = tarefasLista(), grupos = [...new Set(L.map((t) => t.g))].sort((a, b) => (ORDEM_GRUPOS.indexOf(a) + 99) % 99 - (ORDEM_GRUPOS.indexOf(b) + 99) % 99);
   return `${header({ titulo: "Checklist", sub: `${pendentes()} de ${L.length} abertas`, voltar: true })}<main id="main"><div class="pad"><h1>Checklist</h1>
     ${grupos.map((g) => `<p class="eyebrow">${esc(g)}</p><div class="list">${L.filter((t) => t.g === g).map((t) => {
-      const on = !!S.tarefas[t.id];
-      return `<div class="row ${on ? "feito" : ""}"><button class="check ${on ? "on" : ""}" data-a="tarefa" data-id="${esc(t.id)}" aria-label="Concluir">${ic("check", 14, 3)}</button>
-        <div class="main"><b>${esc(textoTarefa(t))}</b><span>${esc(t.s)}</span></div>
-        ${!on && t.comp ? `<button class="pill acc" data-a="comprovante" data-id="${t.id}">${ic("upload", 12, 2.2)} Anexar</button>` : ""}${!on && t.ir ? `<button class="pill acc" data-a="ir" data-t="${t.ir === "confirmar" ? "mapa" : t.ir}">Abrir</button>` : ""}</div>`;
-    }).join("")}</div>`).join("")}</div></main>`;
+      const on = feitaTarefa(t), auto = t.id === "conf";
+      return `<div class="row ${on ? "feito" : ""}"><button class="check ${on ? "on" : ""}" data-a="tarefa" data-id="${esc(t.id)}" aria-label="Concluir"${auto ? " disabled" : ""}>${ic("check", 14, 3)}</button>
+        <div class="main"><b>${esc(textoTarefa(t))}</b><span>${esc(t.s || "")}${auto ? " · conclui sozinha quando tudo estiver conferido" : ""}</span></div>
+        ${!on && t.comp ? `<button class="pill acc" data-a="comprovante" data-id="${esc(t.id)}" data-cat="${esc(t.comp)}">${ic("upload", 12, 2.2)} Anexar</button>` : ""}${!on && t.ir ? `<button class="pill acc" data-a="irTarefa" data-t="${esc(t.ir)}">Abrir</button>` : ""}</div>`;
+    }).join("")}</div>`).join("")}
+    <p class="small" style="margin:0">Ao concluir uma reserva, anexe o comprovante: o Marco lê e atualiza roteiro, Carteira, Cofre e Emergência de uma vez.</p></div></main>`;
 }
 
-// estado de um desejo: o que já entrou no roteiro ou foi reservado (tarefa concluída) avança sozinho
+// estado de um desejo: o que já entrou no roteiro ou foi reservado avança sozinho
 const COR_ESTADO = { Ideia: "neu", Desejo: "neu", "No roteiro": "acc", Reservado: "ok", Pago: "ok", Realizado: "ok" };
 function estadoDesejo(x) {
   if (x.tarefa && S.tarefas[x.tarefa]) return "Reservado";
-  if (Object.values(S.extras).some((l) => l.some((p) => p.n === x.n))) return "No roteiro";
+  if (DIAS.some((d) => paradasDo(d).some((p) => norm(nomeLimpo(p.n)) === norm(x.n)))) return "No roteiro";
   return x.st || "Desejo";
 }
 function telaDesejos() {
   const L = (S.listas && S.listas.desejos) || [];
   return `${header({ titulo: "Desejos", sub: nomeViagem(), voltar: true })}<main id="main"><div class="pad"><h1>Desejos</h1>
     <p class="sub">Tudo começa como ideia e segue até realizado: ideia, desejo, no roteiro, reservado, pago, realizado.</p>
-    ${L.length ? `<div class="list">${L.map((x) => { const st = estadoDesejo(x); return `<div class="row"><span class="ico">${ic("star", 17)}</span><div class="main"><b>${esc(x.n)}</b><span>${esc(x.s || "")}</span></div><span class="pill ${COR_ESTADO[st] || "neu"}">${esc(st)}</span></div>`; }).join("")}</div>`
-      : `<div class="card"><div style="font-weight:600">Nenhum desejo ainda</div><span class="small">Fale com o Marco ("quero conhecer…", "quero jantar em…") ou toque em Adicionar desejo.</span></div>`}
-    <button class="btn sec" data-a="toast" data-m="No app, a busca funciona como no Google Maps: digite o nome, confira no mapa e adicione à viagem.">${ic("plus", 18)} Adicionar desejo</button></div></main>`;
+    ${L.length ? `<div class="list">${L.map((x) => { const st = estadoDesejo(x); return `<div class="row"><span class="ico">${ic("star", 17)}</span><div class="main"><b>${esc(x.n)}</b><span>${esc(x.s || "")}</span>${x.selo && x.selo !== "verde" ? `<span style="margin-top:4px">${seloPill(x.selo)}</span>` : ""}</div><span class="pill ${COR_ESTADO[st] || "neu"}">${esc(st)}</span></div>`; }).join("")}</div>`
+      : `<div class="card"><div style="font-weight:600">Nenhum desejo ainda</div><span class="small">Fale com o Marco ("quero conhecer…", "quero jantar em…") ou busque um lugar.</span></div>`}
+    <button class="btn sec" data-a="buscaAbrir">${ic("search", 18)} Buscar lugar e adicionar</button></div></main>`;
 }
 function telaCofre() {
-  const docs = (S.listas && S.listas.cofre) || COFRE_PADRAO;
+  const esperados = (S.listas && S.listas.cofre) || COFRE_CATS.slice(0, 4).map((n) => ({ n, s: "" }));
+  const tem = (n) => S.cofreDocs.some((x) => x.cat === n);
   return `${header({ titulo: "Cofre", sub: "Disponível sem sinal", voltar: true })}<main id="main"><div class="pad"><h1>Cofre</h1>
-    <div class="list">${docs.map((x) => { const falta = x.seguro ? !S.tarefas.seg : !!x.falta; const s = x.seguro ? (S.tarefas.seg ? "Anexado · lido pelo Marco" : "Falta anexar") : x.s;
-      return `<div class="row"><span class="ico">${ic("doc", 17)}</span><div class="main"><b>${esc(x.n)}</b><span>${esc(s || "")}</span></div>${falta ? '<span class="pill warn">Falta</span>' : `<span class="pill ok">${ic("check", 12, 2.5)} Offline</span>`}</div>`; }).join("")}</div>
-    <p class="small" style="margin:0">Os documentos ficam guardados no aparelho e abrem sem internet. Nenhum número de documento aparece nesta demonstração.</p></div></main>`;
+    <p class="eyebrow">Guardados neste celular</p>
+    ${S.cofreDocs.length ? `<div class="list">${S.cofreDocs.map((x) => `<div class="row"><span class="ico">${ic("doc", 17)}</span><button class="main" style="text-align:left" data-a="cofreAbrir" data-id="${esc(x.id)}"><b>${esc(x.nome)}</b><span>${esc(x.cat)} · ${Math.max(1, Math.round(x.tam / 1024))} KB · ${esc(new Date(x.quando).toLocaleDateString("pt-BR"))}</span></button><button class="pill neu" data-a="cofreApagar" data-id="${esc(x.id)}">Remover</button></div>`).join("")}</div>`
+      : '<div class="card"><span class="small">Nenhum documento guardado ainda. Passaportes, vouchers, seguro e reservas ficam aqui e abrem sem internet.</span></div>'}
+    <button class="btn" data-a="comprovante">${ic("upload", 18)} Guardar documento ou comprovante</button>
+    <p class="eyebrow">O que costuma ir no Cofre</p>
+    <div class="list">${esperados.map((x) => `<div class="row"><span class="ico">${ic("lock", 17)}</span><div class="main"><b>${esc(x.n)}</b>${x.s ? `<span>${esc(x.s)}</span>` : ""}</div>${tem(x.n) ? `<span class="pill ok">${ic("check", 12, 2.5)} Guardado</span>` : '<span class="pill warn">Falta</span>'}</div>`).join("")}</div>
+    <p class="small" style="margin:0">Os documentos ficam só neste aparelho. O arquivo da viagem não os leva (são grandes); guarde-os em cada celular.</p></div></main>`;
 }
 function telaGrupo() {
   const vs = S.viagem ? S.viagem.viajantes : [];
   return `${header({ titulo: "Viajantes", sub: nomeViagem(), voltar: true })}<main id="main"><div class="pad"><h1>Viajantes</h1>
     <div class="list">${vs.map((n, i) => `<div class="row"><span class="num" ${i ? 'style="background:var(--fill);color:var(--fg)"' : ""}>${esc(n[0] || "?")}</span><div class="main"><b>${esc(n)}</b><span>${i ? "Convidado" : "Organizador"}${S.viagem.dono === n ? " · este celular" : ""}</span></div></div>`).join("")}</div>
-    <button class="btn sec" data-a="toast" data-m="Link de convite copiado. Quem entrar faz o próprio perfil e acrescenta os desejos dele.">${ic("plus", 18)} Convidar viajante</button>
+    <button class="btn sec" data-a="convidar">${ic("plus", 18)} Convidar viajante</button>
+    <p class="small" style="margin:0">Cada convidado faz o próprio perfil e acrescenta os desejos dele; o Marco concilia: o que é comum vira programa do grupo, o que diverge vira atividade individual com ponto de reencontro.</p>
     ${exemploWestern() ? `<p class="eyebrow">Conciliação de desejos · exemplo</p>
     <div class="card"><div style="font-weight:600">Atividade separada sugerida no D15</div><div style="font-size:15px;line-height:1.45">${esc(vs[1] || "Um viajante")} quer a exposição do Titanic no Luxor; ${esc(vs[0] || "o outro")} prefere o Jardim Botânico do Bellagio. Os dois ficam na mesma região: cada um vai ao seu programa e vocês se reencontram às 16h00 na estação do monotrilho do MGM.</div>
-      <div class="btns"><button class="btn" data-a="toast" data-m="Proposta aprovada: o D15 agora tem dois blocos individuais e o ponto de reencontro.">Aprovar</button><button class="btn sec" data-a="toast" data-m="Mantido como programa do grupo.">Manter juntos</button></div></div>` : ""}</div></main>`;
+      <div class="btns"><button class="btn" data-a="toast" data-m="Exemplo: no app, o D15 passa a ter dois blocos individuais e o ponto de reencontro.">Aprovar</button><button class="btn sec" data-a="toast" data-m="Mantido como programa do grupo.">Manter juntos</button></div></div>` : ""}</div></main>`;
 }
 function telaGuia() {
-  const d = diaObj(S.diaSel) || DIAS[0];
-  if (!d) return `${header({ titulo: "Guia impresso", sub: nomeViagem(), voltar: true })}<main id="main"><div class="pad"><h1>Guia impresso</h1>${vazio("O guia nasce do roteiro", "Quando o roteiro estiver montado, o guia sai em PDF com o dia a dia, endereços, telefones, reservas e mapas, pronto para imprimir em duas vias.")}</div></main>`;
+  const d = diaObj(S.diaSel) || DIAS.find((x) => x.paradas.length) || DIAS[0];
+  if (!d || !DIAS.some((x) => x.paradas.length)) return `${header({ titulo: "Guia impresso", sub: nomeViagem(), voltar: true })}<main id="main"><div class="pad"><h1>Guia impresso</h1>${vazio("O guia nasce do roteiro", "Quando o roteiro estiver montado, o guia sai em PDF com o dia a dia, endereços, telefones, coordenadas e mapas, pronto para imprimir em duas vias.")}</div></main>`;
+  const n = aConfirmar(), bloqueado = n > 0 && !S.guiaAceito;
   return `${header({ titulo: "Guia impresso", sub: "Prévia de uma página", voltar: true })}<main id="main"><div class="pad"><h1>Guia impresso</h1>
+    ${bloqueado ? `<div class="card" style="background:var(--warn-bg)"><div style="font-weight:600;color:var(--warn)">${n} ${n > 1 ? "locais ainda não foram conferidos" : "local ainda não foi conferido"} no mapa</div>
+      <div style="font-size:15px;line-height:1.4">Um guia impresso com coordenada errada leva ao lugar errado sem aviso. Confira os locais antes, ou gere assim mesmo sabendo que eles saem marcados como "a confirmar".</div>
+      <div class="btns"><button class="btn" data-a="irTarefa" data-t="confirmar">Conferir agora</button><button class="btn sec" data-a="aceitarGuia">Gerar assim mesmo</button></div></div>` : ""}
     <div class="card" style="font-family:Georgia,'Times New Roman',serif;gap:8px"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg2)">${esc(nomeViagem())} · Dia ${d.dia} · ${esc(fmtData(d.data, { weekday: "long", day: "numeric", month: "long" }))}</div>
-      <div style="font-size:20px;font-weight:700">${esc(d.titulo)}</div><div style="font-size:14px;color:var(--fg2)">${d.km} km · ${fmtMin(d.min)} dirigindo · pernoite: ${esc(nomeLimpo(d.pernoite || ""))}</div>
+      <div style="font-size:20px;font-weight:700">${esc(d.titulo)}</div><div style="font-size:14px;color:var(--fg2)">${d.km} km · ${fmtMin(d.min)} dirigindo${d.pernoite ? ` · pernoite: ${esc(nomeLimpo(d.pernoite))}` : ""}</div>
       <div class="mapa">${svgMapa(d, { alto: 150 })}</div>
-      ${paradasDo(d).map((p) => `<div style="display:flex;gap:10px;font-size:14px;border-top:.5px solid var(--sep);padding-top:6px"><b style="width:44px;flex-shrink:0">${esc(p.h || "")}</b><div style="min-width:0">${esc(nomeLimpo(p.n))}${p.tel ? ` · ${esc(p.tel)}` : ""}<br><span style="color:var(--fg2)">${esc(p.end || "")}</span></div></div>`).join("")}</div>
-    <p class="small" style="margin:0">Sem notas de construção: só o que o viajante precisa. O PDF é gerado pelo servidor e sai igual no Android e no iPhone.</p>
-    <button class="btn" data-a="toast" data-m="No app, o PDF completo do roteiro é gerado e salvo no aparelho.">Gerar PDF dos ${DIAS.length} dias</button></div></main>`;
+      ${paradasDo(d).map((p) => `<div style="display:flex;gap:10px;font-size:14px;border-top:.5px solid var(--sep);padding-top:6px"><b style="width:44px;flex-shrink:0">${esc(p.h || "")}</b><div style="min-width:0">${esc(nomeLimpo(p.n))}${p.tel ? ` · ${esc(p.tel)}` : ""}${seloDe(p) !== "verde" ? ' <span style="color:var(--warn)">(a confirmar)</span>' : ""}<br><span style="color:var(--fg2)">${esc(p.end || "")}</span></div></div>`).join("")}</div>
+    <p class="small" style="margin:0">Sem notas de construção: só o que o viajante precisa. No celular, escolha "Salvar como PDF" na tela de impressão.</p>
+    <button class="btn" data-a="imprimirGuia"${bloqueado ? " disabled style=\"opacity:.45\"" : ""}>${ic("printer", 18)} Gerar PDF dos ${DIAS.length} dias</button></div></main>`;
 }
+function htmlGuia() {
+  const v = S.viagem, info = v.info || {}, n = aConfirmar();
+  const linha = (a, b) => (b ? `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>` : "");
+  const capa = `<div class="pg"><div class="k">Guia da viagem</div><h1>${esc(v.nome)}</h1><p>${esc(fmtData(v.inicio, { day: "numeric", month: "long", year: "numeric" }))} a ${esc(fmtData(fimViagem(), { day: "numeric", month: "long", year: "numeric" }))} · ${esc(v.viajantes.join(", "))}</p>
+    <h2>Contatos de emergência</h2><table>${linha("Emergência no país", v.emergencia)}${linha("Seguradora", info.seguro_nome)}${linha("Central 24 h do seguro", info.seguro_central)}${linha("Apólice", info.seguro_apolice)}${linha("Locadora", info.locadora_telefone)}${linha("Consulado do Brasil", info.consulado)}</table>
+    ${n ? `<p class="obs">${n} ${n > 1 ? "locais saem" : "local sai"} marcado(s) como "a confirmar": confira no mapa antes de ir.</p>` : ""}
+    <h2>Resumo</h2><table>${DIAS.map((d) => `<tr><td class="h">D${d.dia}</td><td>${esc(fmtData(d.data))} · ${esc(d.titulo)}${d.pernoite ? ` · pernoite: ${esc(nomeLimpo(d.pernoite))}` : ""}</td></tr>`).join("")}</table></div>`;
+  const dias = DIAS.filter((d) => d.paradas.length || (S.extras[d.dia] || []).length).map((d) => { const ps = paradasDo(d); return `<div class="pg"><div class="k">Dia ${d.dia} · ${esc(fmtData(d.data, { weekday: "long", day: "numeric", month: "long" }))}</div><h2>${esc(d.titulo)}</h2><p>${d.km} km · ${fmtMin(d.min)} dirigindo${d.pernoite ? ` · pernoite: ${esc(nomeLimpo(d.pernoite))}` : ""}</p><div class="mp">${svgMapa(d, { alto: 220 })}</div>
+    <table>${ps.map((p) => `<tr><td class="h">${esc(p.h || "")}</td><td><b>${esc(nomeLimpo(p.n))}</b>${seloDe(p) !== "verde" ? " (a confirmar)" : ""}${p.dur ? ` · ${esc(p.dur)}` : ""}<br>${esc(p.end || "")}${p.tel ? ` · ${esc(p.tel)}` : ""}<br><span class="c">${(+p.lat).toFixed(5)}, ${(+p.lng).toFixed(5)}${p.est ? ` · chegada de carro: ${esc(p.est.n)} (${(+p.est.lat).toFixed(5)}, ${(+p.est.lng).toFixed(5)}), ${Math.round(p.est.km * 1000)} m a pé` : ""}</span></td></tr>`).join("")}</table></div>`; }).join("");
+  return capa + dias;
+}
+function telaHistorico() {
+  const L = S.historico;
+  return `${header({ titulo: "Histórico", sub: nomeViagem(), voltar: true })}<main id="main"><div class="pad"><h1>Histórico de alterações</h1>
+    <p class="sub">Tudo o que foi aprovado fica registrado e pode ser desfeito.</p>
+    ${L.length ? `<div class="list">${L.map((h) => `<div class="row"><span class="ico">${ic("history", 17)}</span><div class="main"><b${h.desfeito ? ' style="text-decoration:line-through;color:var(--fg3)"' : ""}>${esc(h.desc)}</b><span>${esc(new Date(h.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))}${h.quem ? " · " + esc(h.quem) : ""}${h.desfeito ? " · desfeito" : ""}</span></div>${h.desfeito ? "" : `<button class="pill acc" data-a="desfazerHist" data-id="${esc(h.id)}">Desfazer</button>`}</div>`).join("")}</div>`
+      : '<div class="card"><span class="small">Nada aprovado ainda.</span></div>'}</div></main>`;
+}
+
+// ---------- consumo do Marco (regra de contexto e custo, seção 27): medido em cada chamada, com trava diária ----------
+function telaConsumo() {
+  const c = S.consumo;
+  if (!c && API) setTimeout(() => A.consumoAtualizar(), 0);
+  const usd = (v) => "US$ " + (+v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const cache = (x) => { const t = x.entrada + x.cacheLido + x.cacheEscrito; return t ? Math.round((100 * x.cacheLido) / t) + "%" : "–"; };
+  const NOMES = { conversa: "Conversa (Sonnet 5.5)", planejamento: "Planejamento (Opus 5.5)", comprovante: "Comprovantes (Sonnet 5.5)", ficha: "Ficha da viagem", resumo: "Resumos para recomeçar conversa" };
+  let corpo;
+  if (!API) corpo = `<div class="card"><span class="small">O consumo aparece quando o Marco estiver ligado (computador de testes ou servidor na nuvem).</span></div>`;
+  else if (!c) corpo = `<div class="small">Carregando…</div>`;
+  else if (c.erro) corpo = `<div class="card"><span class="small">Não foi possível ler o consumo agora.</span></div>`;
+  else corpo = `<div class="stats"><div class="stat"><b>${usd(c.hoje.usd)}</b><span>hoje</span></div><div class="stat"><b>${usd(c.mes.usd)}</b><span>no mês</span></div><div class="stat"><b>${cache(c.mes)}</b><span>vindo do cache</span></div></div>
+      ${c.limiteDiaUsd ? `<div class="bar"><div class="l"><span>Limite do dia</span><span>${usd(c.hoje.usd)} de ${usd(c.limiteDiaUsd)}</span></div><div class="progress"><i style="width:${Math.min(100, (100 * c.hoje.usd) / c.limiteDiaUsd).toFixed(0)}%"></i></div></div>` : `<div class="small">Sem limite diário de gasto (desligado durante os testes).</div>`}
+      <div class="list">${Object.entries(c.porModo).map(([k, x]) => `<div class="row"><div class="main"><b>${esc(NOMES[k] || k)}</b><span>${x.turnos} pedido(s) · ${x.chamadas} chamada(s) · cache ${cache(x)}${x.buscas ? ` · ${x.buscas} busca(s) na web` : ""}</span></div><span class="val">${usd(x.usd)}</span></div>`).join("") || `<div class="row"><span class="small">Nenhum uso neste mês.</span></div>`}</div>`;
+  return `${header({ titulo: "Consumo do Marco", sub: "Inteligência artificial", voltar: true })}<main id="main"><div class="pad"><h1>Consumo</h1>
+    <p class="sub">Cada pedido ao Marco é medido: tokens novos, tokens lidos do cache (bem mais baratos), resposta e buscas na web. Valores estimados pela tabela de preços da Anthropic.</p>
+    ${corpo}
+    <button class="btn sec" data-a="consumoAtualizar">Atualizar</button>
+    <p class="small" style="margin:0">Quando houver limite diário, ao passar dele o Marco pausa até o dia seguinte e o resto do app continua funcionando. O limite fica no arquivo de chaves do servidor (LIMITE_DIARIO_USD).</p></div></main>`;
+}
+
+// ---------- emergência (seção 21): funciona sob estresse e, no essencial, sem sinal ----------
+const FRASES = [
+  { pt: "Preciso de um médico.", en: "I need a doctor.", es: "Necesito un médico.", fr: "J'ai besoin d'un médecin.", it: "Ho bisogno di un medico.", de: "Ich brauche einen Arzt." },
+  { pt: "Por favor, chame uma ambulância.", en: "Please call an ambulance.", es: "Por favor, llame a una ambulancia.", fr: "Appelez une ambulance, s'il vous plaît.", it: "Per favore, chiami un'ambulanza.", de: "Bitte rufen Sie einen Krankenwagen." },
+  { pt: "Estou com dor no peito.", en: "I have chest pain.", es: "Tengo dolor en el pecho.", fr: "J'ai une douleur à la poitrine.", it: "Ho un dolore al petto.", de: "Ich habe Schmerzen in der Brust." },
+  { pt: "Tenho alergia a alguns medicamentos.", en: "I am allergic to some medications.", es: "Soy alérgico a algunos medicamentos.", fr: "Je suis allergique à certains médicaments.", it: "Sono allergico ad alcuni farmaci.", de: "Ich bin gegen einige Medikamente allergisch." },
+  { pt: "Sofri um acidente de carro.", en: "I had a car accident.", es: "Tuve un accidente de coche.", fr: "J'ai eu un accident de voiture.", it: "Ho avuto un incidente stradale.", de: "Ich hatte einen Autounfall." },
+  { pt: "Fui roubado.", en: "I was robbed.", es: "Me robaron.", fr: "On m'a volé.", it: "Mi hanno derubato.", de: "Ich wurde bestohlen." },
+  { pt: "Perdi meu passaporte.", en: "I lost my passport.", es: "Perdí mi pasaporte.", fr: "J'ai perdu mon passeport.", it: "Ho perso il passaporto.", de: "Ich habe meinen Reisepass verloren." },
+  { pt: "Não falo bem o idioma. Fale devagar, por favor.", en: "I don't speak the language well. Please speak slowly.", es: "No hablo bien el idioma. Por favor, hable despacio.", fr: "Je ne parle pas bien la langue. Parlez lentement, s'il vous plaît.", it: "Non parlo bene la lingua. Per favore, parli lentamente.", de: "Ich spreche die Sprache nicht gut. Bitte sprechen Sie langsam." },
+];
+const FICHA_ROT = {
+  titulo: { en: "Emergency medical information", es: "Información médica de emergencia", fr: "Informations médicales d'urgence", it: "Informazioni mediche di emergenza", de: "Medizinische Notfallinformationen", pt: "Ficha médica de emergência" },
+  nome: { en: "Name", es: "Nombre", fr: "Nom", it: "Nome", de: "Name", pt: "Nome" },
+  condicoes: { en: "Medical conditions", es: "Afecciones", fr: "Pathologies", it: "Patologie", de: "Erkrankungen", pt: "Condições de saúde" },
+  medicacoes: { en: "Medications", es: "Medicamentos", fr: "Médicaments", it: "Farmaci", de: "Medikamente", pt: "Medicações" },
+  alergias: { en: "Allergies", es: "Alergias", fr: "Allergies", it: "Allergie", de: "Allergien", pt: "Alergias" },
+  sangue: { en: "Blood type", es: "Grupo sanguíneo", fr: "Groupe sanguin", it: "Gruppo sanguigno", de: "Blutgruppe", pt: "Tipo sanguíneo" },
+  contato: { en: "Emergency contact", es: "Contacto de emergencia", fr: "Contact d'urgence", it: "Contatto di emergenza", de: "Notfallkontakt", pt: "Contato de emergência" },
+};
+const idiomaLocal = () => { const l = (S.viagem && (S.viagem.idioma || (paisDe(S.viagem.pais) || {}).lang)) || "en"; return FRASES[0][l] ? l : "en"; };
+const SAUDE = "cle-saude"; // dados de saúde: só neste aparelho, nunca no arquivo da viagem (LGPD)
+const saudeLer = () => { try { return JSON.parse(localStorage.getItem(SAUDE) || "{}"); } catch (e) { return {}; } };
+const saudeSalvar = (x) => { try { localStorage.setItem(SAUDE, JSON.stringify(x)); } catch (e) {} };
 function telaEmergencia() {
-  const frases = [["Preciso de um médico.", "I need a doctor."], ["Estou com dor no peito.", "I have chest pain."], ["Sou alérgico a penicilina.", "I am allergic to penicillin."], ["Fui roubado.", "I was robbed."], ["Perdi meu passaporte.", "I lost my passport."]];
-  const sos = (S.viagem && S.viagem.emergencia) || "112";
-  return `${header({ titulo: "Emergência", sub: "Funciona sem sinal", voltar: true, direita: "<span style='width:36px'></span>" })}<main id="main"><div class="pad">
+  const sos = (S.viagem && S.viagem.emergencia) || "112", l = idiomaLocal(), info = (S.viagem && S.viagem.info) || {};
+  return `${header({ titulo: "Emergência", sub: "O essencial funciona sem sinal", voltar: true, direita: "<span style='width:36px'></span>" })}<main id="main"><div class="pad">
     <div class="card" style="background:var(--bad-bg)"><div style="font-weight:700;color:var(--bad);font-size:20px">Você está em segurança?</div><div style="font-size:15px">Se alguém corre risco, ligue primeiro para o número de emergência do país onde vocês estão.</div>
-      <a class="btn danger" href="tel:${esc(sos)}" target="_blank" rel="noopener">${ic("phone", 18)} Ligar ${esc(sos)}</a><span class="small">Se o discador não abrir, disque <b class="sel">${esc(sos)}</b>. O número muda conforme o país do roteiro.</span></div>
-    <div class="list"><button class="row" data-a="toast" data-m="Tradutor ao vivo: tela dividida, cada pessoa fala no seu idioma. Precisa de internet."><span class="ico">${ic("translate", 18)}</span><div class="main"><b>Tradutor de emergência</b><span>Voz a voz, tela dividida</span></div>${ic("chev", 18)}</button>
-      <button class="row" data-a="toast" data-m="Ficha médica em inglês: condições, medicações, alergias e contatos, para mostrar ao atendimento."><span class="ico">${ic("doc", 18)}</span><div class="main"><b>Ficha médica em inglês</b><span>Para mostrar ao atendimento</span></div>${ic("chev", 18)}</button>
-      <div class="row"><span class="ico">${ic("phone", 18)}</span><div class="main"><b>Central do seguro viagem 24 h</b><span>${S.tarefas.seg ? "Número lido do comprovante" : "Anexe o comprovante para aparecer aqui"}</span></div></div>
-      <div class="row"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Consulado-Geral do Brasil</b><span>O mais próximo do roteiro do dia</span></div></div></div>
-    <p class="eyebrow">Frases prontas · sem internet</p><div class="list">${frases.map(([pt, en]) => `<div class="row"><div class="main"><b>${esc(en)}</b><span>${esc(pt)}</span></div></div>`).join("")}</div></div></main>`;
+      <a class="btn danger" href="tel:${esc(sos)}" target="_blank" rel="noopener">${ic("phone", 18)} Ligar ${esc(sos)}</a><span class="small">Se o discador não abrir, disque <b class="sel">${esc(sos)}</b>.</span></div>
+    <div class="list">
+      <button class="row" data-a="compartilharLocal"><span class="ico">${ic("share", 18)}</span><div class="main"><b>Compartilhar minha localização</b><span>Com o grupo ou o contato de emergência (o GPS funciona sem internet)</span></div>${ic("chev", 18)}</button>
+      <button class="row" data-a="hospitais"><span class="ico">${ic("cross", 18)}</span><div class="main"><b>Hospitais perto de mim</b><span>Abre o mapa com os mais próximos (precisa de internet)</span></div>${ic("chev", 18)}</button>
+      <button class="row" data-a="ir" data-t="ficha"><span class="ico">${ic("doc", 18)}</span><div class="main"><b>Ficha médica em ${LINGUAS[l]}</b><span>Para mostrar ao atendimento · fica só neste celular</span></div>${ic("chev", 18)}</button>
+      ${info.seguro_central ? `<a class="row" href="tel:${esc(info.seguro_central.replace(/[^\d+]/g, ""))}" target="_blank" rel="noopener"><span class="ico">${ic("phone", 18)}</span><div class="main"><b>Central do seguro viagem 24 h</b><span>${esc(info.seguro_central)}${info.seguro_apolice ? " · apólice " + esc(info.seguro_apolice) : ""}</span></div>${ic("chev", 18)}</a>`
+        : `<button class="row" data-a="comprovante" data-id="seg" data-cat="Seguro viagem"><span class="ico">${ic("phone", 18)}</span><div class="main"><b>Central do seguro viagem 24 h</b><span>Anexe o comprovante: o Marco lê o telefone e a apólice</span></div>${ic("chev", 18)}</button>`}
+      <button class="row" data-a="toast" data-m="O tradutor voz a voz (tela dividida, cada pessoa no seu idioma) entra junto com a conversa por voz e precisa de internet. Sem sinal, use as frases prontas abaixo."><span class="ico">${ic("translate", 18)}</span><div class="main"><b>Tradutor de emergência</b><span>Voz a voz, tela dividida · chega com a etapa de voz</span></div>${ic("chev", 18)}</button>
+      <a class="row" href="https://www.google.com/maps/search/Consulado+do+Brasil" target="_blank" rel="noopener"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Consulado do Brasil</b><span>${info.consulado ? esc(info.consulado) : "O mais próximo, no mapa"}</span></div>${ic("chev", 18)}</a></div>
+    <p class="eyebrow">Frases prontas em ${LINGUAS[l]} · toque para ouvir</p>
+    <div class="list">${FRASES.map((f, i) => `<button class="row" data-a="falarFrase" data-i="${i}"><div class="main"><b style="font-size:18px">${esc(f[l])}</b><span>${esc(f.pt)}</span></div><span class="ico">${ic("speaker", 17)}</span></button>`).join("")}</div>
+    <p class="small" style="margin:0">O app facilita a comunicação e o acesso à ajuda; não faz diagnóstico nem substitui o atendimento.</p></div></main>`;
+}
+function telaFicha() {
+  const s = saudeLer(), l = idiomaLocal(), campos = ["nome", "condicoes", "medicacoes", "alergias", "sangue", "contato"];
+  const preenchida = campos.some((k) => s[k]);
+  return `${header({ titulo: "Ficha médica", sub: "Só neste celular", voltar: true, direita: "<span style='width:36px'></span>" })}<main id="main"><div class="pad">
+    ${preenchida ? `<div class="card" style="gap:0"><div style="font-size:19px;font-weight:700;padding-bottom:6px">${esc(FICHA_ROT.titulo[l])}</div>${campos.filter((k) => s[k]).map((k) => `<div class="kv"><span>${esc(FICHA_ROT[k][l])}<br><small>${esc(FICHA_ROT[k].pt)}</small></span><span style="max-width:58%;font-weight:600">${esc(s[k])}</span></div>`).join("")}</div>
+      <p class="small" style="margin:0">Mostre esta tela ao atendimento. Escreva os remédios com o nome da caixa (o princípio ativo é igual em qualquer idioma).</p>` : ""}
+    <p class="eyebrow">${preenchida ? "Editar" : "Preencher"} · opcional e discreto</p>
+    ${campos.map((k) => `<div class="campo"><label for="sd-${k}">${esc(FICHA_ROT[k].pt)}</label><input id="sd-${k}" data-saude="${k}" value="${esc(s[k] || "")}" autocomplete="off"></div>`).join("")}
+    <p class="small" style="margin:0">Dados de saúde são sensíveis: ficam guardados só neste aparelho, não vão no arquivo da viagem e só são mostrados por ação sua.</p>
+    <button class="btn" data-a="voltar">Pronto</button></div></main>`;
 }
 function telaViagens() {
   const v = S.viagem, f = diasAte();
@@ -577,77 +1113,143 @@ function telaViagens() {
     <p class="small" style="margin:0">Uma viagem por vez neste aparelho, como na Carteira. Para trocar, abra o arquivo de outra viagem.</p></div></main>`;
 }
 
-// ---------- onboarding ----------
-const INTERESSES = ["Montanhas e natureza", "Trilhas", "Trens cênicos", "Cidades históricas", "Museus", "Gastronomia", "Compras", "Fotografia", "Lagos e barcos", "Vida noturna", "Aventura radical", "Bem-estar"];
-const ATRACOES = [["Jungfraujoch", "A estação de trem mais alta da Europa, entre geleiras."], ["Vale de Lauterbrunnen", "Vale de paredões e cachoeiras, bom para caminhadas leves."], ["Glacier Express", "Trem panorâmico entre Zermatt e St. Moritz."], ["Lucerna", "Cidade à beira do lago, com a ponte de madeira da Kapellbrücke."], ["Zermatt e o Matterhorn", "Vila sem carros aos pés do Matterhorn."]];
-const CENARIO = ["Subir de trem até um mirante e almoçar com vista", "Fazer uma trilha de 3 horas entre vilarejos", "Voo panorâmico de helicóptero", "Ficar num café da vila, sem pressa"];
-const FALA = "Quero levar meus pais para a Suíça em julho, uns doze dias. A gente gosta de montanha, trem e comida boa, mas sem correria.";
+// ---------- perfil (camadas A e B da seção 6, sempre editáveis) ----------
+const INTERESSES = ["Natureza e parques", "Trilhas", "Cidades", "Museus e história", "Gastronomia", "Compras", "Fotografia", "Cultura local", "Shows e esportes", "Parques temáticos", "Aventura radical", "Vida noturna", "Praia", "Bem-estar", "Carros e estradas cênicas"];
+const SLIDERS = [["aventura", "Conservador", "Aventureiro"], ["explorar", "Relaxar", "Explorar"], ["fora", "Popular", "Fora do circuito"], ["premium", "Econômico", "Premium"]];
+const CENARIOS = [
+  { p: "Um mirante famoso e 3 horas livres. O que vocês fazem?", o: [["Ver dos mirantes, de carro", { aventura: -20, premium: -10 }], ["Trilha de 2 horas descendo", { aventura: 20, explorar: 20 }], ["Voo panorâmico de helicóptero", { aventura: 30, premium: 30, explorar: 10 }], ["Sentar e contemplar, sem pressa", { aventura: -10, explorar: -25 }]] },
+  { p: "Chove no dia do passeio ao ar livre.", o: [["Vamos assim mesmo", { aventura: 25, explorar: 10 }], ["Trocamos por um museu", { explorar: 10 }], ["Dia de descanso", { explorar: -25, aventura: -10 }], ["Dia de compras", { explorar: -5 }]] },
+  { p: "A atração famosa tem 2 horas de fila.", o: [["Encaramos a fila", { fora: -20 }], ["Pagamos o fura-fila", { premium: 30, fora: -10 }], ["Trocamos por algo menos conhecido", { fora: 30, premium: -10 }], ["Voltamos no dia seguinte bem cedo", { premium: -10 }]] },
+];
+const RITMOS = [["tranquilo", "Tranquilo"], ["equilibrado", "Equilibrado"], ["intenso", "Intenso"]];
+const campo = (id, rot, val, extra = "") => `<div class="campo"><label for="${id}">${rot}</label><input id="${id}" value="${esc(val ?? "")}" autocomplete="off" ${extra}></div>`;
+function blocoPerfil(pf, alvo) {
+  // alvo: "onb" (criação) ou "pf" (edição no Perfil da viagem)
+  const at = (k) => `data-${alvo}="${k}"`;
+  return `<div class="campo"><label>Ritmo dos dias</label><div class="seg">${RITMOS.map(([k, l]) => `<button class="${pf.ritmo === k ? "on" : ""}" data-a="setPerfil" data-alvo="${alvo}" data-k="ritmo" data-v="${k}">${l}</button>`).join("")}</div></div>
+    <div class="dois">${campo(alvo + "-acordar", "Acorda nas férias às", pf.acordar, at("acordar") + ' placeholder="8h00"')}${campo(alvo + "-dir", "Máx. de horas dirigindo/dia", pf.maxDirecao, at("maxDirecao") + ' inputmode="decimal" placeholder="sem carro: vazio"')}</div>
+    ${campo(alvo + "-regras", "Regras inegociáveis", pf.regras, at("regras") + ' placeholder="Ex.: sem caução em hotel"')}
+    ${campo(alvo + "-alim", "Restrições alimentares", pf.alimentacao, at("alimentacao") + ' placeholder="Ex.: sem glúten"')}
+    ${campo(alvo + "-limites", "Medos e limites", pf.limites, at("limites") + ' placeholder="Ex.: altura, trilhas longas, calor"')}`;
+}
+function blocoSliders(pf, alvo) {
+  return SLIDERS.map(([k, a, b]) => `<div class="slider"><div class="l"><span>${a}</span><span>${b}</span></div><input type="range" min="0" max="100" value="${(pf.sl || {})[k] ?? 50}" data-${alvo}-sl="${k}" aria-label="${a} ou ${b}"></div>`).join("");
+}
+function blocoInteresses(pf, alvo) {
+  const r = ["Tocar", "Curto", "Amo", "Não é comigo"];
+  return `<div class="grid2">${INTERESSES.map((n, i) => { const v = (pf.int || {})[n] || 0; return `<button class="int ${v === 2 ? "amo" : v === 3 ? "nao" : ""}" data-a="setInteresse" data-alvo="${alvo}" data-n="${esc(n)}"><b>${n}</b><span class="pill ${v === 2 ? "acc" : "neu"}" style="align-self:flex-start">${r[v]}</span></button>`; }).join("")}</div>`;
+}
+const perfilAtual = () => { S.viagem.perfil = S.viagem.perfil || { ritmo: "equilibrado", sl: {}, int: {} }; return S.viagem.perfil; };
+function telaPerfil() {
+  if (!S.viagem) return telaViagens();
+  const pf = perfilAtual();
+  return `${header({ titulo: "Perfil da viagem", sub: nomeViagem(), voltar: true })}<main id="main"><div class="pad"><h1>Perfil</h1>
+    <p class="sub">O Marco usa este perfil em todas as sugestões. Mudou de ideia? Ajuste aqui a qualquer momento.</p>
+    <div class="card">${blocoPerfil(pf, "pf")}</div>
+    <p class="eyebrow">Personalidade do grupo</p><div class="card">${blocoSliders(pf, "pf")}</div>
+    <p class="eyebrow">Interesses</p>${blocoInteresses(pf, "pf")}
+    <div class="card" style="gap:0">${[["Ocasião", pf.ocasiao], ["Saindo de", pf.saindoDe], ["Já reservado", pf.reservado], ["Orçamento", pf.orcamento]].filter(([, x]) => x).map(([a, b]) => `<div class="kv"><span>${a}</span><span style="max-width:62%">${esc(b)}</span></div>`).join("") || '<span class="small">Ocasião, origem, reservas e orçamento aparecem aqui quando informados na criação.</span>'}</div>
+  </div></main>`;
+}
+
+// ---------- onboarding (ONBOARDING.md): fala livre primeiro, ficha se preenchendo, só o essencial obrigatório ----------
+function novaOnb() { return { step: 0, f: { fala: "", nome: "", destino: "", pais: "", saindoDe: "", inicio: "", dias: "", outros: "", ocasiao: "", reservado: "", orcamento: "", nomeViagem: "", cotacao: "" }, pf: { ritmo: "equilibrado", acordar: "", maxDirecao: "", regras: "", alimentacao: "", limites: "", sl: {}, int: {} }, cen: {} }; }
 function telaOnboarding() {
-  const o = S.onb, dots = `<div class="dots">${[0, 1, 2, 3, 4].map((i) => `<i class="${i === o.step ? "on" : ""}"></i>`).join("")}</div>`;
+  const o = S.onb, f = o.f, N = 5, dots = `<div class="dots">${Array.from({ length: N }, (_, i) => `<i class="${i === o.step ? "on" : ""}"></i>`).join("")}</div>`;
+  const at = (k) => `data-onb="${k}"`;
   let c = "";
   if (o.step === 0) {
-    const n = o.fala.length, ok = n >= FALA.length;
-    c = `<h1 style="font-size:28px">Me conta sobre essa viagem.</h1><p class="sub">Para onde, com quem, o que você está imaginando. Pode falar à vontade.</p>
-      <div class="transc" style="text-align:left;max-width:none;font-size:17px;color:var(--fg);min-height:72px">${esc(FALA.slice(0, n))}${!ok && n ? "▍" : ""}</div>
-      <div class="card ficha" style="gap:0"><div class="small" style="padding-bottom:6px">Ficha da viagem</div>
-        <div class="kv"><span>Destino</span><span>${n > 40 ? "Suíça" : "…"}</span></div><div class="kv"><span>Quando</span><span>${n > 60 ? "Julho · ~12 dias" : "…"}</span></div>
-        <div class="kv"><span>Quem vai</span><span>${n > 30 ? "Você + pais (3)" : "…"}</span></div><div class="kv"><span>Estilo</span><span>${n > 100 ? "Montanha, trens, gastronomia" : "…"}</span></div><div class="kv"><span>Ritmo</span><span>${ok ? "Tranquilo" : "…"}</span></div></div>
-      <div style="display:flex;justify-content:center"><div class="orb ${o.falando ? "ouvindo" : ""}"><i></i><i></i><button data-a="onbFalar" aria-label="Falar">${ic("mic", 24)}</button></div></div>
-      <button class="btn ${ok ? "" : "sec"}" data-a="onbNext">${ok ? "Continuar" : "Pular a fala"}</button>`;
+    c = `<h1 style="font-size:28px">Me conta sobre essa viagem.</h1><p class="sub">Para onde, com quem, quando, o que você está imaginando. Pode falar à vontade${marcoDisponivel() ? "; o Marco preenche a ficha com o que você disser" : ""}.</p>
+      <div class="campo"><textarea id="onb-fala" ${at("fala")} placeholder="Ex.: Quero levar meus pais para a Suíça em julho, uns doze dias. A gente gosta de montanha, trem e comida boa, mas sem correria.">${esc(f.fala)}</textarea></div>
+      ${marcoDisponivel() ? `<button class="btn ${o.lendo ? "sec" : ""}" data-a="onbMarco"${o.lendo ? " disabled" : ""}>${o.lendo ? "O Marco está lendo…" : `${ic("compass", 18)} Preencher a ficha com o Marco`}</button>` : `<div class="small">O Marco ainda não está ligado neste endereço: preencha a ficha abaixo.</div>`}
+      ${o.marcou ? '<div class="pill ok" style="align-self:flex-start">Ficha preenchida pelo Marco · confira</div>' : ""}
+      <p class="eyebrow">Ficha da viagem</p>
+      <div class="card">
+        ${campo("onb-nome", "Seu nome (este celular fica em seu nome)", f.nome, at("nome") + ' autocomplete="given-name"')}
+        ${campo("onb-destino", "Para onde", f.destino, at("destino") + ' placeholder="Ex.: Suíça e norte da Itália"')}
+        <div class="campo"><label for="onb-pais">País principal</label><select id="onb-pais" ${at("pais")}><option value="">Escolha</option>${PAISES.map((p) => `<option value="${p.cod}"${f.pais === p.cod ? " selected" : ""}>${esc(p.nome)}</option>`).join("")}</select></div>
+        <div class="dois">${campo("onb-inicio", "Início", f.inicio, at("inicio") + ' type="date"')}${campo("onb-dias", "Dias", f.dias, at("dias") + ' type="number" min="1" max="120" inputmode="numeric"')}</div>
+        ${campo("onb-outros", "Quem mais vai (nomes, separados por vírgula)", f.outros, at("outros") + ' placeholder="Ex.: Pai, Mãe"')}
+        ${campo("onb-saindo", "Saindo de", f.saindoDe, at("saindoDe") + ' placeholder="Ex.: São Paulo"')}
+        ${campo("onb-ocasiao", "Ocasião", f.ocasiao, at("ocasiao") + ' placeholder="Férias, aniversário, lua de mel…"')}
+        ${campo("onb-reservado", "O que já está reservado", f.reservado, at("reservado") + ' placeholder="Voos, hotéis, carro… (o Marco lê os comprovantes depois)"')}
+        ${campo("onb-orc", "Quanto pretendem gastar", f.orcamento, at("orcamento") + ' placeholder="Total, por dia, ou &quot;me ajude&quot;"')}
+      </div>
+      <button class="btn" data-a="onbNext">Continuar</button>`;
   } else if (o.step === 1) {
-    c = `<h1 style="font-size:28px">Do que vocês gostam?</h1><p class="sub">Toque uma vez para "curto", duas para "amo", três para "não é comigo".</p>
-      <div class="grid2">${INTERESSES.map((n, i) => { const v = o.int[i] || 0; return `<button class="int ${v === 2 ? "amo" : v === 3 ? "nao" : ""}" data-a="onbInt" data-i="${i}"><b>${n}</b><span class="pill ${v === 2 ? "acc" : v === 1 ? "neu" : "neu"}" style="align-self:flex-start">${["Tocar", "Curto", "Amo", "Não é comigo"][v]}</span></button>`; }).join("")}</div>
-      <button class="btn" data-a="onbNext">Continuar</button>`;
+    c = `<h1 style="font-size:28px">Ritmo e estilo</h1><p class="sub">Isso define quanto cabe em cada dia e o que o Marco nunca propõe.</p><div class="card">${blocoPerfil(o.pf, "onb")}</div>
+      <div class="btns"><button class="btn sec" data-a="onbNext">Pular</button><button class="btn" data-a="onbNext">Continuar</button></div>`;
   } else if (o.step === 2) {
-    const a = ATRACOES[o.at];
-    c = `<h1 style="font-size:28px">Atrações na Suíça</h1><p class="sub">${o.at < ATRACOES.length ? `${o.at + 1} de ${ATRACOES.length}` : "Pronto"} · "Quero" vai direto para a lista de desejos.</p>
-      ${a ? `<div class="swipe fade"><div class="ph">${esc(a[0])}</div><div style="font-size:20px;font-weight:600">${esc(a[0])}</div><div style="font-size:15px;color:var(--fg2);line-height:1.4">${esc(a[1])}</div></div>
-      <div class="btns"><button class="btn sec" data-a="onbAt" data-v="nao">Não</button><button class="btn sec" data-a="onbAt" data-v="talvez">Talvez</button><button class="btn" data-a="onbAt" data-v="quero">Quero</button></div>`
-      : `<div class="card"><div style="font-size:17px"><b>${o.quero.length}</b> na lista de desejos · <b>${o.talvez}</b> como ideia</div><span class="small">${esc(o.quero.join(", ") || "Nenhuma marcada")}</span></div><button class="btn" data-a="onbNext">Continuar</button>`}`;
+    c = `<h1 style="font-size:28px">Do que vocês gostam?</h1><p class="sub">Toque uma vez para "curto", duas para "amo", três para "não é comigo".</p>${blocoInteresses(o.pf, "onb")}
+      <div class="btns"><button class="btn sec" data-a="onbNext">Pular</button><button class="btn" data-a="onbNext">Continuar</button></div>`;
   } else if (o.step === 3) {
-    c = `<h1 style="font-size:28px">Uma situação</h1><p class="sub">Vocês estão em Zermatt, com 3 horas livres. O que preferem?</p>
-      <div style="display:flex;flex-direction:column;gap:10px">${CENARIO.map((t, i) => `<button class="opt ${o.cen === i ? "on" : ""}" data-a="onbCen" data-i="${i}">${esc(t)}</button>`).join("")}</div>
-      <p class="small" style="margin:0">Cenários como este ajustam o perfil (conservador ↔ aventureiro, econômico ↔ premium) melhor do que perguntas diretas.</p>
-      <button class="btn" data-a="onbNext">Continuar</button>`;
+    c = `<h1 style="font-size:28px">Algumas situações</h1><p class="sub">Cenários ajustam o perfil melhor do que perguntas diretas.</p>
+      ${CENARIOS.map((s, si) => `<div class="grupo-op"><div style="font-weight:600">${esc(s.p)}</div>${s.o.map(([t], oi) => `<button class="opt ${o.cen[si] === oi ? "on" : ""}" data-a="onbCen" data-s="${si}" data-i="${oi}">${esc(t)}</button>`).join("")}</div>`).join("")}
+      <div class="btns"><button class="btn sec" data-a="onbNext">Pular</button><button class="btn" data-a="onbNext">Continuar</button></div>`;
   } else {
-    const amo = INTERESSES.filter((_, i) => o.int[i] === 2);
-    const perfil = ["Conservador e contemplativo", "Equilibrado, gosta de caminhar", "Aventureiro, aceita gastar mais", "Relaxado, sem pressa"][o.cen ?? 1];
+    const p = paisDe(f.pais), amo = INTERESSES.filter((n) => o.pf.int[n] === 2);
     c = `<h1 style="font-size:28px">Entendi assim</h1>
-      <div class="card ficha" style="gap:0"><div class="kv"><span>Viagem</span><span>Suíça · julho · ~12 dias</span></div><div class="kv"><span>Grupo</span><span>Você + pais</span></div><div class="kv"><span>Ritmo</span><span>Tranquilo</span></div>
-        <div class="kv"><span>Amam</span><span style="max-width:62%">${esc(amo.join(", ") || "Montanha, trens, gastronomia")}</span></div><div class="kv"><span>Desejos</span><span>${o.quero.length} atrações</span></div><div class="kv"><span>Carteira</span><span style="max-width:62%">3 viajantes · CHF e EUR → R$ · câmbio do dia</span></div><div class="kv"><span>Perfil</span><span>${esc(perfil)}</span></div></div>
-      <p class="sub">"Montei o perfil da viagem. Quer que eu comece pelas cidades-base e pelos trens?"</p>
-      <label class="small" for="onbNome" style="margin-bottom:-8px">Seu nome (este celular fica em seu nome)</label>
-      <input id="onbNome" value="${esc(o.nome || "")}" placeholder="Ex.: Ana" autocomplete="given-name" style="height:50px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:17px;padding:0 14px">
+      <div class="card ficha" style="gap:0"><div class="kv"><span>Viagem</span><span style="max-width:62%">${esc(f.destino)} · ${esc(f.dias)} dias desde ${f.inicio ? esc(fmtData(f.inicio, { day: "numeric", month: "long" })) : "?"}</span></div>
+        <div class="kv"><span>Grupo</span><span style="max-width:62%">${esc([f.nome, ...f.outros.split(",").map((x) => x.trim()).filter(Boolean)].join(", "))}</span></div>
+        <div class="kv"><span>Ritmo</span><span>${esc((RITMOS.find(([k]) => k === o.pf.ritmo) || [, ""])[1])}${o.pf.maxDirecao ? ` · até ${esc(o.pf.maxDirecao)} h de direção` : ""}</span></div>
+        ${amo.length ? `<div class="kv"><span>Amam</span><span style="max-width:62%">${esc(amo.join(", "))}</span></div>` : ""}
+        <div class="kv"><span>Carteira</span><span style="max-width:62%">${p ? `${esc(p.moeda)} e BRL · emergência ${esc(p.sos)}` : "escolha o país"}</span></div></div>
+      <p class="eyebrow">Personalidade do grupo · ajuste se quiser</p><div class="card">${blocoSliders(o.pf, "onb")}</div>
+      <div class="card">${campo("onb-nv", "Nome da viagem", f.nomeViagem || f.destino, at("nomeViagem"))}
+        ${p && p.moeda !== "BRL" ? campo("onb-cot", `Câmbio: 1 ${p.moeda} = quantos R$`, f.cotacao, at("cotacao") + ' inputmode="decimal" placeholder="Ex.: 6,45"') : ""}</div>
       <button class="btn" data-a="onbFim">Criar viagem</button>`;
   }
-  return `<div class="top"><button class="iconbtn" data-a="voltar" aria-label="Fechar">${ic("x")}</button><div class="ttl"><b>Nova viagem</b></div><span style="width:36px"></span></div>
+  return `<div class="top"><button class="iconbtn" data-a="${o.step ? "onbVoltar" : "voltar"}" aria-label="${o.step ? "Voltar" : "Fechar"}">${ic(o.step ? "back" : "x")}</button><div class="ttl"><b>Nova viagem</b></div><span style="width:36px"></span></div>
     <main id="main"><div class="pad">${dots}${c}</div></main>`;
+}
+function aplicarCenarios(o) {
+  const sl = { aventura: 50, explorar: 50, fora: 50, premium: 50 };
+  CENARIOS.forEach((s, si) => { const e = o.cen[si] != null ? s.o[o.cen[si]][1] : {}; for (const [k, v] of Object.entries(e)) sl[k] = Math.max(0, Math.min(100, sl[k] + v)); });
+  for (const k of Object.keys(sl)) if (o.pf.sl[k] == null || !o.slManual) o.pf.sl[k] = sl[k];
+}
+function preencherFicha(i) {
+  const f = S.onb.f, set = (k, v) => { if (v != null && v !== "") f[k] = String(v); };
+  set("destino", i.destino); if (paisDe(i.pais)) f.pais = i.pais; set("saindoDe", i.saindo_de); set("inicio", /^\d{4}-\d{2}-\d{2}$/.test(i.inicio || "") ? i.inicio : null);
+  set("dias", i.dias); if (Array.isArray(i.viajantes) && i.viajantes.length) f.outros = i.viajantes.join(", ");
+  set("ocasiao", i.ocasiao); set("reservado", i.reservado); set("orcamento", i.orcamento);
+  if (i.ritmo) S.onb.pf.ritmo = i.ritmo;
+  for (const t of i.interesses || []) { const n = INTERESSES.find((x) => norm(x).includes(norm(t)) || norm(t).includes(norm(x).split(" ")[0])); if (n) S.onb.pf.int[n] = 2; }
+  S.onb.marcou = true;
+}
+async function buscarCambio() {
+  const f = S.onb.f, p = paisDe(f.pais);
+  if (!p || p.moeda === "BRL" || f.cotacao || navigator.onLine === false) return;
+  try { const j = await (await fetch(`https://open.er-api.com/v6/latest/${p.moeda}`)).json(); if (j && j.rates && j.rates.BRL && !f.cotacao) { f.cotacao = j.rates.BRL.toFixed(4).replace(".", ","); render(); } } catch (e) {}
 }
 
 // ---------- montagem ----------
 const TABS = () => [[S.fase === "viagem" ? "hoje" : "conversa", S.fase === "viagem" ? "sun" : "chat", S.fase === "viagem" ? "Hoje" : "Marco"], ["roteiro", "list", "Roteiro"], ["mapa", "map", "Mapa"], ["carteira", "wallet", "Carteira"], ["mais", "more", "Mais"]];
-const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "roteiro", mapa: "mapa", carteira: "carteira", mais: "mais", checklist: "mais", desejos: "mais", cofre: "mais", grupo: "mais", guia: "mais", emergencia: "mais", arquivo: "mais", lugar: null, viagens: null };
+const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "roteiro", mapa: "mapa", carteira: "carteira", mais: "mais", checklist: "mais", desejos: "mais", cofre: "mais", grupo: "mais", guia: "mais", emergencia: "mais", ficha: "mais", arquivo: "mais", historico: "mais", perfil: "mais", consumo: "mais", lugar: null, viagens: null };
 let ultimaTela = null;
 function render() {
-  const T = { conversa: telaConversa, hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo }[S.tela];
+  const T = { conversa: telaConversa, hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, ficha: telaFicha, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo, historico: telaHistorico, perfil: telaPerfil, consumo: telaConsumo }[S.tela] || telaBoasVindas;
   const main0 = $("#main"), scroll = main0 && ultimaTela === S.tela ? main0.scrollTop : 0;
+  // quem está digitando não perde o foco quando o Marco atualiza a tela
+  const ativo = document.activeElement, focoId = ativo && ativo.id && /^(INPUT|TEXTAREA)$/.test(ativo.tagName) && ativo.type !== "range" ? ativo.id : null;
+  let selIni = null; try { selIni = focoId ? ativo.selectionStart : null; } catch (e) {}
   const raiz = RAIZ[S.tela] ?? S.hist.map((h) => RAIZ[h.tela]).filter(Boolean).pop();
   const tabbar = S.tela === "onboarding" || S.tela === "boasvindas" ? "" : `<nav class="tabbar">${TABS().map(([t, i, l]) => `<button class="tab ${raiz === t ? "on" : ""}" data-a="tab" data-t="${t}"><span>${ic(i, 24)}${t === "mais" && pendentes() ? `<i class="badge">${pendentes()}</i>` : ""}</span>${l}</button>`).join("")}</nav>`;
   let over = "";
-  if (S.overlay === "alerta") over = `<div class="alerta" role="alertdialog" aria-label="Alerta urgente"><div style="font-size:13px;color:#A1A1A6">Agora · Marco, seu agente de viagem</div><div class="ic">${ic("sos", 30, 2)}</div>
-    <div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:600;color:#FF6961">Alerta urgente</div><h2>Estrada fechada no seu trajeto</h2><p>A US-191 está interditada ao norte de Moab. O trajeto de hoje passa por ela.</p></div>
+  if (S.overlay === "alerta") over = `<div class="alerta" role="alertdialog" aria-label="Alerta urgente"><div style="font-size:13px;color:#A1A1A6">Agora · Marco, seu agente de viagem · exemplo de teste</div><div class="ic">${ic("sos", 30, 2)}</div>
+    <div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:600;color:#FF6961">Alerta urgente</div><h2>Estrada fechada no seu trajeto</h2><p>A estrada principal do trajeto de hoje está interditada. Há um desvio que mantém o horário da próxima reserva.</p></div>
     <div class="bx"><small>Rota alternativa</small><b style="font-size:17px">+25 min · chegada às 9h40</b><small>Seu horário de entrada das 10h00 continua garantido.</small></div><div style="flex:1"></div>
-    <button class="b1" data-a="fechar" data-m="Rota alternativa aplicada ao dia.">Usar rota alternativa</button><button class="b2" data-a="fecharIr" data-t="conversa">Falar com o Marco</button><button class="b3" data-a="fechar">Ciente</button></div>`;
-  if (S.overlay === "notif") over = `<button class="notif fade" data-a="fecharIr" data-t="conversa"><span class="app-ic">${ic("compass", 22)}</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:15px">Marco</b><span class="small">agora</span></span><b style="font-size:15px">Chuva prevista amanhã cedo em Moab</b><span style="font-size:15px;color:var(--fg2)">Sugiro levar a trilha do Delicate Arch para a tarde. Quer ver a proposta?</span></span></button>`;
+    <button class="b1" data-a="fechar" data-m="Exemplo: no app, a rota alternativa é aplicada ao dia e registrada no histórico.">Usar rota alternativa</button><button class="b2" data-a="fecharIr" data-t="conversa">Falar com o Marco</button><button class="b3" data-a="fechar">Ciente</button></div>`;
+  if (S.overlay === "notif") over = `<button class="notif fade" data-a="fecharIr" data-t="conversa"><span class="app-ic">${ic("compass", 22)}</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:15px">Marco</b><span class="small">agora · exemplo</span></span><b style="font-size:15px">Chuva prevista amanhã cedo</b><span style="font-size:15px;color:var(--fg2)">Sugiro levar a trilha da manhã para a tarde. Quer ver a proposta?</span></span></button>`;
   if (S.overlay === "comprovante") over = sheetComprovante();
   if (S.overlay === "confirmar") over = sheetConfirmar();
   if (S.overlay === "dono") over = sheetDono();
+  if (S.overlay === "busca") over = sheetBusca();
   if (S.overlay === "fechar") over = `<div class="sheet" data-a="fecharFundo"><div class="in fade"><div class="grab"></div><div style="font-size:20px;font-weight:600">Fechar ${esc(nomeViagem())}?</div>
-    <p class="sub">A viagem e a Carteira saem deste aparelho. Exporte o arquivo da viagem antes, se quiser abrir de novo depois.</p>
+    <p class="sub">A viagem, a Carteira e os documentos do Cofre saem deste aparelho. Exporte o arquivo da viagem antes, se quiser abrir de novo depois.</p>
     <button class="btn sec" data-a="ir" data-t="arquivo">Exportar antes</button><div class="btns"><button class="btn danger" data-a="fecharViagem">Fechar viagem</button><button class="btn ghost" data-a="fechar">Cancelar</button></div></div></div>`;
-  const toast = S.toast ? `<div class="toast fade" role="status">${esc(S.toast.m)}${S.toast.undo ? `<button data-a="${S.toast.undo}">Desfazer</button>` : ""}</div>` : "";
-  // estrutura fixa: a Carteira (app financeiro original) fica num quadro próprio que não é recriado a cada toque
-  if (!$("#view")) $("#app").innerHTML = '<input type="file" id="arqViagem" accept=".json,.pdf,application/json,application/pdf" hidden><input type="file" id="arqJuntar" accept=".json,.pdf,application/json,application/pdf" hidden><div id="view" style="flex:1;display:flex;flex-direction:column;min-height:0"></div><div id="walletBox" hidden style="flex:1;display:flex;flex-direction:column;min-height:0"></div><div id="tabs"></div><div id="over"></div>';
+  const toastH = S.toast ? `<div class="toast fade" role="status">${esc(S.toast.m)}${S.toast.undo ? `<button data-a="${S.toast.undo}">Desfazer</button>` : ""}</div>` : "";
+  // estrutura fixa: a Carteira (app financeiro) fica num quadro próprio que não é recriado a cada toque
+  if (!$("#view")) $("#app").innerHTML = '<input type="file" id="arqViagem" accept=".json,.pdf,application/json,application/pdf" hidden><input type="file" id="arqJuntar" accept=".json,.pdf,application/json,application/pdf" hidden><input type="file" id="arquivo" accept="image/*,application/pdf" hidden><div id="view" style="flex:1;display:flex;flex-direction:column;min-height:0"></div><div id="walletBox" hidden style="flex:1;display:flex;flex-direction:column;min-height:0"></div><div id="tabs"></div><div id="over"></div>';
   const naCarteira = S.tela === "carteira";
   if (!$("#wallet")) abrirCarteira(); // carregada desde o início, para o Marco poder lançar
   $("#walletBox").hidden = !naCarteira;
@@ -655,15 +1257,17 @@ function render() {
   $("#view").hidden = naCarteira;
   if (!naCarteira) $("#view").innerHTML = T();
   $("#tabs").innerHTML = naCarteira ? "" : tabbar; // na Carteira fica só o menu dela + a seta de voltar
-  $("#over").innerHTML = over + toast;
+  $("#over").innerHTML = over + toastH;
+  if (focoId) { const el = document.getElementById(focoId); if (el) { el.focus(); try { if (selIni != null) el.setSelectionRange(selIni, selIni); } catch (e) {} } }
   const m = $("#main");
   if (m) { m.scrollTop = S.tela === "conversa" && (ultimaTela !== S.tela || S.rolarFim) ? m.scrollHeight : scroll; S.rolarFim = false; }
+  // animação de entrada só na primeira vez que cada mensagem aparece (o streaming re-renderiza muitas vezes)
+  if (S.tela === "conversa" && S.chat) for (const x of S.chat) { x.visto = true; for (const k of x.cards || []) k.visto = true; }
   ultimaTela = S.tela;
   memSalvar();
 }
-// A Carteira é o app financeiro original (carteira/index.html), sem alteração. No computador ele abre direto
-// no quadro; publicado, a página lê o arquivo e o entrega ao quadro como conteúdo (o visualizador do Claude
-// bloqueia quadros que buscam outra página). A única adição é <base href="carteira/"> para ele achar lib/ e ícones.
+// A Carteira é o app financeiro (carteira/index.html) com a ponte window.CLE. Publicada, a página entrega o
+// arquivo ao quadro como conteúdo (o visualizador do Claude bloqueia quadros que buscam outra página).
 const CARTEIRA_HTML = /*__CARTEIRA__*/null;
 function abrirCarteira() {
   const box = $("#walletBox");
@@ -674,25 +1278,49 @@ function abrirCarteira() {
   f.srcdoc = CARTEIRA_HTML.replace(/<head>/i, '<head><base href="' + new URL("carteira/", location.href).href + '"><script>window.CLE_APP=true<\/script>');
 }
 const cle = () => { try { const w = $("#wallet") && $("#wallet").contentWindow; return w && w.CLE && w.CLE.pronto() ? w.CLE : null; } catch (e) { return null; } };
+
+// ---------- cofre: documentos no aparelho (IndexedDB), abrem sem internet ----------
+function cofreDb() { return new Promise((ok, falha) => { const r = indexedDB.open("cle-cofre", 1); r.onupgradeneeded = () => r.result.createObjectStore("docs", { keyPath: "id" }); r.onsuccess = () => ok(r.result); r.onerror = () => falha(r.error); }); }
+async function cofreOp(modo, fn) { const db = await cofreDb(); return new Promise((ok, falha) => { const tx = db.transaction("docs", modo), r = fn(tx.objectStore("docs")); tx.oncomplete = () => ok(r && r.result); tx.onerror = () => falha(tx.error); }); }
+async function cofreAtualizar() { try { const l = await cofreOp("readonly", (st) => st.getAll()); S.cofreDocs = (l || []).map(({ blob, ...x }) => x).sort((a, b) => (a.quando < b.quando ? 1 : -1)); } catch (e) { S.cofreDocs = []; } }
+async function cofreGuardar(file, cat) { const id = novoId(); await cofreOp("readwrite", (st) => st.put({ id, nome: file.name, tipo: file.type, tam: file.size, cat, quando: new Date().toISOString(), blob: file })); await cofreAtualizar(); return id; }
 function sheetComprovante() {
   const c = S.comp;
-  let corpo;
-  if (c.etapa === 0) corpo = `<div style="font-size:20px;font-weight:600">Anexar comprovante</div><p class="sub">Foto, PDF ou print. O Marco lê e preenche a viagem sozinho.</p>
-    <label class="btn sec" for="arquivo" style="cursor:pointer">${ic("upload", 18)} Escolher arquivo</label><input id="arquivo" type="file" accept="image/*,application/pdf" hidden>
-    <button class="btn" data-a="compExemplo">Usar um exemplo</button><button class="btn ghost" data-a="fechar">Cancelar</button>`;
-  else if (c.etapa === 1) corpo = `<div style="font-size:20px;font-weight:600">Lendo ${esc(c.nome)}…</div><div class="progress"><i style="width:65%"></i></div><p class="sub">Identificando seguradora, vigência, apólice e telefone da central.</p>`;
-  else corpo = `<div style="font-size:20px;font-weight:600">Confira o que o Marco leu</div><p class="small" style="margin:0">Dados de exemplo${c.nome !== "exemplo" ? "; o arquivo escolhido não sai do seu aparelho nesta demonstração" : ""}.</p>
-    <div class="card" style="gap:0"><div class="kv"><span>Tipo</span><span>Seguro viagem</span></div><div class="kv"><span>Viajantes</span><span>${esc(S.viagem ? S.viagem.viajantes.join(" e ") : "")}</span></div><div class="kv"><span>Vigência</span><span>${esc(S.viagem ? `${fmtData(S.viagem.inicio, { day: "numeric", month: "short" })} – ${fmtData(fimViagem(), { day: "numeric", month: "short", year: "numeric" })}` : "")}</span></div><div class="kv"><span>Cobertura médica</span><span>US$ 60.000,00</span></div><div class="kv"><span>Central 24 h</span><span>salva no Cofre e na Emergência</span></div></div>
-    <p class="small" style="margin:0">Ao confirmar: tarefa concluída, documento no Cofre e telefone da central na tela de Emergência.</p>
-    <div class="btns"><button class="btn" data-a="compOk">Confirmar</button><button class="btn sec" data-a="fechar">Corrigir</button></div>`;
+  const corpo = c.etapa === 0 ? `<div style="font-size:20px;font-weight:600">Guardar documento ou comprovante</div><p class="sub">Foto, PDF ou print. Fica no Cofre${marcoDisponivel() ? " e o Marco lê e propõe o que registrar: Carteira, roteiro, checklist e Emergência" : ""}.</p>
+    <div class="chips" style="padding:0;flex-wrap:wrap">${COFRE_CATS.map((n) => `<button class="chip" style="${c.cat === n ? "border-color:var(--accent);color:var(--accent);font-weight:600" : ""}" data-a="compCat" data-v="${esc(n)}">${esc(n)}</button>`).join("")}</div>
+    <label class="btn" for="arquivo" style="cursor:pointer">${ic("upload", 18)} Escolher arquivo</label><button class="btn ghost" data-a="fechar">Cancelar</button>`
+    : `<div style="font-size:20px;font-weight:600">Guardando ${esc(c.nome)}…</div><div class="progress"><i style="width:65%"></i></div>`;
   return `<div class="sheet" data-a="fecharFundo"><div class="in fade"><div class="grab"></div>${corpo}</div></div>`;
+}
+const LIDOS = ["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"];
+async function receberComprovante(file) {
+  const c = S.comp || { cat: "Outros" }; c.etapa = 1; c.nome = file.name; render();
+  try { await cofreGuardar(file, c.cat || "Outros"); } catch (e) { S.overlay = null; toast("Não foi possível guardar o arquivo neste aparelho."); render(); return; }
+  S.overlay = null;
+  if (!marcoDisponivel()) { toast("Guardado no Cofre. A leitura automática entra quando o Marco estiver ligado."); render(); return; }
+  if (!LIDOS.includes(file.type) || file.size > 20 * 1024 * 1024) { toast("Guardado no Cofre. O Marco lê PDF e fotos (JPG, PNG) de até 20 MB."); render(); return; }
+  const envio = file.type === "application/pdf" ? file : await reduzirImagem(file); // o Cofre guarda o original
+  const dados = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.readAsDataURL(envio); });
+  const bloco = file.type === "application/pdf" ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: dados } } : { type: "image", source: { type: "base64", media_type: envio.type, data: dados } };
+  S.hist = []; S.tela = "conversa";
+  await enviarTexto(`Leia este comprovante (${c.cat}: ${file.name}) e proponha o que registrar.${c.id ? ` Ele corresponde à tarefa de id ${c.id} do checklist.` : ""}`, { anexo: { bloco, nome: file.name }, modo: "comprovante" });
 }
 function sheetConfirmar() {
   const d = diaObj(S.lugar.d), p = paradasDo(d)[S.lugar.i];
   return `<div class="sheet" data-a="fecharFundo"><div class="in fade"><div class="grab"></div><div style="font-size:20px;font-weight:600">É aqui?</div>
-    <p class="sub">${esc(nomeLimpo(p.n))}. Arraste o mapa até o ponto certo ou confirme este.</p>
-    <div class="mapa" style="position:relative">${svgMapa(d, { alto: 220, foco: S.lugar.i, zoom: [[p.lat + 0.006, p.lng + 0.009], [p.lat - 0.006, p.lng - 0.009]] })}<span class="pill neu" style="position:absolute;right:10px;bottom:10px">Satélite no app</span></div>
-    <div class="btns"><button class="btn" data-a="confOk">É aqui</button><button class="btn sec" data-a="fechar" data-m="No app, você arrasta o pino até o ponto certo.">Ajustar</button></div></div></div>`;
+    <p class="sub">${esc(nomeLimpo(p.n))}. Confira na imagem de satélite antes de confirmar${p.est ? "; a navegação vai até o ponto de chegada de carro" : ""}.</p>
+    <div class="mapa" style="position:relative">${svgMapa(d, { alto: 220, foco: S.lugar.i, zoom: [[+p.lat + 0.006, +p.lng + 0.009], [+p.lat - 0.006, +p.lng - 0.009]] })}</div>
+    <a class="btn sec" href="${satelite(p.lat, p.lng)}" target="_blank" rel="noopener">${ic("globe", 18)} Ver no satélite (Google Maps)</a>
+    <div class="btns"><button class="btn" data-a="confOk">É aqui</button><button class="btn sec" data-a="ajustarLocal">Não é aqui</button></div></div></div>`;
+}
+function sheetBusca() {
+  const b = S.busca || {}, r = b.res;
+  const item = (x, i) => `<div class="card" style="gap:8px"><div class="ptopo"><b>${esc(x.nome)}</b>${seloPillSempre(i === 0 ? r.selo : "amarelo")}</div><span class="small">${esc(x.endereco || "")}</span><button class="btn sec" data-a="buscaAdd" data-i="${i}">${ic("plus", 18)} Adicionar aos desejos</button></div>`;
+  return `<div class="sheet" data-a="fecharFundo"><div class="in fade"><div class="grab"></div><div style="font-size:20px;font-weight:600">Buscar lugar</div>
+    <form class="entrada" style="padding:0" data-f="busca"><input id="qBusca" value="${esc(b.q || "")}" placeholder="Nome ou endereço, com a cidade" autocomplete="off"><button type="submit" class="iconbtn enviar" aria-label="Buscar">${ic("search", 20)}</button></form>
+    ${b.carregando ? '<div class="small">Procurando nas bases de mapas…</div>' : ""}
+    ${r ? (r.escolhido ? item(r.escolhido, 0) + (r.alternativas || []).map((x, i) => item(x, i + 1)).join("") + `<div class="small">${esc(r.motivo || "")}</div>` : `<div class="small">${esc(r.orientacao || r.erro || "Nada encontrado.")}</div>`) : ""}
+    <button class="btn ghost" data-a="fechar">Fechar</button></div></div>`;
 }
 
 // ---------- memória da viagem (o "arquivo da viagem": tudo da viagem, Carteira incluída) ----------
@@ -703,13 +1331,24 @@ function memSalvar() {
 }
 function memLer() { try { return JSON.parse(localStorage.getItem(MEM) || "null"); } catch (e) { return null; } }
 function memApagar() { try { localStorage.removeItem(MEM); } catch (e) {} }
-const estadoApp = () => ({ fase: S.fase, diaHoje: S.diaHoje, confirmados: S.confirmados, tarefas: S.tarefas, extras: S.extras, chat: S.chat, lancId: S.lancId || null, listas: S.listas || null });
+const chatSalvo = () => (S.chat || []).map(({ vivo, status, retry, visto, ...m }) => ({ ...m, cards: m.cards && m.cards.map(({ visto: _, ...k }) => k) }));
+const estadoApp = () => ({ fase: S.fase, faseManual: S.faseManual, diaHoje: S.diaHoje, confirmados: S.confirmados, tarefas: S.tarefas, extras: S.extras, chat: chatSalvo(), fios: S.fios, notas: S.notas, historico: S.historico, lancId: S.lancId || null, listas: S.listas || null, guiaAceito: S.guiaAceito, clima: S.clima });
 function aplicarEstado(e) {
-  Object.assign(S, { fase: "planejamento", diaHoje: 1, confirmados: {}, tarefas: {}, extras: {}, chat: null, lancId: null, listas: null });
+  Object.assign(S, { fase: "planejamento", faseManual: false, diaHoje: 1, confirmados: {}, tarefas: {}, extras: {}, chat: null, fios: null, notas: [], historico: [], lancId: null, listas: null, guiaAceito: false, clima: {} });
   if (!e) return;
-  Object.assign(S, { fase: e.fase || "planejamento", diaHoje: e.diaHoje || 1, confirmados: e.confirmados || {}, tarefas: e.tarefas || {}, extras: e.extras || {}, chat: e.chat || null, lancId: e.lancId || null, listas: e.listas || null });
+  Object.assign(S, { fase: e.fase || "planejamento", faseManual: !!e.faseManual, diaHoje: e.diaHoje || 1, confirmados: e.confirmados || {}, tarefas: e.tarefas || {}, extras: e.extras || {}, chat: e.chat && e.chat.length ? e.chat : null, fios: e.fios || null, notas: e.notas || [], historico: e.historico || [], lancId: e.lancId || null, listas: e.listas || null, guiaAceito: !!e.guiaAceito, clima: e.clima || {} });
+  garantirFios();
+  // conversa interrompida no meio (app fechado com cartões pendentes e sem o balão salvo): a próxima mensagem
+  // daquela conversa precisa começar com os resultados, senão a API recusa
+  for (const [k, f] of Object.entries(S.fios)) {
+    const ult = f.msgs[f.msgs.length - 1];
+    if (!ult || ult.role !== "assistant" || !Array.isArray(ult.content) || !ult.content.some((b) => b.type === "tool_use")) continue;
+    if ((S.chat || []).some((x) => x.fio === k && x.toolUses && !x.respondido)) continue;
+    S.chat = S.chat || [];
+    S.chat.push({ de: "m", txt: "", fio: k, toolUses: ult.content.filter((b) => b.type === "tool_use").map((b) => b.id), servidor: {}, cards: [] });
+  }
 }
-// configuração da Carteira a partir da viagem (o Marco preenche; o usuário não redigita)
+// configuração da Carteira a partir da viagem (preenchida na criação; o usuário não redigita)
 const cfgCarteira = (v) => ({ nome: v.nome, inicio: v.inicio, dias: v.dias, seuNome: v.viajantes[0], localCod: (v.moeda && v.moeda.cod) || "USD", localSimb: (v.moeda && v.moeda.simb) || "US$", nativaCod: "BRL", nativaSimb: "R$", cotacao: v.cotacao || 5.5 });
 // espera a Carteira terminar a leitura inicial antes de conversar com ela
 function carteiraPronta() {
@@ -756,7 +1395,7 @@ async function abrirArquivoViagem(file) {
     const d = normalizarArquivo(await lerArquivo(file));
     S.viagem = { ...d.viagem, dono: null };
     DIAS = d.roteiro && Array.isArray(d.roteiro.dias) ? d.roteiro.dias : [];
-    aplicarEstado(d.estado);
+    aplicarEstado(d.estado); garantirDias(); faseAuto();
     S.diaSel = S.diaHoje;
     const c = await carteiraPronta();
     if (c) { if (d.carteira) c.carregar(d.carteira, null); else c.criar(cfgCarteira(S.viagem), S.viagem.viajantes.slice(1), null); }
@@ -775,7 +1414,12 @@ async function juntarArquivo(file) {
     for (const [k, v] of Object.entries(e.confirmados || {})) if (v && !S.confirmados[k]) { S.confirmados[k] = true; extra++; }
     for (const [k, v] of Object.entries(e.tarefas || {})) if (v && !S.tarefas[k]) { S.tarefas[k] = true; extra++; }
     for (const [dia, lista] of Object.entries(e.extras || {})) for (const p of lista) { S.extras[dia] = S.extras[dia] || []; if (!S.extras[dia].some((x) => x.n === p.n)) { S.extras[dia].push(p); extra++; } }
-    render(); toast(`Juntado${d.de ? " o arquivo de " + d.de : ""}: ${r ? `${r.novos} lançamento(s) novo(s), ${r.atualizados} atualizado(s)` : "sem Carteira"} · ${extra} mudança(s) no roteiro e checklist.`); render();
+    // paradas que o outro celular aprovou (por id ou nome) e tarefas/desejos novos
+    for (const od of (d.roteiro && d.roteiro.dias) || []) { const ld = diaObj(od.dia); if (!ld) continue; for (const p of od.paradas || []) if (!ld.paradas.some((x) => (p.id && x.id === p.id) || x.n === p.n)) { ld.paradas.push(p); extra++; } if (!ld.paradas.length && od.titulo) ld.titulo = od.titulo; }
+    const ol = e.listas || {};
+    if (ol.tarefas) { garantirListas(); for (const t of ol.tarefas) if (!S.listas.tarefas.some((x) => x.id === t.id)) { S.listas.tarefas.push(t); extra++; } }
+    if (ol.desejos) { garantirListas(); for (const x of ol.desejos) if (!S.listas.desejos.some((y) => (x.id && y.id === x.id) || y.n === x.n)) { S.listas.desejos.push(x); extra++; } }
+    render(); toast(`Juntado${d.de ? " o arquivo de " + d.de : ""}: ${r ? `${r.novos} lançamento(s) novo(s), ${r.atualizados} atualizado(s)` : "sem Carteira"} · ${extra} mudança(s) no roteiro, checklist e desejos.`); render();
   } catch (e) { toast("Este arquivo não é um arquivo de viagem válido."); render(); }
 }
 
@@ -791,7 +1435,7 @@ function telaBoasVindas() {
 function telaArquivo() {
   return `${header({ titulo: "Arquivo da viagem", sub: S.viagem ? S.viagem.nome : "", voltar: true })}<main id="main"><div class="pad">
     <div class="hero"><span class="kick">Memória da viagem</span><h1>Arquivo e sincronização</h1>
-      <p class="sub">Roteiro, lugares confirmados, desejos, checklist, documentos, viajantes e Carteira ficam guardados neste celular e cabem num arquivo só.</p></div>
+      <p class="sub">Roteiro, lugares confirmados, desejos, checklist, conversa, histórico, viajantes e Carteira ficam guardados neste celular e cabem num arquivo só.</p></div>
     <div class="list">
       <button class="row" data-a="syncQR"><span class="ico">${ic("phone", 18)}</span><div class="main"><b>Sincronizar com outro celular</b><span>Lado a lado, por QR Code, sem internet</span></div>${ic("chev", 18)}</button>
       <button class="row" data-a="enviarPdf"><span class="ico">${ic("upload", 18)}</span><div class="main"><b>Enviar por Quick Share ou WhatsApp</b><span>PDF com a viagem inteira guardada dentro</span></div>${ic("chev", 18)}</button>
@@ -799,7 +1443,7 @@ function telaArquivo() {
       <button class="row" data-a="exportar"><span class="ico">${ic("doc", 18)}</span><div class="main"><b>Exportar arquivo da viagem</b><span>Cópia de segurança (.json)</span></div>${ic("chev", 18)}</button>
     </div>
     <div class="list"><label class="row" for="arqViagem" style="cursor:pointer"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Abrir outra viagem</b><span>Substitui a viagem aberta neste celular</span></div>${ic("chev", 18)}</label></div>
-    <p class="small" style="margin:0;line-height:1.5">Neste protótipo, o QR sincroniza a Carteira; o arquivo e o PDF já levam a viagem inteira. Na construção, o QR também passa a levar tudo.</p>
+    <p class="small" style="margin:0;line-height:1.5">O QR ainda sincroniza só a Carteira; o arquivo e o PDF levam a viagem inteira. Documentos do Cofre e a ficha médica ficam só em cada celular.</p>
   </div></main>`;
 }
 function sheetDono() {
@@ -810,32 +1454,52 @@ function sheetDono() {
 
 // ---------- ações ----------
 let toastT;
-function toast(m, undo) { S.toast = { m, undo }; clearTimeout(toastT); toastT = setTimeout(() => { S.toast = null; render(); }, 3800); }
+function toast(m, undo) { S.toast = { m, undo }; clearTimeout(toastT); toastT = setTimeout(() => { S.toast = null; render(); }, 4200); }
 function ir(tela, extra = {}) { S.hist.push({ tela: S.tela, lugar: S.lugar, diaSel: S.diaSel }); Object.assign(S, extra, { tela }); render(); }
 function home() { S.hist = []; S.tela = S.fase === "viagem" ? "hoje" : "conversa"; render(); }
 function pergunta(k, texto) {
   S.chat.push({ de: "u", txt: texto }); S.pensando = true; S.rolarFim = true; render();
   setTimeout(() => { S.pensando = false; S.chat.push({ de: "m", ...RESP[k]() }); S.rolarFim = true; render(); }, 900);
 }
+function falarTexto(t, lang) {
+  if (!("speechSynthesis" in window)) { toast("Este aparelho não lê textos em voz alta. Mostre a frase na tela."); render(); return; }
+  speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = { en: "en-US", es: "es-ES", fr: "fr-FR", it: "it-IT", de: "de-DE", pt: "pt-BR" }[lang] || "en-US"; u.rate = 0.9; speechSynthesis.speak(u);
+}
+function comPosicao(ok) {
+  if (!navigator.geolocation) { toast("Este aparelho não informa a localização."); render(); return; }
+  navigator.geolocation.getCurrentPosition((p) => ok(p.coords.latitude, p.coords.longitude), () => { toast("Não foi possível obter a localização. Verifique a permissão de localização do app."); render(); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
 const A = {
-  voltar() { const h = S.hist.pop(); if (h) Object.assign(S, h); else S.tela = S.fase === "viagem" ? "hoje" : "conversa"; render(); },
-  ir(ds) { if (ds.t === (S.fase === "viagem" ? "hoje" : "conversa")) return home(); ir(ds.t); },
+  voltar() { const h = S.hist.pop(); if (h) Object.assign(S, h); else S.tela = S.viagem ? (S.fase === "viagem" ? "hoje" : "conversa") : "boasvindas"; render(); },
+  ir(ds) { if (ds.t === (S.fase === "viagem" ? "hoje" : "conversa") && S.tela !== "onboarding") return home(); ir(ds.t); },
+  irTarefa(ds) { if (ds.t !== "confirmar") return ir(ds.t); const d = DIAS.find((x) => paradasDo(x).some((p) => seloDe(p) !== "verde")); if (!d) { toast("Nenhum local para conferir."); render(); return; } const i = paradasDo(d).findIndex((p) => seloDe(p) !== "verde"); ir("lugar", { lugar: { d: d.dia, i }, diaSel: d.dia }); },
   tab(ds) { S.hist = []; S.tela = ds.t; if (ds.t === "mapa" && S.fase === "viagem") S.diaSel = S.diaHoje; render(); },
   home, dia(ds) { ir("dia", { diaSel: +ds.d }); }, mapa(ds) { ir("mapa", { diaSel: +ds.d }); },
   lugar(ds) { ir("lugar", { lugar: { d: +ds.d, i: +ds.i } }); },
   diaMapa(ds) { S.diaSel = Math.min(DIAS.length, Math.max(1, S.diaSel + +ds.v)); render(); },
   diaHoje(ds) { S.diaHoje = Math.min(DIAS.length, Math.max(1, S.diaHoje + +ds.v)); render(); },
-  fase(ds) { S.fase = ds.v; render(); toast(ds.v === "viagem" ? "Na viagem, a tela inicial passa a ser o painel do dia." : "No planejamento, a tela inicial é a conversa com o Marco."); render(); },
-  vista(ds) { S.carteiraVista = ds.v; render(); },
-  perg(ds, el) { pergunta(ds.k, el.textContent); },
+  fase(ds) {
+    if (ds.v === "auto") { S.faseManual = false; faseAuto(); } else { S.faseManual = true; S.fase = ds.v; }
+    render(); toast(S.fase === "viagem" ? "Na viagem, a tela inicial passa a ser o painel do dia." : "No planejamento, a tela inicial é a conversa com o Marco."); render();
+  },
+  perg(ds, el) { if (ds.k === "txt") { S.hist = []; S.tela = "conversa"; enviarTexto(el.textContent); } else pergunta(ds.k, el.textContent); },
+  pedirMarco(ds) { S.hist = []; S.tela = "conversa"; enviarTexto(ds.q); },
+  retry() { const m = S.chat[S.chat.length - 1]; if (!m || !m.reenvio) return; S.chat.pop(); enviarTexto(m.reenvio.txt, m.reenvio.opc); },
+  async consumoAtualizar() { if (!API) return; try { S.consumo = await (await fetch(API + "/consumo")).json(); } catch (e) { S.consumo = { erro: true }; } render(); },
   falar() {
-    if (S.voz === "ouvindo") return;
-    const frase = "Tem posto de gasolina no caminho hoje?"; S.voz = "ouvindo"; S.transc = ""; render();
-    let i = 0; const t = setInterval(() => { i += 3; S.transc = frase.slice(0, i); render(); if (i >= frase.length) { clearInterval(t); setTimeout(() => { S.voz = "parado"; S.transc = ""; pergunta("posto", frase); }, 400); } }, 60);
+    if (exemploWestern() && !marcoDisponivel()) {
+      if (S.voz === "ouvindo") return;
+      const frase = "Tem posto de gasolina no caminho hoje?"; S.voz = "ouvindo"; S.transc = ""; render();
+      let i = 0; const t = setInterval(() => { i += 3; S.transc = frase.slice(0, i); render(); if (i >= frase.length) { clearInterval(t); setTimeout(() => { S.voz = "parado"; S.transc = ""; pergunta("posto", frase); }, 400); } }, 60);
+      return;
+    }
+    toast("A conversa por voz (ElevenLabs: voz do Eric e transcrição Scribe) entra na próxima etapa. Por enquanto, escreva para o Marco."); render();
+    const el = $("#txtMarco"); if (el) el.focus();
   },
   sairCarteira() { A.voltar(); },
   async dono(ds) {
-    S.viagem.dono = ds.n; S.overlay = null; S.chat = null; // a conversa recomeça já com o nome de quem usa o celular
+    S.viagem.dono = ds.n; S.overlay = null;
+    if (!S.chat || !S.chat.some((m) => m.de === "u")) S.chat = null; // a saudação recomeça com o nome de quem usa o celular
     const c = await carteiraPronta();
     if (c && ds.id) c.definirDono(ds.id);
     render(); toast(`Pronto. Este celular é de ${ds.n}.`); render();
@@ -858,10 +1522,10 @@ const A = {
     await salvarArquivo(nome, pdf);
   },
   async syncQR() { ir("carteira"); const c = await carteiraPronta(); if (c && c.tem()) c.sincronizar(); else { toast("Abra uma viagem primeiro."); render(); } },
-  ajustesViagem() { ir("carteira"); const c = cle(); if (c) c.abrir("ajustes"); else { toast("Carregue o arquivo da viagem na Carteira uma vez; depois os ajustes abrem aqui."); render(); } },
+  ajustesViagem() { ir("carteira"); const c = cle(); if (c) c.abrir("ajustes"); else { toast("A Carteira ainda está carregando. Tente de novo em instantes."); render(); } },
   aprovarLanc() {
     const c = cle();
-    if (!c) { toast("Abra a Carteira e carregue o arquivo da viagem uma vez. Depois o Marco lança direto."); render(); return; }
+    if (!c) { toast("A Carteira ainda está carregando. Tente de novo em instantes."); render(); return; }
     S.lancId = c.lancar({ desc: "Almoço", cat: "ali", valor: 38.5, resp: c.viajantes().map((v) => v.id), obs: "Lançado pelo Marco por voz" });
     render(); toast("Lançado na Carteira. Tudo continua editável lá."); render();
   },
@@ -869,13 +1533,50 @@ const A = {
   verLanc() { ir("carteira"); const c = cle(); if (c) c.abrir("lista"); },
   aprovar() { S.extras[3] = [SYLVAN]; render(); toast("Adicionado ao D3. Roteiro e mapa atualizados.", "desfazer"); render(); },
   desfazer() { S.extras[3] = []; S.toast = null; render(); toast("Alteração desfeita."); render(); },
+  decidir(ds) {
+    const m = S.chat[+ds.m], k = m && m.cards && m.cards[+ds.c]; if (!k || k.estado !== "aguardando" || S.pensando) return;
+    if (ds.v === "aprovar" || ds.v === "talvez") {
+      try { const r = aplicarProposta(k, ds.v); k.estado = ds.v === "talvez" ? "talvez" : "aprovado"; k.resultado = r.texto; k.hist = r.hist; }
+      catch (e) { k.estado = "erro"; k.resultado = "Não foi possível aplicar: " + e.message + "."; }
+    } else if (ds.v === "recusar") { k.estado = "recusado"; k.resultado = k.name === "propor_desejo" ? "O viajante respondeu Não: não quer este item." : "Recusado pelo viajante."; }
+    else { k.estado = "ajustar"; k.resultado = "O viajante quer ajustar esta proposta antes de aprovar. Pergunte o que mudar."; }
+    render();
+    // os resultados seguem com a próxima mensagem desta conversa (sem chamada extra ao Marco);
+    // comprovante é conversa avulsa: o que foi decidido vira uma nota para a conversa principal
+    if (m.fio === "comprovante" && m.cards.every((x) => x.estado !== "aguardando")) S.notas.push(`[Comprovante lido em conversa à parte; decisões do viajante: ${m.cards.map((x) => `${x.name.replace("propor_", "")} ${x.estado}: ${x.resultado}`).join(" | ")}]`);
+  },
+  desfazerHist(ds) { if (desfazerHist(ds.id)) { render(); toast("Alteração desfeita."); } render(); },
   toast(ds) { toast(ds.m); render(); },
-  tarefa(ds) { S.tarefas[ds.id] = !S.tarefas[ds.id]; render(); },
-  comprovante(ds) { S.comp = { id: ds.id, etapa: 0 }; S.overlay = "comprovante"; render(); },
-  compExemplo() { lerComprovante("exemplo"); },
-  compOk() { S.tarefas[S.comp.id] = true; S.overlay = null; render(); toast("Seguro anexado. Cofre e Emergência atualizados."); render(); },
+  tarefa(ds) { if (ds.id === "conf") return; S.tarefas[ds.id] = !S.tarefas[ds.id]; render(); },
+  comprovante(ds) { S.comp = { id: ds.id || null, cat: ds.cat || "Outros", etapa: 0 }; S.overlay = "comprovante"; render(); },
+  compCat(ds) { S.comp.cat = ds.v; render(); },
+  async cofreAbrir(ds) { try { const x = await cofreOp("readonly", (st) => st.get(ds.id)); if (!x) return; const u = URL.createObjectURL(x.blob); const w = window.open(u, "_blank"); if (!w) { const a = document.createElement("a"); a.href = u; a.download = x.nome; a.click(); } } catch (e) { toast("Não foi possível abrir o documento."); render(); } },
+  async cofreApagar(ds) { if (!confirm("Remover este documento do Cofre deste celular?")) return; await cofreOp("readwrite", (st) => st.delete(ds.id)); await cofreAtualizar(); render(); toast("Documento removido."); render(); },
   confirmarLocal() { S.overlay = "confirmar"; render(); },
-  confOk() { const p = paradasDo(diaObj(S.lugar.d))[S.lugar.i]; S.confirmados[p.n] = true; S.overlay = null; render(); toast("Local confirmado. O selo ficou verde."); render(); },
+  confOk() { const p = paradasDo(diaObj(S.lugar.d))[S.lugar.i]; S.confirmados[p.n] = true; registrar(`Local confirmado no mapa: ${nomeLimpo(p.n)}`, "confirmar", { n: p.n }); S.overlay = null; render(); toast("Local confirmado. O selo ficou verde."); render(); },
+  ajustarLocal() { const p = paradasDo(diaObj(S.lugar.d))[S.lugar.i]; S.overlay = null; S.hist = []; S.tela = "conversa"; enviarTexto(`O ponto de "${nomeLimpo(p.n)}" no D${S.lugar.d} não está certo. Procure de novo, de preferência o ponto de chegada de carro, e proponha a correção.`); },
+  aceitarGuia() { S.guiaAceito = true; registrar(`Guia liberado com ${aConfirmar()} local(is) a confirmar`, "guia", {}); render(); },
+  imprimirGuia() { if (aConfirmar() && !S.guiaAceito) return; $("#print").innerHTML = htmlGuia(); setTimeout(() => window.print(), 60); },
+  convidar() { toast("Convites por link chegam com o servidor da viagem. Por enquanto, envie o arquivo da viagem: cada um abre no próprio celular e vocês juntam os arquivos."); ir("arquivo"); },
+  buscaAbrir() { S.busca = { q: "", res: null }; S.overlay = "busca"; render(); setTimeout(() => { const e = $("#qBusca"); if (e) e.focus(); }, 50); },
+  buscaAdd(ds) {
+    const r = S.busca.res, x = +ds.i === 0 ? r.escolhido : r.alternativas[+ds.i - 1]; garantirListas();
+    const id = novoId(); S.listas.desejos.push({ id, n: x.nome, s: x.endereco || "", st: "Desejo", lat: x.lat, lng: x.lng, selo: +ds.i === 0 ? r.selo : "amarelo" });
+    registrar(`Desejo: ${x.nome}`, "desejo", { id }); S.overlay = null; render(); toast(`${x.nome} entrou na lista de desejos.`); render();
+  },
+  compartilharLocal() {
+    toast("Obtendo sua localização…"); render();
+    comPosicao(async (la, lo) => {
+      const txt = `${(S.viagem && S.viagem.dono) || "Estou"} aqui agora: https://maps.google.com/?q=${la.toFixed(6)},${lo.toFixed(6)}`;
+      if (navigator.share) { try { await navigator.share({ text: txt }); return; } catch (e) { if (e.name === "AbortError") return; } }
+      try { await navigator.clipboard.writeText(txt); toast("Localização copiada. Cole no WhatsApp do grupo."); } catch (e) { toast(`Sua localização: ${la.toFixed(5)}, ${lo.toFixed(5)}`); }
+      render();
+    });
+  },
+  hospitais() { comPosicao((la, lo) => { window.open(`https://www.google.com/maps/search/hospital/@${la.toFixed(5)},${lo.toFixed(5)},14z`, "_blank"); }); },
+  falarFrase(ds) { const l = idiomaLocal(); falarTexto(FRASES[+ds.i][l], l); },
+  setPerfil(ds) { const pf = ds.alvo === "onb" ? S.onb.pf : perfilAtual(); pf[ds.k] = ds.v; render(); },
+  setInteresse(ds) { const pf = ds.alvo === "onb" ? S.onb.pf : perfilAtual(); pf.int = pf.int || {}; pf.int[ds.n] = ((pf.int[ds.n] || 0) + 1) % 4; render(); },
   alerta() { S.overlay = "alerta"; render(); }, notif() { S.overlay = "notif"; render(); setTimeout(() => { if (S.overlay === "notif") { S.overlay = null; render(); } }, 6000); },
   fechar(ds) { S.overlay = null; render(); if (ds && ds.m) { toast(ds.m); render(); } },
   fecharIr(ds) { S.overlay = null; S.hist = []; S.tela = ds.t; S.rolarFim = true; render(); },
@@ -883,31 +1584,50 @@ const A = {
   pedirFechar() { S.overlay = "fechar"; render(); },
   async fecharViagem() {
     const c = await carteiraPronta(); if (c) c.apagar();
+    try { await cofreOp("readwrite", (st) => st.clear()); } catch (e) {}
+    S.cofreDocs = [];
     memApagar(); DIAS = []; S.viagem = null; aplicarEstado(null); S.overlay = null; S.hist = []; S.tela = "boasvindas"; render();
     toast("Viagem fechada neste aparelho. O arquivo exportado continua valendo."); render();
   },
-  onb() { S.onb = { step: 0, fala: "", int: {}, at: 0, quero: [], talvez: 0, cen: null }; ir("onboarding"); },
-  onbFalar() {
-    const o = S.onb; if (o.falando) return; o.falando = true; o.fala = ""; render();
-    const t = setInterval(() => { o.fala = FALA.slice(0, o.fala.length + 3); render(); if (o.fala.length >= FALA.length) { clearInterval(t); o.falando = false; o.fala = FALA; render(); } }, 45);
+  onb() { S.onb = novaOnb(); ir("onboarding"); },
+  async onbMarco() {
+    const o = S.onb; if (!o.f.fala.trim()) { toast("Conte primeiro sobre a viagem, no campo acima."); render(); return; }
+    o.lendo = true; render();
+    try {
+      // pedido avulso e barato (sem histórico): só extrai a ficha; o viajante confere cada campo
+      const r = await fetch(API + "/ficha", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fala: o.f.fala, hoje: hojeISO(), quem: o.f.nome || null }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.erro || "O Marco não respondeu.");
+      if (j.ficha) preencherFicha(j.ficha); else toast("O Marco não encontrou dados suficientes na fala. Complete a ficha abaixo.");
+    } catch (e) { toast(e.message || "O Marco não respondeu. Preencha a ficha abaixo."); }
+    o.lendo = false; render();
   },
-  onbNext() { const o = S.onb; if (o.step === 0 && o.fala.length < FALA.length) o.fala = FALA; o.step++; render(); $("#main").scrollTop = 0; },
-  onbInt(ds) { const o = S.onb; o.int[ds.i] = ((o.int[ds.i] || 0) + 1) % 4; render(); },
-  onbAt(ds) { const o = S.onb; if (ds.v === "quero") o.quero.push(ATRACOES[o.at][0]); if (ds.v === "talvez") o.talvez++; o.at++; render(); },
-  onbCen(ds) { S.onb.cen = +ds.i; render(); },
+  onbNext() {
+    const o = S.onb, f = o.f;
+    if (o.step === 0) {
+      const falta = [["nome", "seu nome"], ["destino", "o destino"], ["pais", "o país principal"], ["inicio", "a data de início"], ["dias", "quantos dias"]].filter(([k]) => !String(f[k] || "").trim()).map(([, l]) => l);
+      if (!(+f.dias > 0) && !falta.includes("quantos dias")) falta.push("quantos dias");
+      if (falta.length) { toast(`Para começar falta: ${falta.join(", ")}.`); render(); return; }
+    }
+    o.step++; if (o.step === 4) { aplicarCenarios(o); buscarCambio(); }
+    render(); $("#main").scrollTop = 0;
+  },
+  onbVoltar() { S.onb.step = Math.max(0, S.onb.step - 1); render(); },
+  onbCen(ds) { S.onb.cen[+ds.s] = +ds.i; render(); },
   async onbFim() {
-    const nome = (($("#onbNome") || {}).value || S.onb.nome || "").trim();
-    if (!nome) { toast("Digite seu nome para criar a viagem."); render(); return; }
-    const o = S.onb;
-    S.viagem = { nome: "Suíça com os pais", inicio: "2027-07-05", dias: 12, viajantes: [nome, "Pai", "Mãe"], dono: nome, emergencia: "112", moeda: { cod: "CHF", simb: "CHF" }, cotacao: 6.5 };
-    DIAS = []; aplicarEstado(null);
-    S.listas = { tarefas: null, desejos: o.quero.map((n) => ({ n, s: "Escolhido no onboarding", st: "Desejo" })), cofre: null };
-    const c = await carteiraPronta(); if (c) c.criar(cfgCarteira(S.viagem), S.viagem.viajantes.slice(1), nome);
-    S.hist = []; S.tela = "conversa"; render();
+    const o = S.onb, f = o.f, p = paisDe(f.pais);
+    const cot = p && p.moeda === "BRL" ? 1 : numBR(f.cotacao);
+    if (!(cot > 0)) { toast(`Informe o câmbio: quantos reais vale 1 ${p ? p.moeda : "unidade"} hoje.`); render(); return; }
+    const nome = f.nome.trim(), outrosN = f.outros.split(",").map((x) => x.trim()).filter((x) => x && norm(x) !== norm(nome));
+    const pf = { ...o.pf, maxDirecao: o.pf.maxDirecao ? numBR(o.pf.maxDirecao) : null, ocasiao: f.ocasiao, saindoDe: f.saindoDe, reservado: f.reservado, orcamento: f.orcamento, fala: f.fala };
+    S.viagem = { nome: (f.nomeViagem || f.destino).trim(), destino: f.destino.trim(), pais: f.pais, idioma: p.lang, inicio: f.inicio, dias: +f.dias, viajantes: [nome, ...outrosN], dono: nome, emergencia: p.sos, moeda: { cod: p.moeda, simb: p.simb }, cotacao: cot, perfil: pf, info: {} };
+    DIAS = []; aplicarEstado(null); garantirDias(); garantirListas(); faseAuto();
+    const c = await carteiraPronta(); if (c) c.criar(cfgCarteira(S.viagem), outrosN, nome);
+    S.hist = []; S.tela = S.fase === "viagem" ? "hoje" : "conversa"; S.chat = null; render();
     toast("Viagem criada. A Carteira já nasceu configurada."); render();
+    if (marcoDisponivel()) { S.tela = "conversa"; enviarTexto("Acabei de criar a viagem. Sugira as principais atrações dos destinos para escolhermos (Quero, Talvez ou Não), de acordo com o nosso perfil."); }
   },
 };
-function lerComprovante(nome) { S.comp.etapa = 1; S.comp.nome = nome; render(); setTimeout(() => { if (S.overlay === "comprovante") { S.comp.etapa = 2; render(); } }, 1400); }
 
 document.addEventListener("click", (ev) => {
   const el = ev.target.closest("[data-a]"); if (!el) return;
@@ -915,19 +1635,51 @@ document.addEventListener("click", (ev) => {
   if (el.dataset.a !== "fecharFundo") ev.preventDefault();
   f(el.dataset, el, ev);
 });
-document.addEventListener("change", (ev) => {
-  const f = ev.target.files && ev.target.files[0]; if (!f) return;
-  if (ev.target.id === "arquivo") lerComprovante(f.name);
-  if (ev.target.id === "arqViagem") abrirArquivoViagem(f);
-  if (ev.target.id === "arqJuntar") juntarArquivo(f);
-  ev.target.value = "";
+document.addEventListener("submit", async (ev) => {
+  const fm = ev.target.closest("[data-f]"); if (!fm) return;
+  ev.preventDefault();
+  if (fm.dataset.f === "marco") { const t = S.rascunho; S.rascunho = ""; await enviarTexto(t); }
+  if (fm.dataset.f === "busca") {
+    const b = S.busca; if (!b.q.trim()) return;
+    if (!API) { b.res = { erro: "A busca de lugares usa o servidor do Marco, que ainda não está ligado neste endereço. Peça o lugar ao Marco no computador de testes." }; render(); return; }
+    b.carregando = true; b.res = null; render();
+    const ref = DIAS.flatMap((d) => paradasDo(d)).find((p) => p.t === "pernoite" && Number.isFinite(+p.lat));
+    try { b.res = await (await fetch(API + "/lugar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consulta: b.q, pais: S.viagem && S.viagem.pais, perto: ref ? { lat: +ref.lat, lng: +ref.lng } : null }) })).json(); }
+    catch (e) { b.res = { erro: "A busca não respondeu. Verifique a internet." }; }
+    b.carregando = false; render();
+  }
 });
+document.addEventListener("change", (ev) => {
+  const t = ev.target;
+  const f = t.files && t.files[0];
+  if (f) {
+    if (t.id === "arquivo") receberComprovante(f);
+    if (t.id === "arqViagem") abrirArquivoViagem(f);
+    if (t.id === "arqJuntar") juntarArquivo(f);
+    t.value = ""; return;
+  }
+  if (t.dataset.onb === "pais" && S.onb) { S.onb.f.pais = t.value; S.onb.f.cotacao = ""; }
+  if (t.dataset.onbSl || t.dataset.pfSl) render();
+});
+document.addEventListener("input", (ev) => {
+  const t = ev.target, ds = t.dataset;
+  if (t.id === "txtMarco") S.rascunho = t.value;
+  else if (t.id === "qBusca" && S.busca) S.busca.q = t.value;
+  else if (ds.onb && S.onb) { if (ds.onb in S.onb.f) S.onb.f[ds.onb] = t.value; else S.onb.pf[ds.onb] = t.value; }
+  else if (ds.onbSl && S.onb) { S.onb.pf.sl[ds.onbSl] = +t.value; S.onb.slManual = true; }
+  else if (ds.pf && S.viagem) { perfilAtual()[ds.pf] = ds.pf === "maxDirecao" ? (t.value ? numBR(t.value) : null) : t.value; memSalvar(); }
+  else if (ds.pfSl && S.viagem) { const pf = perfilAtual(); pf.sl = pf.sl || {}; pf.sl[ds.pfSl] = +t.value; memSalvar(); }
+  else if (ds.saude) { const s = saudeLer(); s[ds.saude] = t.value; saudeSalvar(s); }
+});
+
+// ---------- partida ----------
 const _mem = memLer();
 if (_mem && _mem.viagem && _mem.viagem.dono) {
-  S.viagem = _mem.viagem; aplicarEstado(_mem.estado); DIAS = (_mem.roteiro && _mem.roteiro.dias) || []; S.diaSel = S.diaHoje;
+  S.viagem = _mem.viagem; DIAS = (_mem.roteiro && _mem.roteiro.dias) || []; aplicarEstado(_mem.estado); garantirDias(); faseAuto(); S.diaSel = S.diaHoje;
   S.tela = S.fase === "viagem" ? "hoje" : "conversa";
 } else S.tela = "boasvindas";
-document.addEventListener("input", (ev) => { if (ev.target.id === "onbNome" && S.onb) S.onb.nome = ev.target.value; });
+checarMarco();
+cofreAtualizar().then(render);
 // app instalável (PWA): funciona sem internet depois da primeira abertura
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   const jaTinha = !!navigator.serviceWorker.controller;

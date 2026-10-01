@@ -8,6 +8,7 @@
 !/.githooks/
 !/app/
 !/prototipo/
+!/servidor-marco/
 
 # dentro do código do design
 /prototipo/*.bak
@@ -16,6 +17,9 @@
 # nunca, em lugar nenhum
 .env
 .env.*
+!.env.exemplo
+node_modules/
+/servidor-marco/consumo/
 *.pem
 
 # segredos da conta (códigos de recuperação etc.)
