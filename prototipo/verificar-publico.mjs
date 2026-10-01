@@ -15,6 +15,7 @@ const arquivos = execSync("git ls-files --cached --others --exclude-standard", {
 const CAMINHOS_PROIBIDOS = [/(^|\/)\.env(?!\.exemplo$)/, /(^|\/)node_modules\//, /^servidor-marco\/consumo\//, /^ANALISE/i, /^exemplos\//, /^validacoes\//, /ESPECIFICACAO/i, /ONBOARDING\.md$/, /^seguranca\//, /recovery-codes/i, /^design\//, /\.bak$/];
 const CONTEUDO_PROIBIDO = [
   [/sk-ant-[A-Za-z0-9_-]{8,}/, "chave da Anthropic"],
+  [/sbp_[A-Za-z0-9]{20,}/, "token da conta Supabase"],
   [/^[A-Z_]+_(KEY|TOKEN)=\S+/m, "chave preenchida num arquivo de modelo"],
   [/sk_car_[A-Za-z0-9]{8,}/, "chave da Cartesia"],
   [/AIza[0-9A-Za-z_-]{30,}/, "chave do Google"],
@@ -32,13 +33,16 @@ if (fs.existsSync(dirEx)) for (const f of fs.readdirSync(dirEx).filter((x) => x.
     for (const x of (d.estado && d.estado.listas && d.estado.listas.cofre) || []) if (x.s && x.s.length > 6) privados.add(x.s);
   } catch (e) {}
 }
+// códigos de acesso dos testadores (seguranca/testadores.json): nunca podem aparecer em arquivo publicado
+const arqTest = path.join(RAIZ, "seguranca", "testadores.json");
+if (fs.existsSync(arqTest)) { try { for (const c of Object.values(JSON.parse(fs.readFileSync(arqTest, "utf8")))) if (typeof c === "string" && c.length > 8) privados.add(c); } catch (e) {} }
 // termos pessoais (nomes, documentos, e-mails): lista privada em exemplos/termos-privados.txt, nunca escrita aqui
 const termosEx = path.join(dirEx, "termos-privados.txt");
 if (fs.existsSync(termosEx)) for (const l of fs.readFileSync(termosEx, "utf8").split(/\r?\n/)) { const t = l.trim(); if (t && !t.startsWith("#")) privados.add(t); }
 const problemas = [];
 for (const f of arquivos) {
   if (CAMINHOS_PROIBIDOS.some((re) => re.test(f))) { problemas.push(`${f}: arquivo que não pode ser público`); continue; }
-  if (!/\.(html|js|mjs|json|md|txt|webmanifest|yml|yaml|exemplo)$/i.test(f)) continue;
+  if (!/\.(html|js|mjs|json|md|txt|webmanifest|yml|yaml|exemplo|ts|sql|toml)$/i.test(f)) continue;
   const txt = fs.readFileSync(path.join(RAIZ, f), "utf8");
   for (const [re, motivo] of CONTEUDO_PROIBIDO) {
     if (f.endsWith("verificar-publico.mjs")) break; // este arquivo descreve os padrões

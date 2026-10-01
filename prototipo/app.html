@@ -432,13 +432,21 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const API = ["localhost", "127.0.0.1"].includes(location.hostname) ? "/api" : null;
+const NUVEM = /*__NUVEM__*/null; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
+const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
+const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
+// código de acesso ao Marco na nuvem: fica só neste aparelho (nunca no arquivo da viagem)
+const CHAVE_ACESSO = "cle-acesso";
+const codigoAcesso = () => { try { return localStorage.getItem(CHAVE_ACESSO) || ""; } catch (e) { return ""; } };
+const apiFetch = (rota, opc = {}) => fetch(API + rota, { ...opc, headers: { ...(opc.body ? { "Content-Type": "application/json" } : {}), ...(LOCAL ? {} : { "x-cle-acesso": codigoAcesso() }) } });
 const marcoDisponivel = () => !!API && S.marcoOn !== false;
 function checarMarco() {
   if (!API) { S.marcoOn = false; return; }
-  fetch(API + "/estado").then((r) => r.json()).then((j) => { S.marcoOn = !!j.marco; S.rotasOn = !!j.rotas; S.marcoFaltam = j.faltam || []; S.recursos = j.recursos || {}; render(); }).catch(() => { S.marcoOn = false; render(); });
+  apiFetch("/estado").then((r) => r.json()).then((j) => { S.marcoOn = !!j.marco; S.semAcesso = j.acesso === false; S.quem = j.quem || null; S.rotasOn = !!j.rotas; S.marcoFaltam = j.faltam || []; S.recursos = j.recursos || {}; render(); }).catch(() => { S.marcoOn = false; render(); });
 }
-const msgMarcoOff = () => !API
+const msgMarcoOff = () => S.semAcesso
+  ? "Para conversar comigo, digite o seu código de acesso em Mais → Acesso ao Marco. Peça o seu ao Wagner."
+  : !API
   ? "Neste endereço eu ainda não estou ligado: chego aqui quando o servidor na nuvem estiver no ar. Por enquanto converso no computador de testes. Roteiro, mapa, Carteira, Cofre e checklist funcionam normalmente."
   : `Estou desligado neste computador${S.marcoFaltam.length ? `: falta ${S.marcoFaltam.join(", ")}` : ""}. Roteiro, mapa, Carteira, Cofre e checklist funcionam normalmente.`;
 
@@ -534,7 +542,7 @@ async function enviarTexto(txt, opc = {}) {
   return ok;
 }
 async function rodarTurno(modo, novas, ctrl = {}) {
-  const avulso = modo === "comprovante", fio = avulso ? fioVazio() : S.fios[modo];
+  const avulso = modo === "comprovante", fio = avulso ? ctrl.fioAvulso || fioVazio() : S.fios[modo];
   // conversa grande sem compactação no servidor: recomeça com resumo antes de crescer mais
   if (!avulso && fio.msgs.length && S.recursos && (S.recursos.compactacao === false || S.recursos.gatilhoCompactacao === false) && fio.tamanho > LIMITE_FIO[modo]) await recomecarFio(modo);
   let envio = novas;
@@ -544,12 +552,13 @@ async function rodarTurno(modo, novas, ctrl = {}) {
   S.chat.push(m); S.pensando = true; S.rolarFim = true; render();
   let ok = false, codigo = null;
   try {
-    const r = await fetch(API + "/marco", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ modo, versao: fio.versao, historico: fio.msgs, novas: envio, contexto: contextoTexto(envio.filter((b) => b.type === "text").map((b) => b.text).join(" ")), dados: dadosRoteiro() }) });
+    const r = await apiFetch("/marco", { method: "POST", body: JSON.stringify({ modo, versao: fio.versao, historico: fio.msgs, novas: envio, contexto: contextoTexto(envio.filter((b) => b.type === "text").map((b) => b.text).join(" ")), dados: dadosRoteiro() }) });
     if (r.status === 409) codigo = "versao";
     else if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.erro || "O Marco não respondeu."); }
     else await lerSSE(r, (ev) => { if (tratarEvento(ev, m, fio, modo)) ok = true; if (ev.tipo === "erro" && ev.codigo) codigo = ev.codigo; });
   } catch (e) { m.erro = navigator.onLine === false ? "Sem internet: o Marco precisa de conexão. Roteiro, mapa, Carteira e Cofre continuam funcionando." : e.message || "O Marco não respondeu."; }
   m.vivo = false; m.status = null; S.pensando = false;
+  if (m.continuar && !ok && !m.erro) { if (!m.txt.trim()) S.chat.splice(S.chat.indexOf(m), 1); return rodarTurno(modo, [], { ...ctrl, fioAvulso: avulso ? fio : undefined }); }
   // trava: versão nova do prefixo ou histórico recusado → recomeça a conversa com resumo e tenta uma vez
   if (!ok && (codigo === "versao" || codigo === "historico_invalido") && !avulso && !ctrl.recomecou) {
     S.chat.splice(S.chat.indexOf(m), 1);
@@ -586,6 +595,7 @@ function tratarEvento(ev, m, fio, modo) {
     }
     return true;
   }
+  else if (ev.tipo === "continuar") { fio.msgs.push(...ev.anexadas); m.continuar = true; m.status = "Continuando…"; renderLogo(); }
   else if (ev.tipo === "erro") { m.erro = ev.mensagem; }
   return false;
 }
@@ -593,7 +603,7 @@ function tratarEvento(ev, m, fio, modo) {
 async function recomecarFio(modo) {
   const linhas = S.chat.filter((x) => x.fio === modo || (x.de === "u" && modo === "conversa")).slice(-40).map((x) => x.de === "u" ? `Viajante: ${x.txt}` : `Marco: ${x.txt}${(x.cards || []).map((k) => ` [${k.name}: ${k.estado}${k.resultado ? " · " + k.resultado : ""}]`).join("")}`).join("\n");
   let resumo = null;
-  try { const r = await fetch(API + "/resumir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto: linhas }) }); if (r.ok) resumo = (await r.json()).resumo; } catch (e) {}
+  try { const r = await apiFetch("/resumir", { method: "POST", body: JSON.stringify({ texto: linhas }) }); if (r.ok) resumo = (await r.json()).resumo; } catch (e) {}
   for (const x of S.chat) if (x.fio === modo && x.toolUses) x.respondido = true;
   S.fios[modo] = { ...fioVazio(), resumo };
 }
@@ -702,7 +712,7 @@ function recalcRota(d) {
   if (!API || !S.rotasOn) return;
   const pts = paradasDo(d).filter((p) => Number.isFinite(+p.lat)).map((p) => (p.est ? { lat: p.est.lat, lng: p.est.lng } : { lat: +p.lat, lng: +p.lng }));
   if (pts.length < 2) { d.poly = []; d.km = 0; d.min = 0; return; }
-  fetch(API + "/rota", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pontos: pts.slice(0, 25), modo: "carro" }) })
+  apiFetch("/rota", { method: "POST", body: JSON.stringify({ pontos: pts.slice(0, 25), modo: "carro" }) })
     .then((r) => r.json()).then((j) => { if (j.erro) return; d.poly = j.poly; d.km = Math.round(j.km); d.min = j.min; render(); }).catch(() => {});
 }
 
@@ -935,7 +945,7 @@ function telaMais() {
   const ativos = S.historico.filter((h) => !h.desfeito).length;
   return `${header({ titulo: "Mais", sub: nomeViagem() })}<main id="main"><div class="pad"><h1>Mais</h1>
     <div class="list">${it("perfil", "user", "Perfil da viagem", "Ritmo, limites, interesses e regras · sempre editável")}<button class="row" data-a="ajustesViagem"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Ajustes da viagem</b><span>Datas, viajantes, moedas, câmbio e carteiras · preenchidos na criação</span></div>${ic("chev", 18)}</button></div>
-    <div class="list">${it("arquivo", "doc", "Arquivo da viagem e sincronização", "QR, Quick Share, WhatsApp, exportar e juntar")}${it("historico", "history", "Histórico de alterações", ativos ? `${ativos} alteração(ões) com desfazer` : "Tudo o que for aprovado aparece aqui")}${it("consumo", "wallet", "Consumo do Marco", "Gasto com a inteligência artificial, hoje e no mês")}</div>
+    <div class="list">${it("arquivo", "doc", "Arquivo da viagem e sincronização", "QR, Quick Share, WhatsApp, exportar e juntar")}${it("historico", "history", "Histórico de alterações", ativos ? `${ativos} alteração(ões) com desfazer` : "Tudo o que for aprovado aparece aqui")}${it("consumo", "wallet", "Consumo do Marco", "Gasto com a inteligência artificial, hoje e no mês")}${LOCAL ? "" : it("acesso", "lock", "Acesso ao Marco", S.marcoOn ? `Conectado${S.quem ? " como " + esc(S.quem) : ""}` : "Digite o seu código de acesso")}</div>
     <div class="list">${it("checklist", "check", "Checklist", `${pendentes()} tarefas abertas`)}${it("desejos", "heart", "Desejos", "Lugares, restaurantes e compras")}${it("cofre", "lock", "Cofre", "Documentos disponíveis sem sinal")}${it("grupo", "people", "Viajantes", esc(S.viagem ? S.viagem.viajantes.join(" e ") : ""))}${it("guia", "printer", "Guia impresso", "PDF para imprimir em duas vias")}</div>
     <div class="list">${it("emergencia", "sos", '<span style="color:var(--bad)">Emergência</span>', `${sos}, frases, ficha médica, localização`)}${it("viagens", "globe", "Minhas viagens", "")}</div>
     <p class="eyebrow">Ferramentas de teste</p>
@@ -1029,6 +1039,17 @@ function telaHistorico() {
     <p class="sub">Tudo o que foi aprovado fica registrado e pode ser desfeito.</p>
     ${L.length ? `<div class="list">${L.map((h) => `<div class="row"><span class="ico">${ic("history", 17)}</span><div class="main"><b${h.desfeito ? ' style="text-decoration:line-through;color:var(--fg3)"' : ""}>${esc(h.desc)}</b><span>${esc(new Date(h.quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))}${h.quem ? " · " + esc(h.quem) : ""}${h.desfeito ? " · desfeito" : ""}</span></div>${h.desfeito ? "" : `<button class="pill acc" data-a="desfazerHist" data-id="${esc(h.id)}">Desfazer</button>`}</div>`).join("")}</div>`
       : '<div class="card"><span class="small">Nada aprovado ainda.</span></div>'}</div></main>`;
+}
+
+// ---------- acesso ao Marco na nuvem: um código por testador (até o login com Google/Apple da etapa de colaboração) ----------
+function telaAcesso() {
+  const st = S.marcoOn ? `<span class="pill ok">${ic("check", 12, 2.5)} Conectado${S.quem ? " como " + esc(S.quem) : ""}</span>` : codigoAcesso() ? '<span class="pill bad">Código não aceito</span>' : '<span class="pill neu">Sem código</span>';
+  return `${header({ titulo: "Acesso ao Marco", sub: "Neste celular", voltar: true })}<main id="main"><div class="pad"><h1>Acesso ao Marco</h1>
+    <p class="sub">O Marco usa créditos pagos; por isso cada testador tem um código próprio. Digite uma vez: ele fica guardado só neste aparelho.</p>
+    <div style="display:flex">${st}</div>
+    <div class="campo"><label for="codigoAcesso">Código de acesso</label><input id="codigoAcesso" value="${esc(codigoAcesso())}" placeholder="CLE-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+    <button class="btn" data-a="salvarAcesso">Salvar e conectar</button>
+    <p class="small" style="margin:0">Não tem código? Peça ao Wagner. O código não vai no arquivo da viagem nem é compartilhado com os outros viajantes.</p></div></main>`;
 }
 
 // ---------- consumo do Marco (regra de contexto e custo, seção 27): medido em cada chamada, com trava diária ----------
@@ -1224,10 +1245,10 @@ async function buscarCambio() {
 
 // ---------- montagem ----------
 const TABS = () => [[S.fase === "viagem" ? "hoje" : "conversa", S.fase === "viagem" ? "sun" : "chat", S.fase === "viagem" ? "Hoje" : "Marco"], ["roteiro", "list", "Roteiro"], ["mapa", "map", "Mapa"], ["carteira", "wallet", "Carteira"], ["mais", "more", "Mais"]];
-const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "roteiro", mapa: "mapa", carteira: "carteira", mais: "mais", checklist: "mais", desejos: "mais", cofre: "mais", grupo: "mais", guia: "mais", emergencia: "mais", ficha: "mais", arquivo: "mais", historico: "mais", perfil: "mais", consumo: "mais", lugar: null, viagens: null };
+const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "roteiro", mapa: "mapa", carteira: "carteira", mais: "mais", checklist: "mais", desejos: "mais", cofre: "mais", grupo: "mais", guia: "mais", emergencia: "mais", ficha: "mais", arquivo: "mais", historico: "mais", perfil: "mais", consumo: "mais", acesso: "mais", lugar: null, viagens: null };
 let ultimaTela = null;
 function render() {
-  const T = { conversa: telaConversa, hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, ficha: telaFicha, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo, historico: telaHistorico, perfil: telaPerfil, consumo: telaConsumo }[S.tela] || telaBoasVindas;
+  const T = { conversa: telaConversa, hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, ficha: telaFicha, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo, historico: telaHistorico, perfil: telaPerfil, consumo: telaConsumo, acesso: telaAcesso }[S.tela] || telaBoasVindas;
   const main0 = $("#main"), scroll = main0 && ultimaTela === S.tela ? main0.scrollTop : 0;
   // quem está digitando não perde o foco quando o Marco atualiza a tela
   const ativo = document.activeElement, focoId = ativo && ativo.id && /^(INPUT|TEXTAREA)$/.test(ativo.tagName) && ativo.type !== "range" ? ativo.id : null;
@@ -1485,7 +1506,13 @@ const A = {
   perg(ds, el) { if (ds.k === "txt") { S.hist = []; S.tela = "conversa"; enviarTexto(el.textContent); } else pergunta(ds.k, el.textContent); },
   pedirMarco(ds) { S.hist = []; S.tela = "conversa"; enviarTexto(ds.q); },
   retry() { const m = S.chat[S.chat.length - 1]; if (!m || !m.reenvio) return; S.chat.pop(); enviarTexto(m.reenvio.txt, m.reenvio.opc); },
-  async consumoAtualizar() { if (!API) return; try { S.consumo = await (await fetch(API + "/consumo")).json(); } catch (e) { S.consumo = { erro: true }; } render(); },
+  salvarAcesso() {
+    const v = (($("#codigoAcesso") || {}).value || "").trim().toUpperCase();
+    try { if (v) localStorage.setItem(CHAVE_ACESSO, v); else localStorage.removeItem(CHAVE_ACESSO); } catch (e) {}
+    S.marcoOn = null; toast("Conferindo o código…"); render(); checarMarco();
+    setTimeout(() => { toast(S.marcoOn ? `Pronto: Marco conectado${S.quem ? " para " + S.quem : ""}.` : "Código não aceito. Confira as letras e os traços."); render(); }, 1800);
+  },
+  async consumoAtualizar() { if (!API) return; try { S.consumo = await (await apiFetch("/consumo")).json(); } catch (e) { S.consumo = { erro: true }; } render(); },
   falar() {
     if (exemploWestern() && !marcoDisponivel()) {
       if (S.voz === "ouvindo") return;
@@ -1595,7 +1622,7 @@ const A = {
     o.lendo = true; render();
     try {
       // pedido avulso e barato (sem histórico): só extrai a ficha; o viajante confere cada campo
-      const r = await fetch(API + "/ficha", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fala: o.f.fala, hoje: hojeISO(), quem: o.f.nome || null }) });
+      const r = await apiFetch("/ficha", { method: "POST", body: JSON.stringify({ fala: o.f.fala, hoje: hojeISO(), quem: o.f.nome || null }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.erro || "O Marco não respondeu.");
       if (j.ficha) preencherFicha(j.ficha); else toast("O Marco não encontrou dados suficientes na fala. Complete a ficha abaixo.");
@@ -1644,7 +1671,7 @@ document.addEventListener("submit", async (ev) => {
     if (!API) { b.res = { erro: "A busca de lugares usa o servidor do Marco, que ainda não está ligado neste endereço. Peça o lugar ao Marco no computador de testes." }; render(); return; }
     b.carregando = true; b.res = null; render();
     const ref = DIAS.flatMap((d) => paradasDo(d)).find((p) => p.t === "pernoite" && Number.isFinite(+p.lat));
-    try { b.res = await (await fetch(API + "/lugar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consulta: b.q, pais: S.viagem && S.viagem.pais, perto: ref ? { lat: +ref.lat, lng: +ref.lng } : null }) })).json(); }
+    try { b.res = await (await apiFetch("/lugar", { method: "POST", body: JSON.stringify({ consulta: b.q, pais: S.viagem && S.viagem.pais, perto: ref ? { lat: +ref.lat, lng: +ref.lng } : null }) })).json(); }
     catch (e) { b.res = { erro: "A busca não respondeu. Verifique a internet." }; }
     b.carregando = false; render();
   }

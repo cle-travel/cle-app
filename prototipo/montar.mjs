@@ -20,7 +20,9 @@ const carteira = fs.readFileSync(path.join(HERE, "carteira", "index.html"), "utf
 const seguro = (s) => JSON.stringify(s).replace(/<\/script/gi, "<\\/script").replace(/<!--/g, "<\\!--");
 const html = fs.readFileSync(path.join(HERE, "app.html"), "utf8")
   .replace("/*__MONTADO__*/false", "true")
-  .replace("/*__CARTEIRA__*/null", () => seguro(carteira));
+  .replace("/*__CARTEIRA__*/null", () => seguro(carteira))
+  // endereço do Marco na nuvem (público; gravado por publicar-nuvem.mjs). Sem ele, o app publicado avisa que o Marco não está ligado
+  .replace("/*__NUVEM__*/null", () => { const f = path.join(HERE, "nuvem.json"); return fs.existsSync(f) ? JSON.stringify(JSON.parse(fs.readFileSync(f, "utf8"))) : "null"; });
 
 // trava: o código do app é um único <script>; qualquer "</script" antes do fim o corta ao meio e o resto
 // aparece como texto na tela (bug de 30/09/2026). Recusa gerar se isso acontecer.

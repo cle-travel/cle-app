@@ -9,6 +9,7 @@
 !/app/
 !/prototipo/
 !/servidor-marco/
+!/supabase/
 
 # dentro do código do design
 /prototipo/*.bak
@@ -20,6 +21,10 @@
 !.env.exemplo
 node_modules/
 /servidor-marco/consumo/
+# cópias geradas na publicação da nuvem e arquivos locais da CLI do Supabase
+/supabase/functions/_shared/
+/supabase/.temp/
+/supabase/.branches/
 *.pem
 
 # segredos da conta (códigos de recuperação etc.)

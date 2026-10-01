@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 const APP = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "app");
 const TIPOS = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".txt": "text/plain; charset=utf-8" };
-const PORTA = 8090;
+const PORTA = +(process.env.PORTA || 8090);
 // o Marco (Claude, lugares, rotas) roda em servidor-marco/; sem ele, o app funciona e avisa que o Marco está desligado
 const { tratarApi } = await import("../servidor-marco/api.mjs").catch((e) => { console.error("Marco desligado:", e.message); return { tratarApi: async () => false }; });
 

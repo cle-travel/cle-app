@@ -201,10 +201,13 @@ const ZERO = { entrada: 0, saida: 0, cacheLido: 0, cacheEscrito: 0, buscas: 0, u
  *   novas       blocos da nova mensagem do viajante (resultados de cartões, notas, anexo, texto)
  *   contexto    texto compacto da viagem para este turno (R3)
  *   dados       roteiro completo, usado só por consultar_dia (não entra no prompt)
- * Eventos: texto, buscando, propostas {anexadas, resultadosServidor}, fim {anexadas}, erro {codigo}.
+ *   prazoMs     tempo máximo deste pedido (nuvem: o Supabase corta em 150 s); perto dele o servidor entrega o que
+ *               já fez com {tipo:"continuar"} e o app pede a continuação com `novas` vazio. Nada é cortado.
+ * Eventos: texto, buscando, propostas {anexadas, resultadosServidor}, fim {anexadas}, continuar {anexadas}, erro {codigo}.
  * `anexadas` = tudo o que este turno acrescentou à conversa, byte a byte; o app guarda e reenvia igual.
  */
-export async function* turnoMarco({ client, modo, historico, novas, contexto, dados, chaves, Anthropic }) {
+export async function* turnoMarco({ client, modo, historico, novas, contexto, dados, chaves, Anthropic, prazoMs = 0 }) {
+  const t0 = Date.now();
   const M = MODOS[modo]; if (!M) { yield { tipo: "erro", mensagem: "Modo desconhecido." }; return; }
   let consumo = { ...ZERO };
   let tentativa = 0;
@@ -213,8 +216,11 @@ export async function* turnoMarco({ client, modo, historico, novas, contexto, da
     const ctxTexto = "CONTEXTO DA VIAGEM NESTE TURNO:\n" + (contexto || "(sem viagem aberta)");
     const usuario = { role: "user", content: [...novas] };
     const ctxMsg = () => ({ role: "system", clear_at: "next_user_message", content: ctxTexto });
-    if (RECURSOS.clearAt) anexadas.push(usuario, ctxMsg());
-    else { usuario.content.push({ type: "text", text: ctxTexto }); anexadas.push(usuario); }
+    // continuação de um pedido longo (novas vazio): o histórico já termina nos resultados das ferramentas
+    if (novas.length) {
+      if (RECURSOS.clearAt) anexadas.push(usuario, ctxMsg());
+      else { usuario.content.push({ type: "text", text: ctxTexto }); anexadas.push(usuario); }
+    }
     const msgs = () => [...historico, ...anexadas];
     let fila = [], usosServidor = 0;
     for (let passo = 1; passo <= M.passos + 1; passo++) {
@@ -274,6 +280,7 @@ export async function* turnoMarco({ client, modo, historico, novas, contexto, da
       if (passo >= M.passos) res.push({ type: "text", text: "Muitas consultas seguidas neste pedido: apresente agora o que já tem e diga o que falta, para o viajante pedir a continuação." });
       anexadas.push({ role: "user", content: res });
       if (RECURSOS.clearAt) anexadas.push(ctxMsg()); // o contexto se apagou com o resultado; volta para o próximo passo
+      if (prazoMs && Date.now() - t0 > prazoMs && passo < M.passos) { yield { tipo: "continuar", anexadas, consumo }; return; }
     }
     yield { tipo: "erro", consumo, mensagem: "O Marco fez consultas demais seguidas neste pedido e parou por segurança. Peça para ele continuar de onde parou." };
     return;
