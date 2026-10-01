@@ -453,6 +453,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
+const VERSAO_APP = /*__VERSAO__*/"dev"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = /*__NUVEM__*/null; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -974,9 +975,9 @@ function telaMais() {
       <div class="seg">${[["auto", "Pela data"], ["planejamento", "Planejamento"], ["viagem", "Na viagem"]].map(([k, l]) => `<button class="${(S.faseManual ? S.fase : "auto") === k ? "on" : ""}" data-a="fase" data-v="${k}">${l}</button>`).join("")}</div>
       ${dH && S.faseManual ? `<div class="daynav"><button class="iconbtn" data-a="diaHoje" data-v="-1" aria-label="Dia anterior">${ic("back")}</button><div class="t"><b>Dia simulado: D${S.diaHoje}</b><span>${esc(fmtData(dH.data))} · ${esc(cidade(dH))}</span></div><button class="iconbtn" data-a="diaHoje" data-v="1" aria-label="Próximo dia">${ic("chev")}</button></div>` : ""}
       <div class="btns"><button class="btn sec" data-a="alerta">Alerta urgente</button><button class="btn sec" data-a="notif">Notificação</button></div>
-      <div class="small">Versão do app: ${esc(S.versaoApp || "–")}</div>
       <div class="small">Marco: ${S.marcoOn ? "ligado" : API ? "desligado" + (S.marcoFaltam.length ? ` (falta ${esc(S.marcoFaltam.join(", "))})` : "") : "chega com o servidor na nuvem"}</div>
       <button class="btn ghost" style="color:var(--bad)" data-a="pedirFechar">Fechar esta viagem neste aparelho</button></div>
+    <p class="small" style="margin:0;text-align:center">Clé v${esc(VERSAO_APP)} · os dados da viagem ficam neste aparelho; exporte o arquivo da viagem de vez em quando.</p>
   </div></main>`;
 }
 
@@ -1739,7 +1740,6 @@ if ("serviceWorker" in navigator && (location.protocol === "https:" || location.
   navigator.serviceWorker.register("sw.js").then((r) => r.update()).catch(() => {});
   // no celular o app fica aberto em segundo plano: ao voltar para ele, procura versão nova de novo
   document.addEventListener("visibilitychange", () => { if (!document.hidden) navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => {}); });
-  caches.keys().then((ks) => { const v = ks.find((k) => k.startsWith("cle-")); if (v) { S.versaoApp = v.slice(4); render(); } }).catch(() => {});
 }
 render();
 </script>

@@ -51,6 +51,13 @@ for (const f of arquivos) {
   }
   for (const n of privados) if (n.length > 5 && txt.toLowerCase().includes(n.toLowerCase())) problemas.push(`${f}: dado da viagem de exemplo ("${n.slice(0, 12)}…")`);
 }
+// o app publicado mudou? então a versão (prototipo/versao.json) precisa subir no mesmo envio
+let noEnvio = [];
+try { noEnvio = execSync("git diff --cached --name-only", { cwd: RAIZ, encoding: "utf8" }).split("\n").filter(Boolean); } catch (e) {}
+if (noEnvio.includes("app/index.html") && !noEnvio.includes("prototipo/versao.json")) {
+  let antes = null; try { antes = JSON.parse(execSync("git show HEAD:prototipo/versao.json", { cwd: RAIZ, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })).versao; } catch (e) {}
+  if (antes !== null) problemas.push(`app/index.html mudou, mas a versão continua ${antes}: suba o número em prototipo/versao.json (correção 1.0.1, recurso novo 1.1.0, mudança grande 2.0.0)`);
+}
 if (problemas.length) {
   console.error("ENVIO BLOQUEADO. O repositório é público e estes itens não podem ir para lá:\n  " + problemas.join("\n  "));
   process.exit(1);

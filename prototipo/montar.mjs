@@ -18,8 +18,12 @@ const APP = path.join(RAIZ, "app");
 // ---------- 1. o app (sem dados) ----------
 const carteira = fs.readFileSync(path.join(HERE, "carteira", "index.html"), "utf8");
 const seguro = (s) => JSON.stringify(s).replace(/<\/script/gi, "<\\/script").replace(/<!--/g, "<\\!--");
+// número da versão (padrão da Carteira): prototipo/versao.json; a trava de publicação exige subir a cada mudança
+const VERSAO_APP = JSON.parse(fs.readFileSync(path.join(HERE, "versao.json"), "utf8")).versao;
+if (!/^\d+\.\d+\.\d+$/.test(VERSAO_APP)) throw new Error("app NÃO gerado: versão inválida em prototipo/versao.json (use 1.0.0)");
 const html = fs.readFileSync(path.join(HERE, "app.html"), "utf8")
   .replace("/*__MONTADO__*/false", "true")
+  .replace('/*__VERSAO__*/"dev"', () => JSON.stringify(VERSAO_APP))
   .replace("/*__CARTEIRA__*/null", () => seguro(carteira))
   // endereço do Marco na nuvem (público; gravado por publicar-nuvem.mjs). Sem ele, o app publicado avisa que o Marco não está ligado
   .replace("/*__NUVEM__*/null", () => { const f = path.join(HERE, "nuvem.json"); return fs.existsSync(f) ? JSON.stringify(JSON.parse(fs.readFileSync(f, "utf8"))) : "null"; });
@@ -111,7 +115,7 @@ fs.writeFileSync(path.join(APP, "manifest.webmanifest"), JSON.stringify({
 const arquivos = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./carteira/lib/qrcode.js", "./carteira/lib/jsQR.js", "./carteira/icon-192.png"];
 const versao = crypto.createHash("sha256").update(htmlApp).update(fs.readFileSync(path.join(APP, "carteira/lib/jsQR.js"))).digest("hex").slice(0, 10);
 fs.writeFileSync(path.join(APP, "sw.js"), `// Clé: funciona sem internet depois da primeira abertura (gerado por prototipo/montar.mjs)
-const VERSAO = "cle-${versao}";
+const VERSAO = "cle-v${VERSAO_APP}-${versao}";
 const ARQUIVOS = ${JSON.stringify(arquivos)};
 const FONTES = /^https:\\/\\/fonts\\.(googleapis|gstatic)\\.com\\//;
 // o GitHub Pages manda o navegador guardar cada arquivo por 10 min: a versão nova é baixada direto do servidor
@@ -127,4 +131,4 @@ self.addEventListener("fetch", (e) => {
 });
 `);
 
-console.log(`app: app/index.html (${Math.round(Buffer.byteLength(html) / 1024)} KB, versão ${versao}) · ícones, manifest e sw.js gerados`);
+console.log(`app v${VERSAO_APP}: app/index.html (${Math.round(Buffer.byteLength(html) / 1024)} KB, versão ${versao}) · ícones, manifest e sw.js gerados`);
