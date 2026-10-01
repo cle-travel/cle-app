@@ -70,5 +70,13 @@ if (fs.existsSync(idx)) {
   confere("app tem meta viewport", /<meta name="viewport" content="width=device-width/.test(h), true);
 }
 
+// ---------- 4. voz do Marco: só a voz aprovada (ElevenLabs "Eric", Eleven v4 turbo; Wagner, 30/09/2026) ----------
+// Em 01/10 a voz do aparelho (robótica) entrou no lugar sem aviso; esta trava impede que se repita.
+const http = fs.readFileSync(path.join(RAIZ, "servidor-marco", "http.mjs"), "utf8");
+confere("voz do Marco é a Eric (cjVigY5qzO86Huf0OWal)", /VOZ_MARCO = \{ id: "cjVigY5qzO86Huf0OWal", nome: "Eric", modelo: "eleven_v4_turbo" \}/.test(http), true);
+const falaMarco = app.slice(app.indexOf("async function marcoFalar"), app.indexOf("function marcoCalar"));
+confere("marcoFalar não usa a voz do aparelho", falaMarco.length > 0 && !/speechSynthesis|SpeechSynthesisUtterance/.test(falaMarco), true);
+confere("marcoFalar usa a rota /voz do servidor", /apiFetch\("\/voz"/.test(app), true);
+
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }
 console.log(`testes: ${total} de ${total} passaram.`);

@@ -138,6 +138,8 @@ a.row{color:inherit;text-decoration:none}
 .siri.ouvindo::after{animation-duration:1.2s}
 .siri.ouvindo .nucleo{animation:siriPulsa 1s ease-in-out infinite}
 .siri.pensando::before{animation-duration:2.4s;opacity:.6}
+.siri.falando::before{inset:-8px;filter:blur(12px);opacity:.95;animation-duration:2.2s}
+.siri.falando .nucleo{animation:siriPulsa 1.6s ease-in-out infinite}
 @keyframes siriGira{to{transform:rotate(360deg)}}
 @keyframes siriPulsa{50%{transform:scale(1.07)}}
 @media (prefers-reduced-motion:reduce){.siri::before,.siri::after,.siri .nucleo{animation:none!important}}
@@ -343,7 +345,7 @@ const I = {
   compass: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>', translate: '<path d="M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M11 5c0 3-3 7-7 8M13 21l4-9 4 9M14.5 18h5"/>',
   send: '<path d="M5 12l14-7-5 15-3-6z"/>', history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   share: '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.9l7.6-3.8M8.2 13.1l7.6 3.8"/>',
-  speaker: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>', cross: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/>',
+  speaker: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>', mudo: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/>',cross: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
 };
 const ic = (n, s = 22, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n] || ""}</svg>`;
@@ -639,7 +641,7 @@ async function sairDaConta() {
 const marcoDisponivel = () => !!API && S.marcoOn !== false;
 function checarMarco() {
   if (!API) { S.marcoOn = false; return; }
-  apiFetch("/estado").then((r) => r.json()).then((j) => { S.marcoOn = !!j.marco; S.semAcesso = j.acesso === false; S.motivoAcesso = j.motivo || null; S.quem = j.quem || null; S.rotasOn = !!j.rotas; S.marcoFaltam = j.faltam || []; S.recursos = j.recursos || {}; render(); }).catch(() => { S.marcoOn = false; render(); });
+  apiFetch("/estado").then((r) => r.json()).then((j) => { S.marcoOn = !!j.marco; S.semAcesso = j.acesso === false; S.motivoAcesso = j.motivo || null; S.quem = j.quem || null; S.rotasOn = !!j.rotas; S.vozOn = !!j.voz; S.marcoFaltam = j.faltam || []; S.recursos = j.recursos || {}; render(); }).catch(() => { S.marcoOn = false; render(); });
 }
 const msgMarcoOff = () => S.semAcesso
   ? (!S.conta ? "Para conversar comigo, entre na sua conta."
@@ -1382,7 +1384,7 @@ function telaOnboarding() {
   let c = "";
   if (o.step === 0) {
     c = `<div class="saudacao fade"><div class="who"><span class="avatar">${ic("compass", 16, 2)}</span>Marco</div>
-        <div class="msg-m">Oi! Eu sou o Marco, seu agente de viagens. Bora planejar essa viagem juntos? Me conta pra onde vocês querem ir, quando e quem vai, do jeito que vier na cabeça. O resto eu organizo.</div></div>
+        <div class="msg-m" aria-live="polite">${o.lendo ? "Deixa eu ver…" : esc(o.marco || boasVindasMarco())}</div></div>
       <div class="campo"><label for="onb-fala">Se preferir, escreva aqui</label><textarea id="onb-fala" ${at("fala")} placeholder="Ex.: Quero levar meus pais para a Suíça em julho, uns doze dias. A gente curte montanha, trem e comida boa, mas sem correria.">${esc(f.fala)}</textarea></div>
       ${marcoDisponivel() ? `<button class="btn ${o.lendo ? "sec" : ""}" data-a="onbMarco"${o.lendo ? " disabled" : ""}>${o.lendo ? "O Marco está lendo…" : `${ic("compass", 18)} Preencher a ficha com o Marco`}</button>`
         : S.semAcesso && AUTH && S.motivoAcesso === "conta_nao_liberada" ? `<div class="card" style="gap:6px"><div style="font-size:15px;line-height:1.45">Sua conta (${esc((S.conta && S.conta.email) || "")}) ainda não foi liberada para conversar comigo nesta fase de testes. Enquanto isso, preencha a ficha abaixo; peça ao Wagner para incluir o seu e-mail.</div></div>`
@@ -1426,10 +1428,10 @@ function telaOnboarding() {
         ${p && p.moeda !== "BRL" ? campo("onb-cot", `Câmbio: 1 ${p.moeda} = quantos R$`, f.cotacao, at("cotacao") + ' inputmode="decimal" placeholder="Ex.: 6,45"') : ""}</div>
       <button class="btn" data-a="onbFim">Criar viagem</button>`;
   }
-  return `<div class="top"><button class="iconbtn" data-a="${o.step ? "onbVoltar" : "voltar"}" aria-label="${o.step ? "Voltar" : "Fechar"}">${ic(o.step ? "back" : "x")}</button><div class="ttl"><b>Nova viagem</b></div><span style="width:36px"></span></div>
+  return `<div class="top"><button class="iconbtn" data-a="${o.step ? "onbVoltar" : "voltar"}" aria-label="${o.step ? "Voltar" : "Fechar"}">${ic(o.step ? "back" : "x")}</button><div class="ttl"><b>Nova viagem</b></div>${o.step === 0 && S.vozOn && marcoDisponivel() ? `<button class="iconbtn" data-a="vozMarco" aria-label="${S.vozMarco ? "Silenciar a voz do Marco" : "Ligar a voz do Marco"}" aria-pressed="${S.vozMarco}">${ic(S.vozMarco ? "speaker" : "mudo")}</button>` : '<span style="width:36px"></span>'}</div>
     <main id="main"><div class="pad${o.step === 0 ? " com-doca" : ""}">${dots}${c}</div></main>
-    ${o.step === 0 ? `<div class="doca"><div class="doca-dica" role="status">${S.ditando === "onb-fala" ? "Estou ouvindo. Quando terminar, toque de novo." : "Prefere falar? Toque aqui e me conte do seu jeito."}</div>
-      <button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : ""}" data-a="ditar" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button></div>` : ""}`;
+    ${o.step === 0 ? `<div class="doca"><div class="doca-dica" role="status">${S.ditando === "onb-fala" ? "Estou ouvindo. Quando terminar, toque de novo." : o.conversou ? "Toque aqui para me responder." : "Prefere falar? Toque aqui e me conte do seu jeito."}</div>
+      <button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="ditar" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button></div>` : ""}`;
 }
 function aplicarCenarios(o) {
   const sl = { aventura: 50, explorar: 50, fora: 50, premium: 50 };
@@ -1696,6 +1698,72 @@ function falarTexto(t, lang) {
   if (!("speechSynthesis" in window)) { toast("Este aparelho não lê textos em voz alta. Mostre a frase na tela."); render(); return; }
   speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = { en: "en-US", es: "es-ES", fr: "fr-FR", it: "it-IT", de: "de-DE", pt: "pt-BR" }[lang] || "en-US"; u.rate = 0.9; speechSynthesis.speak(u);
 }
+// ---------- voz do Marco: ElevenLabs, voz "Eric", modelo Eleven v4 turbo (escolha de Wagner, 30/09/2026) ----------
+// O áudio vem do servidor do Marco (/voz). NUNCA usa o leitor de voz do aparelho (robótico, reprovado por Wagner
+// em 01/10/2026): sem a voz Eric, o Marco só escreve. Liga por padrão; o alto-falante no topo silencia.
+// As boas-vindas (que se repetem) ficam guardadas neste aparelho para não gastar caracteres de novo.
+const CHAVE_VOZ = "cle-voz-marco", CHAVE_APRESENTADO = "cle-marco-apresentado", CACHE_VOZ = "cle-voz-eric-v1";
+try { S.vozMarco = localStorage.getItem(CHAVE_VOZ) !== "0"; } catch (e) { S.vozMarco = true; }
+let audioMarco = null, falaAtual = 0;
+// o navegador só toca som depois de um toque: o primeiro toque em qualquer lugar destrava o tocador do Marco
+// 50 ms de silêncio em WAV, montado aqui mesmo, só para destravar o tocador dentro do toque
+function silencioWav() {
+  const n = 400, b = new DataView(new ArrayBuffer(44 + n)), w = (o, t) => [...t].forEach((c, i) => b.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); b.setUint32(4, 36 + n, true); w(8, "WAVEfmt "); b.setUint32(16, 16, true); b.setUint16(20, 1, true); b.setUint16(22, 1, true);
+  b.setUint32(24, 8000, true); b.setUint32(28, 8000, true); b.setUint16(32, 1, true); b.setUint16(34, 8, true); w(36, "data"); b.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) b.setUint8(44 + i, 128);
+  return new Blob([b.buffer], { type: "audio/wav" });
+}
+function destravarAudio() {
+  if (audioMarco) return; audioMarco = new Audio(); audioMarco.preload = "auto";
+  audioMarco.src = URL.createObjectURL(silencioWav());
+  audioMarco.play().catch(() => {});
+}
+document.addEventListener("pointerdown", destravarAudio, { capture: true, once: true });
+function marcarFalando(on) { S.marcoFalando = on; const b = document.querySelector(".doca .siri"); if (b) b.classList.toggle("falando", on && !b.classList.contains("ouvindo") && !b.classList.contains("pensando")); }
+function tocarUrl(url) {
+  if (audioMarco.dataset.url) URL.revokeObjectURL(audioMarco.dataset.url);
+  audioMarco.src = audioMarco.dataset.url = url;
+  audioMarco.onplaying = () => marcarFalando(true); audioMarco.onended = audioMarco.onpause = audioMarco.onerror = () => marcarFalando(false);
+  return audioMarco.play();
+}
+// toca enquanto o áudio ainda chega (primeiro som em menos de 1 s); devolve o áudio inteiro para guardar
+async function tocarAoChegar(resp, n) {
+  const partes = [], leitor = resp.body.getReader();
+  const ms = new MediaSource(); tocarUrl(URL.createObjectURL(ms)).catch(() => {});
+  await new Promise((ok) => ms.addEventListener("sourceopen", ok, { once: true }));
+  const sb = ms.addSourceBuffer("audio/mpeg"), anexar = (c) => new Promise((ok, falha) => { sb.addEventListener("updateend", ok, { once: true }); sb.addEventListener("error", falha, { once: true }); sb.appendBuffer(c); });
+  for (;;) {
+    const { done, value } = await leitor.read();
+    if (n !== falaAtual) { leitor.cancel().catch(() => {}); return null; } // interrompido
+    if (done) break;
+    partes.push(value); await anexar(value);
+  }
+  if (ms.readyState === "open") ms.endOfStream();
+  return new Blob(partes, { type: "audio/mpeg" });
+}
+async function marcoFalar(t, guardar = false) {
+  if (!S.vozMarco || !t || !API || !marcoDisponivel() || !S.vozOn) return;
+  destravarAudio(); const n = ++falaAtual;
+  try {
+    const chave = "https://cle.local/voz/" + encodeURIComponent(t).slice(0, 1800);
+    let cache = null; try { cache = await caches.open(CACHE_VOZ); const g = await cache.match(chave); if (g) { const b = await g.blob(); if (n === falaAtual && S.vozMarco) await tocarUrl(URL.createObjectURL(b)); return; } } catch (e) {}
+    const r = await apiFetch("/voz", { method: "POST", body: JSON.stringify({ texto: t }) });
+    if (!r.ok || n !== falaAtual || !S.vozMarco) return; // sem voz Eric, o Marco só escreve; ou outra fala começou
+    let b;
+    if (window.MediaSource && MediaSource.isTypeSupported("audio/mpeg") && r.body) b = await tocarAoChegar(r, n);
+    else { b = await r.blob(); if (n === falaAtual && S.vozMarco) await tocarUrl(URL.createObjectURL(b)); }
+    if (b && cache && guardar) await cache.put(chave, new Response(b, { headers: { "Content-Type": "audio/mpeg" } })).catch(() => {});
+  } catch (e) { marcarFalando(false); }
+}
+function marcoCalar() { falaAtual++; if (audioMarco && !audioMarco.paused) audioMarco.pause(); marcarFalando(false); }
+// Roteiro de boas-vindas: completo na primeira vez; curto para quem já conhece o Marco.
+function boasVindasMarco() {
+  const nome = ((S.onb && S.onb.f.nome) || "").trim().split(" ")[0];
+  let veterano = false; try { veterano = localStorage.getItem(CHAVE_APRESENTADO) === "1"; } catch (e) {}
+  if (veterano) return `Oi${nome ? ", " + nome : ""}! Viagem nova à vista? Me conta pra onde vai ser dessa vez, quando e quem vai. Se preferir, preencha a ficha aqui embaixo, como achar melhor.`;
+  return `Olá${nome ? ", " + nome : ""}! Que bom ter você no Clé. Eu sou o Marco, seu concierge de viagens, e vou te acompanhar em todo o planejamento: do roteiro de cada dia às reservas, gastos e imprevistos. Pra começar, a gente precisa da ficha da viagem. Você pode preencher os campos aqui embaixo, ou, se preferir, é só tocar no botão e me contar pra onde querem ir, quando e quem vai. Eu preencho tudo pra você.`;
+}
 // ---------- ditado: o botão do Marco escreve o que você fala (reconhecimento de fala do próprio aparelho) ----------
 // Ponte até a etapa de voz (ElevenLabs Scribe + voz do Eric): sem custo, em português, funciona no Chrome do Android e no iPhone.
 const Reconhecimento = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1718,6 +1786,7 @@ function juntarFala(trechos) {
 // /*juntarFala:fim*/
 function ditar(alvo, aoTerminar) {
   if (reconhecedor) { reconhecedor.stop(); return; } // segundo toque: termina
+  marcoCalar(); // tocar no botão interrompe o Marco, e o microfone não capta a voz dele
   if (!Reconhecimento) { toast("Este navegador não permite ditar. Use o microfone do teclado do celular, ou escreva."); render(); return; }
   const campo = () => document.getElementById(alvo);
   const ler = () => (alvo === "txtMarco" ? S.rascunho : (S.onb && S.onb.f.fala) || "");
@@ -1738,7 +1807,7 @@ function comPosicao(ok) {
   navigator.geolocation.getCurrentPosition((p) => ok(p.coords.latitude, p.coords.longitude), () => { toast("Não foi possível obter a localização. Verifique a permissão de localização do app."); render(); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
 }
 const A = {
-  voltar() { const h = S.hist.pop(); if (h) Object.assign(S, h); else S.tela = S.viagem ? (S.fase === "viagem" ? "hoje" : "conversa") : "boasvindas"; render(); },
+  voltar() { marcoCalar(); const h = S.hist.pop(); if (h) Object.assign(S, h); else S.tela = S.viagem ? (S.fase === "viagem" ? "hoje" : "conversa") : "boasvindas"; render(); },
   ir(ds) { if (ds.t === (S.fase === "viagem" ? "hoje" : "conversa") && S.tela !== "onboarding") return home(); ir(ds.t); },
   irTarefa(ds) { if (ds.t !== "confirmar") return ir(ds.t); const d = DIAS.find((x) => paradasDo(x).some((p) => seloDe(p) !== "verde")); if (!d) { toast("Nenhum local para conferir."); render(); return; } const i = paradasDo(d).findIndex((p) => seloDe(p) !== "verde"); ir("lugar", { lugar: { d: d.dia, i }, diaSel: d.dia }); },
   tab(ds) { S.hist = []; S.tela = ds.t; if (ds.t === "mapa" && S.fase === "viagem") S.diaSel = S.diaHoje; render(); },
@@ -1862,21 +1931,34 @@ const A = {
     memApagar(); DIAS = []; S.viagem = null; aplicarEstado(null); S.overlay = null; S.hist = []; S.tela = "boasvindas"; render();
     toast("Viagem fechada neste aparelho. O arquivo exportado continua valendo."); render();
   },
-  onb() { S.onb = novaOnb(); S.onb.f.nome = (S.conta && S.conta.nome) || ""; ir("onboarding"); },
+  onb() {
+    S.onb = novaOnb(); S.onb.f.nome = (S.conta && S.conta.nome) || "";
+    S.onb.marco = boasVindasMarco(); ir("onboarding");
+    // fala dentro do toque em "Nova viagem" (o navegador só deixa o app falar depois de um toque)
+    if (marcoDisponivel()) { marcoFalar(S.onb.marco, true); try { localStorage.setItem(CHAVE_APRESENTADO, "1"); } catch (e) {} }
+  },
+  vozMarco() {
+    S.vozMarco = !S.vozMarco; try { localStorage.setItem(CHAVE_VOZ, S.vozMarco ? "1" : "0"); } catch (e) {}
+    if (S.vozMarco) { render(); marcoFalar(S.onb && S.onb.marco); } else { marcoCalar(); toast("Voz do Marco desligada. As respostas continuam aparecendo na tela."); render(); }
+  },
   async onbMarco() {
     const o = S.onb; if (!o.f.fala.trim()) { toast("Conte primeiro sobre a viagem, no campo acima."); render(); return; }
-    o.lendo = true; render();
+    o.lendo = true; marcoCalar(); render();
     try {
-      // pedido avulso e barato (sem histórico): só extrai a ficha; o viajante confere cada campo
-      const r = await apiFetch("/ficha", { method: "POST", body: JSON.stringify({ fala: o.f.fala, hoje: hojeISO(), quem: o.f.nome || null }) });
+      // pedido avulso e barato (sem histórico): o Marco responde em voz e preenche a ficha; o viajante confere cada campo
+      const { fala, nomeViagem, cotacao, ...ficha } = o.f;
+      const r = await apiFetch("/ficha", { method: "POST", body: JSON.stringify({ fala: o.f.fala, hoje: hojeISO(), quem: o.f.nome || null, ficha, ultima: o.marco || "" }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.erro || "O Marco não respondeu.");
-      if (j.ficha) preencherFicha(j.ficha); else toast("O Marco não encontrou dados suficientes na fala. Complete a ficha abaixo.");
+      if (j.ficha) preencherFicha(j.ficha);
+      o.marco = j.resposta || (j.ficha ? "Preenchi o que entendi na ficha aqui embaixo. Confere pra mim?" : "Ainda não peguei os detalhes da viagem. Me conta pra onde vocês querem ir, quando e quem vai?");
+      o.conversou = true;
+      o.lendo = false; render(); marcoFalar(o.marco); return;
     } catch (e) { toast(e.message || "O Marco não respondeu. Preencha a ficha abaixo."); }
     o.lendo = false; render();
   },
   onbNext() {
-    const o = S.onb, f = o.f;
+    const o = S.onb, f = o.f; marcoCalar();
     if (o.step === 0) {
       const falta = [["nome", "seu nome"], ["destino", "o destino"], ["pais", "o país principal"], ["inicio", "a data de início"], ["dias", "quantos dias"]].filter(([k]) => !String(f[k] || "").trim()).map(([, l]) => l);
       if (!(+f.dias > 0) && !falta.includes("quantos dias")) falta.push("quantos dias");

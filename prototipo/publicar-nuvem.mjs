@@ -54,7 +54,7 @@ console.log("tabela de consumo pronta");
 
 // 5. segredos (valores nunca impressos)
 const env = {}; for (const l of fs.readFileSync(path.join(RAIZ, "servidor-marco", ".env"), "utf8").split(/\r?\n/)) { const m = l.match(/^([A-Z_]+)=(.*)$/); if (m && m[2].trim()) env[m[1]] = m[2].trim(); }
-const segredos = ["ANTHROPIC_API_KEY", "MAPBOX_TOKEN", "FOURSQUARE_API_KEY", "NPS_API_KEY", "LIMITE_DIARIO_USD"].filter((k) => env[k]).map((k) => ({ name: k, value: env[k] }));
+const segredos = ["ANTHROPIC_API_KEY", "MAPBOX_TOKEN", "FOURSQUARE_API_KEY", "NPS_API_KEY", "ELEVENLABS_API_KEY", "LIMITE_DIARIO_USD"].filter((k) => env[k]).map((k) => ({ name: k, value: env[k] }));
 segredos.push({ name: "TESTADORES", value: JSON.stringify(testadores) });
 // contas liberadas para o Marco (e-mail de cada testador): seguranca/permitidos.json { "Wagner": "email", ... }
 const arqPerm = path.join(SEG, "permitidos.json");

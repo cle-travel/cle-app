@@ -317,15 +317,43 @@ async function executarNoServidor(uso, chaves, dados) {
 // Sonnet 5.5 com esforço baixo: são raras (centavos por mês) e um resumo ruim perderia preferências do viajante;
 // por isso o Haiku 4.5 ficou fora do app (decisão de Wagner, 01/10/2026).
 const RAPIDO = "claude-sonnet-5-5";
-export async function fichaOnboarding({ client, fala, hoje, quem }) {
+// Tela "Nova viagem": o Marco conversa por voz e preenche a ficha ao mesmo tempo. A cada fala, responde em
+// voz alta (campo resposta) e devolve só o que foi dito para a ficha. Ferramenta própria, para não mexer no
+// prefixo congelado dos modos (T.propor_ficha_viagem segue igual).
+const FICHA_CONVERSA = {
+  name: "responder_e_preencher",
+  description: "Responde ao viajante (resposta, lida em voz alta) e preenche a ficha com o que ele contou até agora.",
+  input_schema: { type: "object", properties: {
+    resposta: { type: "string", description: "O que o Marco fala em voz alta agora" },
+    ...T.propor_ficha_viagem.input_schema.properties,
+  }, required: ["resposta"], additionalProperties: false },
+};
+const INSTR_FICHA = `Você é o Marco, concierge de viagens do app Clé, conversando por voz com o viajante na tela "Nova viagem". Sua função no app: guiar e, se a pessoa quiser, fazer por ela todo o planejamento da viagem (ficha, roteiro dia a dia, reservas, gastos, imprevistos).
+A cada fala, use a ferramenta responder_e_preencher uma única vez:
+1. Ficha: só o que foi dito na fala inteira (a parte mais nova fica no fim). Datas em AAAA-MM-DD a partir da data de hoje; país em ISO de 2 letras, deduzido do destino quando for óbvio. Nunca invente; o que não foi dito fica de fora.
+2. resposta: o que você vai FALAR em voz alta. Português do Brasil, informal, caloroso e seguro, como um concierge de confiança. De 1 a 3 frases curtas. Sem listas, sem emojis, sem markdown, sem travessão, sem repetir a ficha inteira.
+- Se a pessoa só cumprimentou, testou o app ou perguntou algo sobre você, responda de verdade (por exemplo: sim, já dá para conversar, estou ouvindo) e convide a contar da viagem.
+- Se ela contou algo da viagem, confirme em poucas palavras o que entendeu (o destino e as datas, por exemplo) e pergunte o que ainda falta do essencial: para onde, quando começa, quantos dias e quem vai. No máximo duas perguntas por vez.
+- Se o essencial já estiver completo, diga que a ficha está pronta para ela conferir e que é só tocar em Continuar; pode sugerir em uma frase contar também o ritmo ou o orçamento.
+- Ela pode mudar de ideia: a fala mais nova vale mais que a antiga.
+- Se já existe "Sua última fala", a conversa está em andamento: não cumprimente de novo e não responda de novo ao que já respondeu; siga dali.`;
+export async function fichaOnboarding({ client, fala, hoje, quem, ficha, ultima }) {
+  const atual = ficha && typeof ficha === "object" ? Object.entries(ficha).filter(([, v]) => v != null && String(v).trim()).map(([k, v]) => `${k}: ${String(v).slice(0, 200)}`).join("; ") : "";
   const msg = await client.messages.create({
     model: RAPIDO, max_tokens: 4000, output_config: { effort: "low" },
-    system: "Você extrai a ficha de uma nova viagem a partir da fala livre do viajante. Use a ferramenta propor_ficha_viagem uma vez, só com o que foi dito. Datas em AAAA-MM-DD, considerando a data de hoje informada.",
-    tools: [T.propor_ficha_viagem],
-    messages: [{ role: "user", content: `Hoje: ${hoje}.${quem ? ` Quem fala: ${quem}.` : ""}\n\n${fala}` }],
+    system: INSTR_FICHA,
+    tools: [FICHA_CONVERSA],
+    messages: [{ role: "user", content: `Hoje: ${hoje}.${quem ? ` Quem fala: ${quem}.` : ""}${atual ? `\nFicha na tela agora: ${atual}.` : ""}${ultima ? `\nSua última fala: "${ultima}"` : ""}\n\nFala do viajante:\n${fala}` }],
   });
   const b = msg.content.find((x) => x.type === "tool_use");
-  return { ficha: b ? b.input : null, consumo: { ...somar(ZERO, custoDe(RAPIDO, msg.usage)) } };
+  const texto = msg.content.filter((x) => x.type === "text").map((x) => x.text).join(" ").trim();
+  let fichaNova = null, resposta = texto;
+  if (b) {
+    const { resposta: r, ...resto } = b.input || {};
+    if (r) resposta = r;
+    if (Object.values(resto).some((v) => v != null && v !== "" && !(Array.isArray(v) && !v.length))) fichaNova = resto;
+  }
+  return { ficha: fichaNova, resposta: resposta || null, consumo: { ...somar(ZERO, custoDe(RAPIDO, msg.usage)) } };
 }
 export async function resumirConversa({ client, texto }) {
   const msg = await client.messages.create({

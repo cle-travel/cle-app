@@ -121,7 +121,7 @@ const FONTES = /^https:\\/\\/fonts\\.(googleapis|gstatic)\\.com\\//;
 // o GitHub Pages manda o navegador guardar cada arquivo por 10 min: a versão nova é baixada direto do servidor
 // (cache: "reload"), senão o app avisaria "versão nova" e continuaria mostrando a antiga (bug de 01/10/2026)
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(VERSAO).then((c) => c.addAll(ARQUIVOS.map((u) => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())); });
-self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSAO).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
+self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSAO && !k.startsWith("cle-voz-")).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", (e) => {
   const r = e.request;
   if (r.method !== "GET") return;

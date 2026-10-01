@@ -18,6 +18,7 @@ import { turnoMarco, fichaOnboarding, resumirConversa, MODOS, RECURSOS, CREDITOS
 import { calcularRota } from "./rotas.mjs";
 import { buscarLugar } from "./lugares.mjs";
 
+const VOZ_MARCO = { id: "cjVigY5qzO86Huf0OWal", nome: "Eric", modelo: "eleven_v4_turbo" };
 const LIMITE_CORPO = 25 * 1024 * 1024; // comprovantes em PDF ou foto vão dentro da mensagem
 
 // "Bearer <token>" → "<token>" (exportada para o teste automático em prototipo/testar.mjs)
@@ -86,7 +87,7 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
       if (!env("FOURSQUARE_API_KEY")) faltam.push("chave do Foursquare");
       if (!quem) return json(200, { marco: false, acesso: false, motivo, faltam: [motivo === "conta_nao_liberada" ? "conta liberada para o Marco" : "conta ou código de acesso"], versoes: {}, recursos: RECURSOS });
       const versoes = Object.fromEntries(Object.entries(MODOS).map(([k, m]) => [k, m.versao]));
-      return json(200, { marco: !!(Anthropic && env("ANTHROPIC_API_KEY")), acesso: true, quem, rotas: !!env("MAPBOX_TOKEN"), faltam, versoes, recursos: RECURSOS, consumo: await consumo.ler() });
+      return json(200, { marco: !!(Anthropic && env("ANTHROPIC_API_KEY")), acesso: true, quem, rotas: !!env("MAPBOX_TOKEN"), voz: !!env("ELEVENLABS_API_KEY"), faltam, versoes, recursos: RECURSOS, consumo: await consumo.ler() });
     }
     // daqui em diante tudo pode gastar créditos ou cotas: só com código válido
     if (!quem) return json(401, { erro: motivo === "conta_nao_liberada" ? "Sua conta ainda não foi liberada para o Marco nesta fase de testes. Peça ao Wagner para incluir o seu e-mail." : "Entre na sua conta para conversar com o Marco." });
@@ -95,6 +96,21 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
     if (rota === "rota" && req.method === "POST") {
       try { const b = await lerCorpo(); return json(200, await calcularRota(b.pontos, b.modo, chaves())); } catch { return json(400, { erro: "Pedido inválido." }); }
     }
+    // voz do Marco: ElevenLabs, voz "Eric", modelo Eleven v4 turbo (escolha de Wagner na validação 2, 30/09/2026).
+    // Devolve o áudio em MP3; no consumo, "entrada" guarda os caracteres falados (a ElevenLabs cobra por caractere).
+    if (rota === "voz" && req.method === "POST") {
+      if (!env("ELEVENLABS_API_KEY")) return json(503, { erro: "A voz do Marco ainda não está configurada." });
+      let texto; try { texto = String((await lerCorpo()).texto || "").trim().slice(0, 2500); } catch { return json(400, { erro: "Pedido inválido." }); }
+      if (!texto) return json(400, { erro: "Pedido inválido." });
+      const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOZ_MARCO.id}/stream?output_format=mp3_44100_128`, {
+        // mesmos parâmetros das amostras aprovadas (validacoes/02-voz/gerar-elevenlabs.mjs): sem language_code, MP3 128 kbps
+        method: "POST", headers: { "xi-api-key": env("ELEVENLABS_API_KEY"), "Content-Type": "application/json", Accept: "audio/mpeg" },
+        body: JSON.stringify({ text: texto, model_id: VOZ_MARCO.modelo }),
+      }).catch(() => null);
+      if (!r || !r.ok) { console.error("voz:", r ? r.status + " " + (await r.text()).slice(0, 200) : "sem conexão"); return json(502, { erro: "A voz do Marco não respondeu agora." }); }
+      await consumo.registrar("voz", { entrada: texto.length, saida: 0, cacheLido: 0, cacheEscrito: 0, buscas: 0, chamadas: 1, usd: 0 }, quem);
+      return new Response(r.body, { status: 200, headers: { ...cors, "Content-Type": "audio/mpeg", "Cache-Control": "no-store" } });
+    }
     if (rota === "lugar" && req.method === "POST") {
       try { const b = await lerCorpo(); if (!b.consulta) throw 0; return json(200, await buscarLugar(String(b.consulta), b.perto || null, chaves(), { pais: b.pais, forma: b.forma })); } catch { return json(400, { erro: "Pedido inválido." }); }
     }
@@ -102,7 +118,7 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
       let b; try { b = await lerCorpo(); } catch { return json(400, { erro: "Pedido inválido." }); }
       const c = await prontoParaClaude(); if (c.erro) return c.erro;
       try {
-        const r = rota === "ficha" ? await fichaOnboarding({ client: c.client, fala: String(b.fala || ""), hoje: b.hoje, quem: b.quem }) : await resumirConversa({ client: c.client, texto: String(b.texto || "") });
+        const r = rota === "ficha" ? await fichaOnboarding({ client: c.client, fala: String(b.fala || "").slice(-6000), hoje: b.hoje, quem: b.quem, ficha: b.ficha, ultima: String(b.ultima || "").slice(0, 1500) }) : await resumirConversa({ client: c.client, texto: String(b.texto || "") });
         await consumo.registrar(rota === "ficha" ? "ficha" : "resumo", r.consumo, quem);
         return json(200, r);
       } catch (e) { console.error("avulso:", e.message); return json(502, { erro: /credit balance|billing|insufficient/i.test(String(e.message)) ? CREDITOS_ACABARAM : "O Marco não conseguiu responder agora." }); }
