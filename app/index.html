@@ -250,7 +250,7 @@ function chatInicial() {
   if (exemploWestern()) {
     const n = aConfirmar(), f = diasAte();
     return [
-      { de: "m", txt: `Olá, ${dono}. ${f > 0 ? `Faltam ${f} dias para a ${nomeViagem()}.` : `Esta é a ${nomeViagem()}.`} O roteiro dos ${DIAS.length} dias está montado; ainda há ${n} locais para você conferir no mapa e algumas reservas em aberto.` },
+      { de: "m", txt: `Olá${dono ? ", " + dono : ""}. ${f > 0 ? `Faltam ${f} dias para a ${nomeViagem()}.` : `Esta é a ${nomeViagem()}.`} O roteiro dos ${DIAS.length} dias está montado; ainda há ${n} locais para você conferir no mapa e algumas reservas em aberto.` },
       { de: "u", txt: "Quero um lugar bonito para ver o pôr do sol no dia 3, perto de Custer." },
       { de: "m", txt: "O Sylvan Lake fica a 15 minutos do hotel em Custer, e a volta é curta. Veja a proposta:", card: "proposta" },
     ];
@@ -835,7 +835,7 @@ const A = {
   },
   sairCarteira() { A.voltar(); },
   async dono(ds) {
-    S.viagem.dono = ds.n; S.overlay = null;
+    S.viagem.dono = ds.n; S.overlay = null; S.chat = null; // a conversa recomeça já com o nome de quem usa o celular
     const c = await carteiraPronta();
     if (c && ds.id) c.definirDono(ds.id);
     render(); toast(`Pronto. Este celular é de ${ds.n}.`); render();

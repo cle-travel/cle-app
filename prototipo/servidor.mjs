@@ -15,7 +15,8 @@ const PORTA = 8090;
 http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, "http://x").pathname);
   // só para testes locais: o exemplo da Western (nunca publicado junto com o app)
-  if (p === "/__teste/exemplo-western-2026.json") { res.writeHead(200, { "Content-Type": "application/json" }); fs.createReadStream(path.join(APP, "..", "exemplos", "exemplo-western-2026.json")).pipe(res); return; }
+  const t = p.match(/^\/__teste\/([\w.-]+\.json)$/);
+  if (t) { const arq = path.join(APP, "..", "exemplos", t[1]); if (fs.existsSync(arq)) { res.writeHead(200, { "Content-Type": "application/json" }); fs.createReadStream(arq).pipe(res); } else { res.writeHead(404); res.end(); } return; }
   if (p.endsWith("/")) p += "index.html";
   const arq = path.join(APP, path.normalize(p));
   if (!arq.startsWith(APP) || !fs.existsSync(arq) || fs.statSync(arq).isDirectory()) { res.writeHead(404); res.end("não encontrado"); return; }
