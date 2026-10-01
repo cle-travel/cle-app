@@ -1,3 +1,7 @@
 {
-  "url": "https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api"
+  "url": "https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api",
+  "supabase": "https://aephlilxfvnjjcpvsiwa.supabase.co",
+  "anon": "sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo",
+  "google": true,
+  "apple": false
 }

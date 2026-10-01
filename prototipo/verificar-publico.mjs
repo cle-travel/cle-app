@@ -36,6 +36,9 @@ if (fs.existsSync(dirEx)) for (const f of fs.readdirSync(dirEx).filter((x) => x.
 // códigos de acesso dos testadores (seguranca/testadores.json): nunca podem aparecer em arquivo publicado
 const arqTest = path.join(RAIZ, "seguranca", "testadores.json");
 if (fs.existsSync(arqTest)) { try { for (const c of Object.values(JSON.parse(fs.readFileSync(arqTest, "utf8")))) if (typeof c === "string" && c.length > 8) privados.add(c); } catch (e) {} }
+// e-mails dos testadores (seguranca/permitidos.json): nunca podem aparecer em arquivo publicado
+const arqPerm = path.join(RAIZ, "seguranca", "permitidos.json");
+if (fs.existsSync(arqPerm)) { try { for (const e of Object.values(JSON.parse(fs.readFileSync(arqPerm, "utf8")))) if (typeof e === "string" && e.includes("@")) privados.add(e.trim()); } catch (e) {} }
 // termos pessoais (nomes, documentos, e-mails): lista privada em exemplos/termos-privados.txt, nunca escrita aqui
 const termosEx = path.join(dirEx, "termos-privados.txt");
 if (fs.existsSync(termosEx)) for (const l of fs.readFileSync(termosEx, "utf8").split(/\r?\n/)) { const t = l.trim(); if (t && !t.startsWith("#")) privados.add(t); }

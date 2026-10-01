@@ -56,6 +56,9 @@ console.log("tabela de consumo pronta");
 const env = {}; for (const l of fs.readFileSync(path.join(RAIZ, "servidor-marco", ".env"), "utf8").split(/\r?\n/)) { const m = l.match(/^([A-Z_]+)=(.*)$/); if (m && m[2].trim()) env[m[1]] = m[2].trim(); }
 const segredos = ["ANTHROPIC_API_KEY", "MAPBOX_TOKEN", "FOURSQUARE_API_KEY", "NPS_API_KEY", "LIMITE_DIARIO_USD"].filter((k) => env[k]).map((k) => ({ name: k, value: env[k] }));
 segredos.push({ name: "TESTADORES", value: JSON.stringify(testadores) });
+// contas liberadas para o Marco (e-mail de cada testador): seguranca/permitidos.json { "Wagner": "email", ... }
+const arqPerm = path.join(SEG, "permitidos.json");
+if (fs.existsSync(arqPerm)) segredos.push({ name: "PERMITIDOS", value: JSON.stringify(lerJson(arqPerm)) });
 if (!segredos.some((s) => s.name === "ANTHROPIC_API_KEY")) { console.error("Falta ANTHROPIC_API_KEY em servidor-marco/.env"); process.exit(1); }
 r = await fetch(`${API}/secrets`, { method: "POST", headers: cab, body: JSON.stringify(segredos) });
 if (!r.ok) { console.error("segredos: falhou", r.status, (await r.text()).slice(0, 200)); process.exit(1); }
@@ -70,7 +73,10 @@ execSync(`npx --yes supabase@latest functions deploy api --project-ref ${ref} --
 
 // 7. URL pública no app e remontagem
 const url = `https://${ref}.supabase.co/functions/v1/api`;
-fs.writeFileSync(path.join(RAIZ, "prototipo", "nuvem.json"), JSON.stringify({ url }, null, 2) + "\n");
+// preserva a chave pública de login (anon) e os provedores ativos (google/apple) já gravados
+const arqNuvem = path.join(RAIZ, "prototipo", "nuvem.json");
+const antes = fs.existsSync(arqNuvem) ? lerJson(arqNuvem) : {};
+fs.writeFileSync(arqNuvem, JSON.stringify({ ...antes, url, supabase: `https://${ref}.supabase.co` }, null, 2) + "\n");
 execFileSync(process.execPath, [path.join(RAIZ, "prototipo", "montar.mjs")], { stdio: "inherit" });
 
 // 8. teste com o código do Wagner

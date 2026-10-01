@@ -10,8 +10,9 @@
 //   POST …/rota      { pontos, modo } → { km, min, trechos, poly }
 //   POST …/lugar     { consulta, perto, pais } → selo e ponto (caminho B)
 //
-// Acesso: na nuvem, cada testador tem um código (cabeçalho x-cle-acesso), definido no segredo TESTADORES
-// ({"Wagner":"código", ...}). Sem código válido, nada que gaste créditos responde.
+// Acesso na nuvem: pela CONTA do viajante (login do Supabase, cabeçalho Authorization) cujo e-mail está no segredo
+// PERMITIDOS ({"Wagner":"email", ...}), ou, na transição, pelo código do testador (x-cle-acesso, segredo TESTADORES).
+// Sem um dos dois, nada que gaste créditos responde.
 
 import { turnoMarco, fichaOnboarding, resumirConversa, MODOS, RECURSOS, CREDITOS_ACABARAM } from "./nucleo.mjs";
 import { calcularRota } from "./rotas.mjs";
@@ -35,15 +36,33 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
     return null;
   };
 
+  // conta do Supabase: confere o token com o próprio Supabase e procura o e-mail na lista de liberados (cache de 5 min)
+  const liberados = () => { try { return Object.fromEntries(Object.entries(JSON.parse(env("PERMITIDOS") || "{}")).map(([n, e]) => [String(e).trim().toLowerCase(), n])); } catch { return {}; } };
+  const cacheContas = new Map();
+  const quemPelaConta = async (cabecalho) => {
+    const t = String(cabecalho || "").replace(/^Bearers+/i, "");
+    if (!t || !env("SUPABASE_URL")) return { quem: null, motivo: "sem_conta" };
+    const c = cacheContas.get(t); if (c && c.ate > Date.now()) return c.r;
+    let r = { quem: null, motivo: "conta_invalida" };
+    try {
+      const resp = await fetch(env("SUPABASE_URL") + "/auth/v1/user", { headers: { apikey: env("SUPABASE_SERVICE_ROLE_KEY") || env("SUPABASE_ANON_KEY"), Authorization: "Bearer " + t } });
+      if (resp.ok) { const u = await resp.json(); const nome = liberados()[String(u.email || "").toLowerCase()]; r = nome ? { quem: nome } : { quem: null, motivo: "conta_nao_liberada" }; }
+    } catch { r = { quem: null, motivo: "conta_indisponivel" }; }
+    if (cacheContas.size > 500) cacheContas.clear();
+    cacheContas.set(t, { r, ate: Date.now() + 5 * 60 * 1000 });
+    return r;
+  };
+
   return async function tratar(req) {
     const url = new URL(req.url);
     const rota = url.pathname.replace(/\/+$/, "").split("/").pop();
     const origem = req.headers.get("origin") || "";
-    const cors = { "Access-Control-Allow-Origin": origens.includes(origem) ? origem : origens[0] || "*", "Access-Control-Allow-Headers": "content-type, x-cle-acesso", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", Vary: "Origin" };
+    const cors = { "Access-Control-Allow-Origin": origens.includes(origem) ? origem : origens[0] || "*", "Access-Control-Allow-Headers": "content-type, x-cle-acesso, authorization", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", Vary: "Origin" };
     const json = (status, obj) => new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
 
-    const quem = exigirAcesso ? quemE(req.headers.get("x-cle-acesso") || "") : "local";
+    let quem = "local", motivo = null;
+    if (exigirAcesso) { quem = quemE(req.headers.get("x-cle-acesso") || ""); if (!quem) ({ quem, motivo } = await quemPelaConta(req.headers.get("authorization"))); }
     const lerCorpo = async () => { const t = await req.text(); if (t.length > LIMITE_CORPO) throw new Error("grande"); return JSON.parse(t || "{}"); };
     const prontoParaClaude = async () => {
       if (!Anthropic || !env("ANTHROPIC_API_KEY")) return { erro: json(503, { erro: "O Marco ainda não está configurado (falta a chave da Anthropic ou o pacote oficial)." }) };
@@ -58,12 +77,12 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
       if (!env("ANTHROPIC_API_KEY")) faltam.push("chave da Anthropic");
       if (!env("MAPBOX_TOKEN")) faltam.push("chave do Mapbox");
       if (!env("FOURSQUARE_API_KEY")) faltam.push("chave do Foursquare");
-      if (!quem) return json(200, { marco: false, acesso: false, faltam: ["código de acesso válido"], versoes: {}, recursos: RECURSOS });
+      if (!quem) return json(200, { marco: false, acesso: false, motivo, faltam: [motivo === "conta_nao_liberada" ? "conta liberada para o Marco" : "conta ou código de acesso"], versoes: {}, recursos: RECURSOS });
       const versoes = Object.fromEntries(Object.entries(MODOS).map(([k, m]) => [k, m.versao]));
       return json(200, { marco: !!(Anthropic && env("ANTHROPIC_API_KEY")), acesso: true, quem, rotas: !!env("MAPBOX_TOKEN"), faltam, versoes, recursos: RECURSOS, consumo: await consumo.ler() });
     }
     // daqui em diante tudo pode gastar créditos ou cotas: só com código válido
-    if (!quem) return json(401, { erro: "Código de acesso ao Marco ausente ou inválido. Peça o seu ao Wagner e digite em Mais → Acesso ao Marco." });
+    if (!quem) return json(401, { erro: motivo === "conta_nao_liberada" ? "Sua conta ainda não foi liberada para o Marco nesta fase de testes. Peça ao Wagner para incluir o seu e-mail." : "Entre na sua conta para conversar com o Marco." });
     if (rota === "consumo" && req.method === "GET") return json(200, await consumo.ler());
 
     if (rota === "rota" && req.method === "POST") {

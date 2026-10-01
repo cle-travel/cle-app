@@ -133,6 +133,44 @@ a.row{color:inherit;text-decoration:none}
 @keyframes pulso{0%,100%{transform:scale(.9)}50%{transform:scale(1.08)}}
 @keyframes gira{0%{opacity:.08}50%{opacity:.3}100%{opacity:.08}}
 @media (prefers-reduced-motion:reduce){.orb i{animation:none!important}}
+/* botão do Marco, estilo Siri: esfera com luz girando; ao ouvir, acelera e pulsa */
+.siri{position:relative;width:68px;height:68px;border-radius:50%;flex-shrink:0;isolation:isolate;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.siri::before,.siri::after{content:"";position:absolute;border-radius:50%;z-index:-1;background:conic-gradient(from 0deg,#24476B,#5B8DC9,#A9C4EE,#7C74D9,#3FA6BF,#24476B)}
+.siri::before{inset:-3px;filter:blur(8px);opacity:.85;animation:siriGira 7s linear infinite}
+.siri::after{inset:3px;filter:blur(3px);animation:siriGira 4s linear infinite reverse}
+.siri .nucleo{position:absolute;inset:9px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.5),rgba(255,255,255,0) 42%),linear-gradient(160deg,#2F5D8C,#162E47);box-shadow:inset 0 0 12px rgba(169,196,238,.35)}
+.siri.ouvindo::before{inset:-12px;filter:blur(14px);opacity:1;animation-duration:1.6s}
+.siri.ouvindo::after{animation-duration:1.2s}
+.siri.ouvindo .nucleo{animation:siriPulsa 1s ease-in-out infinite}
+.siri.pensando::before{animation-duration:2.4s;opacity:.6}
+@keyframes siriGira{to{transform:rotate(360deg)}}
+@keyframes siriPulsa{50%{transform:scale(1.07)}}
+@media (prefers-reduced-motion:reduce){.siri::before,.siri::after,.siri .nucleo{animation:none!important}}
+/* doca flutuante: o botão do Marco sempre ao alcance do polegar, com uma dica curta */
+.doca{position:absolute;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none;z-index:20}
+.doca>*{pointer-events:auto}
+.doca::before{content:"";position:absolute;left:0;right:0;bottom:calc(-18px - env(safe-area-inset-bottom,0px));height:190px;z-index:-1;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--bg) 62%)}
+.doca-dica{max-width:min(320px,calc(100% - 32px));text-align:center;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border:1px solid var(--line);box-shadow:var(--sh);border-radius:16px;padding:9px 14px;font-size:14px;line-height:1.35;color:var(--fg)}
+.com-doca{padding-bottom:150px!important}
+.saudacao{display:flex;flex-direction:column;gap:10px}
+/* telas de conta (entrar, cadastrar, recuperar senha): estilo das redes sociais, no visual do Clé */
+.conta{max-width:440px!important;min-height:100%;padding-top:calc(24px + env(safe-area-inset-top,0px))!important;gap:14px!important}
+.conta-topo{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
+.conta-form{display:flex;flex-direction:column;gap:12px}
+.campo-linha{position:relative;display:flex}
+.campo-linha input{padding-right:84px}
+.olho{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:600;color:var(--accent);padding:8px 10px;border-radius:8px}
+.btn.social{font-weight:600;gap:10px}
+.btn.social.google{background:var(--card);color:var(--fg);border:1px solid var(--sep)}
+.btn.social.apple{background:#000;color:#fff}
+:root[data-theme="dark"] .btn.social.apple{background:#fff;color:#000}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.social.apple{background:#fff;color:#000}}
+.btn.social[disabled]{opacity:.55;cursor:not-allowed}
+.btn.contorno{background:none;color:var(--accent);border:1px solid var(--accent)}
+.btn[disabled]{opacity:.6}
+.ou{display:flex;align-items:center;gap:12px;color:var(--fg2);font-size:13px}
+.ou::before,.ou::after{content:"";flex:1;border-top:1px solid var(--sep)}
+.saudacao .msg-m{font-size:20px;line-height:1.45;letter-spacing:-.2px}
 .small{font-size:13px;color:var(--fg2)}
 .transc{font-size:15px;color:var(--fg2);min-height:22px;text-align:center;max-width:320px}
 /* mapa */
@@ -187,7 +225,7 @@ a.row{color:inherit;text-decoration:none}
   .top{padding-top:calc(6px + env(safe-area-inset-top,0px));padding-bottom:4px;min-height:44px}
   .chips,.voz .transc,.voz>.small{display:none}
   .voz{padding-block:2px calc(4px + env(safe-area-inset-bottom,0px))}
-  .orb{width:56px;height:56px}.orb button{width:42px;height:42px}
+  .siri{width:52px;height:52px}
   .voz .linha .iconbtn{width:40px!important;height:40px!important}
   .tabbar{padding-block:2px calc(4px + env(safe-area-inset-bottom,0px))}.tab{font-size:0;gap:0}
 }
@@ -458,21 +496,158 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.0.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
-const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api"}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
+const VERSAO_APP = "1.1.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
 // código de acesso ao Marco na nuvem: fica só neste aparelho (nunca no arquivo da viagem)
 const CHAVE_ACESSO = "cle-acesso";
 const codigoAcesso = () => { try { return localStorage.getItem(CHAVE_ACESSO) || ""; } catch (e) { return ""; } };
-const apiFetch = (rota, opc = {}) => fetch(API + rota, { ...opc, headers: { ...(opc.body ? { "Content-Type": "application/json" } : {}), ...(LOCAL ? {} : { "x-cle-acesso": codigoAcesso() }) } });
+// pedidos ao Marco levam a conta (token) e, na transição, o código de acesso
+const apiFetch = async (rota, opc = {}) => { const t = await tokenConta(); return fetch(API + rota, { ...opc, headers: { ...(opc.body ? { "Content-Type": "application/json" } : {}), ...(LOCAL ? {} : { "x-cle-acesso": codigoAcesso() }), ...(t ? { Authorization: "Bearer " + t } : {}) } }); };
+
+// ---------- conta do viajante (Supabase Auth): entrar com Google, Apple ou e-mail e senha ----------
+// A conta identifica a pessoa e libera o Marco (lista de testadores no servidor). Os dados da viagem continuam
+// no aparelho (local-first). Ativada quando prototipo/nuvem.json tem "supabase" e "anon" (chave pública).
+const AUTH = NUVEM && NUVEM.supabase && NUVEM.anon ? { url: NUVEM.supabase + "/auth/v1", anon: NUVEM.anon, google: !!NUVEM.google, apple: !!NUVEM.apple } : null;
+const CHAVE_SESSAO = "cle-sessao";
+const sessaoLer = () => { try { return JSON.parse(localStorage.getItem(CHAVE_SESSAO) || "null"); } catch (e) { return null; } };
+const sessaoGravar = (s) => { try { if (s) localStorage.setItem(CHAVE_SESSAO, JSON.stringify(s)); else localStorage.removeItem(CHAVE_SESSAO); } catch (e) {} };
+const ERROS_CONTA = [
+  [/invalid login credentials/i, "E-mail ou senha incorretos."],
+  [/already registered|already been registered|user already exists/i, "Já existe uma conta com este e-mail. Entre com ela ou recupere a senha."],
+  [/password should be at least|password.*(short|length)/i, "A senha precisa ter pelo menos 8 caracteres."],
+  [/weak password|pwned|easy to guess/i, "Essa senha é fácil de adivinhar. Escolha outra, misturando letras e números."],
+  [/email not confirmed/i, "Confirme o seu e-mail pelo link que enviamos e entre de novo."],
+  [/rate limit|too many/i, "Muitas tentativas agora. Espere alguns minutos e tente de novo."],
+  [/signups? not allowed|signup is disabled/i, "Os cadastros estão fechados no momento."],
+  [/invalid.*email|unable to validate email/i, "Esse e-mail não parece válido."],
+  [/error sending|smtp/i, "Não consegui enviar o e-mail agora. Tente mais tarde."],
+];
+const traduzErroConta = (j) => { const t = String((j && (j.msg || j.error_description || j.message || j.error)) || ""); const a = ERROS_CONTA.find(([re]) => re.test(t)); return a ? a[1] : "Não foi possível concluir agora. Confira a internet e tente de novo."; };
+async function contaPost(rota, corpo, token) {
+  const r = await fetch(AUTH.url + rota, { method: "POST", headers: { apikey: AUTH.anon, "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) }, body: JSON.stringify(corpo || {}) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(traduzErroConta(j));
+  return j;
+}
+const nomeDoUsuario = (u) => { const m = (u && u.user_metadata) || {}; return m.nome || m.full_name || m.name || (u && u.email ? u.email.split("@")[0] : ""); };
+function guardarSessao(j) {
+  const s = { access: j.access_token, refresh: j.refresh_token, expira: Date.now() + (j.expires_in || 3600) * 1000, user: { id: j.user.id, email: j.user.email, nome: nomeDoUsuario(j.user) } };
+  sessaoGravar(s); S.conta = s.user; return s;
+}
+// token válido para falar com o Marco (renova sozinho quando está para vencer)
+async function tokenConta() {
+  let s = sessaoLer(); if (!s || !AUTH) return null;
+  if (Date.now() > s.expira - 60000) { try { s = guardarSessao(await contaPost("/token?grant_type=refresh_token", { refresh_token: s.refresh })); } catch (e) { return s.access; } }
+  return s.access;
+}
+// volta do login com Google/Apple ou do link de recuperação de senha: os dados chegam no fim do endereço (#...)
+async function lerRetornoConta() {
+  if (!AUTH || !location.hash || location.hash.length < 2) return;
+  const p = new URLSearchParams(location.hash.slice(1));
+  history.replaceState(null, "", location.pathname + location.search);
+  if (p.get("error_description")) { S.contaForm = { erro: "Não foi possível entrar: " + p.get("error_description").replace(/\+/g, " ") }; return; }
+  const access = p.get("access_token"); if (!access) return;
+  try {
+    const u = await (await fetch(AUTH.url + "/user", { headers: { apikey: AUTH.anon, Authorization: "Bearer " + access } })).json();
+    guardarSessao({ access_token: access, refresh_token: p.get("refresh_token"), expires_in: +p.get("expires_in") || 3600, user: u });
+    if (p.get("type") === "recovery") S.telaDepoisConta = "novasenha";
+  } catch (e) { S.contaForm = { erro: "Não foi possível concluir o login. Tente de novo." }; }
+}
+const telaInicial = () => (S.viagem ? (S.fase === "viagem" ? "hoje" : "conversa") : "boasvindas");
+function entrarNoApp() { S.contaForm = null; S.contaVals = null; S.hist = []; S.tela = S.telaDepoisConta || telaInicial(); S.telaDepoisConta = null; render(); checarMarco(); }
+
+const LOGO_GOOGLE = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>';
+const LOGO_APPLE = '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.6c-.02-2.2 1.8-3.26 1.88-3.31-1.03-1.5-2.62-1.7-3.18-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.75-.78-2.88-.76-1.48.02-2.85.86-3.61 2.19-1.54 2.67-.39 6.62 1.11 8.79.73 1.06 1.6 2.25 2.75 2.21 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.71.71 2.88.69 1.19-.02 1.94-1.08 2.67-2.14.84-1.23 1.19-2.42 1.21-2.48-.03-.01-2.32-.89-2.35-3.55zM14.2 6.13c.61-.74 1.02-1.76.91-2.78-.88.04-1.94.59-2.57 1.32-.56.65-1.06 1.69-.92 2.69.98.08 1.97-.5 2.58-1.23z"/></svg>';
+const olho = (id) => `<button type="button" class="olho" data-a="verSenha" data-id="${id}" aria-label="Mostrar senha"><span>Mostrar</span></button>`;
+// o que foi digitado sobrevive às mensagens de erro (fica só na memória da tela, nunca gravado)
+const campoConta = (id, rot, tipo, extra = "") => `<div class="campo campo-conta"><label for="${id}">${rot}</label><div class="campo-linha"><input id="${id}" type="${tipo}" value="${esc((S.contaVals || {})[id] || "")}" ${extra}>${tipo === "password" ? olho(id) : ""}</div></div>`;
+function botoesSociais() {
+  const b = (prov, logo, rotulo, ativo, cls) => `<button type="button" class="btn social ${cls}" data-a="entrarCom" data-p="${prov}"${ativo ? "" : " disabled"}>${logo}<span>${rotulo}</span>${ativo ? "" : '<span class="pill neu" style="margin-left:6px">em breve</span>'}</button>`;
+  return b("google", LOGO_GOOGLE, "Continuar com Google", AUTH && AUTH.google, "google") + b("apple", LOGO_APPLE, "Continuar com Apple", AUTH && AUTH.apple, "apple");
+}
+const avisoConta = () => (S.contaForm && S.contaForm.erro ? `<div class="card" style="background:var(--bad-bg);padding:12px 14px"><span style="color:var(--bad);font-size:15px">${esc(S.contaForm.erro)}</span></div>` : S.contaForm && S.contaForm.ok ? `<div class="card" style="background:var(--ok-bg);padding:12px 14px"><span style="color:var(--ok);font-size:15px">${esc(S.contaForm.ok)}</span></div>` : "");
+const ocupado = () => !!(S.contaForm && S.contaForm.carregando);
+function telaEntrar() {
+  return `<main id="main"><div class="pad conta">
+    <div class="conta-topo"><span class="avatar" style="width:56px;height:56px;border-radius:16px">${ic("compass", 30, 1.6)}</span><h1 style="font-size:30px">Entrar no Clé</h1><p class="sub">Planeje e viva a viagem conversando com o Marco.</p></div>
+    ${botoesSociais()}
+    <div class="ou"><span>ou</span></div>
+    <form class="conta-form" data-f="entrar">${campoConta("cEmail", "E-mail", "email", 'autocomplete="email" inputmode="email" required')}${campoConta("cSenha", "Senha", "password", 'autocomplete="current-password" required')}
+      ${avisoConta()}
+      <button class="btn" type="submit"${ocupado() ? " disabled" : ""}>${ocupado() ? "Entrando…" : "Entrar"}</button></form>
+    <button class="btn ghost" data-a="ir" data-t="recuperar">Esqueceu a senha?</button>
+    <div style="flex:1"></div>
+    <button class="btn contorno" data-a="ir" data-t="cadastro">Criar nova conta</button>
+  </div></main>`;
+}
+function telaCadastro() {
+  return `${header({ titulo: "Criar conta", sub: "", voltar: true, direita: "<span style='width:36px'></span>" })}<main id="main"><div class="pad conta">
+    <div class="conta-topo"><h1 style="font-size:28px">Crie sua conta</h1><p class="sub">Com ela, o Marco reconhece você em qualquer celular. Os dados das viagens continuam guardados no seu aparelho.</p></div>
+    ${botoesSociais()}
+    <div class="ou"><span>ou cadastre com e-mail</span></div>
+    <form class="conta-form" data-f="cadastro">${campoConta("cNome", "Nome", "text", 'autocomplete="name" required')}${campoConta("cEmail", "E-mail", "email", 'autocomplete="email" inputmode="email" required')}
+      ${campoConta("cSenha", "Senha (pelo menos 8 caracteres)", "password", 'autocomplete="new-password" minlength="8" required')}${campoConta("cSenha2", "Confirme a senha", "password", 'autocomplete="new-password" minlength="8" required')}
+      ${avisoConta()}
+      <button class="btn" type="submit"${ocupado() ? " disabled" : ""}>${ocupado() ? "Criando…" : "Cadastrar"}</button></form>
+    <p class="small" style="margin:0;line-height:1.5">Usamos o seu nome e e-mail só para entrar no app e liberar o Marco. Nada é compartilhado.</p>
+    <button class="btn ghost" data-a="voltar">Já tenho conta · Entrar</button>
+  </div></main>`;
+}
+function telaRecuperar() {
+  return `${header({ titulo: "Recuperar senha", sub: "", voltar: true, direita: "<span style='width:36px'></span>" })}<main id="main"><div class="pad conta">
+    <div class="conta-topo"><h1 style="font-size:28px">Esqueceu a senha?</h1><p class="sub">Digite o e-mail da conta. Mandamos um link para você criar uma senha nova.</p></div>
+    <form class="conta-form" data-f="recuperar">${campoConta("cEmail", "E-mail", "email", 'autocomplete="email" inputmode="email" required')}${avisoConta()}
+      <button class="btn" type="submit"${ocupado() ? " disabled" : ""}>${ocupado() ? "Enviando…" : "Enviar link"}</button></form>
+  </div></main>`;
+}
+function telaNovaSenha() {
+  return `<main id="main"><div class="pad conta">
+    <div class="conta-topo"><h1 style="font-size:28px">Crie uma senha nova</h1><p class="sub">Para a conta ${esc((S.conta && S.conta.email) || "")}.</p></div>
+    <form class="conta-form" data-f="novasenha">${campoConta("cSenha", "Senha nova (pelo menos 8 caracteres)", "password", 'autocomplete="new-password" minlength="8" required')}${campoConta("cSenha2", "Confirme a senha", "password", 'autocomplete="new-password" minlength="8" required')}
+      ${avisoConta()}<button class="btn" type="submit"${ocupado() ? " disabled" : ""}>Salvar senha</button></form>
+  </div></main>`;
+}
+async function enviarConta(tipo) {
+  const v = (id) => ((document.getElementById(id) || {}).value || "").trim();
+  const email = v("cEmail").toLowerCase(), senha = (document.getElementById("cSenha") || {}).value || "", senha2 = (document.getElementById("cSenha2") || {}).value || "";
+  S.contaVals = { cNome: v("cNome"), cEmail: v("cEmail"), cSenha: senha, cSenha2: senha2 };
+  const falha = (m) => { S.contaForm = { erro: m }; render(); };
+  if (tipo !== "novasenha" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return falha("Digite um e-mail válido.");
+  if ((tipo === "cadastro" || tipo === "novasenha") && senha.length < 8) return falha("A senha precisa ter pelo menos 8 caracteres.");
+  if ((tipo === "cadastro" || tipo === "novasenha") && senha !== senha2) return falha("As duas senhas não são iguais.");
+  if (tipo === "cadastro" && v("cNome").length < 2) return falha("Digite o seu nome.");
+  S.contaForm = { carregando: true }; render();
+  try {
+    if (tipo === "entrar") { guardarSessao(await contaPost("/token?grant_type=password", { email, password: senha })); return entrarNoApp(); }
+    if (tipo === "cadastro") {
+      const j = await contaPost("/signup", { email, password: senha, data: { nome: v("cNome") } });
+      if (j.access_token) { guardarSessao(j); toast(`Conta criada. Bem-vindo, ${v("cNome").split(" ")[0]}!`); return entrarNoApp(); }
+      S.hist = []; S.tela = "entrar"; S.contaForm = { ok: `Enviamos um link de confirmação para ${email}. Abra o e-mail e depois entre aqui.` }; return render();
+    }
+    if (tipo === "recuperar") { await contaPost("/recover?redirect_to=" + encodeURIComponent(location.origin + location.pathname), { email }); S.contaForm = { ok: `Se existir uma conta com ${email}, o link chega em instantes. Confira também a caixa de spam.` }; return render(); }
+    if (tipo === "novasenha") {
+      const r = await fetch(AUTH.url + "/user", { method: "PUT", headers: { apikey: AUTH.anon, "Content-Type": "application/json", Authorization: "Bearer " + (await tokenConta()) }, body: JSON.stringify({ password: senha }) });
+      if (!r.ok) throw new Error(traduzErroConta(await r.json().catch(() => ({}))));
+      toast("Senha nova salva."); return entrarNoApp();
+    }
+  } catch (e) { falha(e.message); }
+}
+async function sairDaConta() {
+  const s = sessaoLer();
+  if (s && AUTH) fetch(AUTH.url + "/logout", { method: "POST", headers: { apikey: AUTH.anon, Authorization: "Bearer " + s.access } }).catch(() => {});
+  sessaoGravar(null); S.conta = null; S.marcoOn = null; S.hist = []; S.tela = "entrar"; S.contaForm = null; render();
+}
+
+
 const marcoDisponivel = () => !!API && S.marcoOn !== false;
 function checarMarco() {
   if (!API) { S.marcoOn = false; return; }
-  apiFetch("/estado").then((r) => r.json()).then((j) => { S.marcoOn = !!j.marco; S.semAcesso = j.acesso === false; S.quem = j.quem || null; S.rotasOn = !!j.rotas; S.marcoFaltam = j.faltam || []; S.recursos = j.recursos || {}; render(); }).catch(() => { S.marcoOn = false; render(); });
+  apiFetch("/estado").then((r) => r.json()).then((j) => { S.marcoOn = !!j.marco; S.semAcesso = j.acesso === false; S.motivoAcesso = j.motivo || null; S.quem = j.quem || null; S.rotasOn = !!j.rotas; S.marcoFaltam = j.faltam || []; S.recursos = j.recursos || {}; render(); }).catch(() => { S.marcoOn = false; render(); });
 }
 const msgMarcoOff = () => S.semAcesso
-  ? "Para conversar comigo, digite o seu código de acesso em Mais → Acesso ao Marco. Peça o seu ao Wagner."
+  ? (S.conta ? "Sua conta ainda não foi liberada para conversar comigo nesta fase de testes. Peça ao Wagner para incluir o seu e-mail." : "Para conversar comigo, entre na sua conta.")
   : !API
   ? "Neste endereço eu ainda não estou ligado: chego aqui quando o servidor na nuvem estiver no ar. Por enquanto converso no computador de testes. Roteiro, mapa, Carteira, Cofre e checklist funcionam normalmente."
   : `Estou desligado neste computador${S.marcoFaltam.length ? `: falta ${S.marcoFaltam.join(", ")}` : ""}. Roteiro, mapa, Carteira, Cofre e checklist funcionam normalmente.`;
@@ -777,7 +952,7 @@ function telaConversa() {
   <form class="entrada" data-f="marco"><input id="txtMarco" value="${esc(S.rascunho)}" placeholder="Escreva para o Marco" enterkeyhint="send" autocomplete="off" aria-label="Mensagem para o Marco"><button type="submit" class="iconbtn enviar" aria-label="Enviar">${ic("send", 20)}</button></form>
   <div class="voz"><div class="transc">${esc(S.transc || "")}</div>
     <div class="linha"><button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="comprovante" aria-label="Enviar comprovante">${ic("upload", 20)}</button>
-    <div class="orb ${orbCls}"><i></i><i></i><button data-a="falar" aria-label="Falar com o Marco">${ic("mic", 24)}</button></div>
+    <button class="siri ${S.ditando === "txtMarco" ? "ouvindo" : S.pensando ? "pensando" : ""}" data-a="falar" aria-label="${S.ditando === "txtMarco" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "txtMarco" ? "pause" : "mic", 24)}</span></button>
     <button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="toast" data-m="O botão de pausa interrompe a escuta da conversa por voz, que entra na etapa de voz (ElevenLabs)." aria-label="Pausar">${ic("pause", 20)}</button></div>
     <span class="small">${status}</span></div>`;
 }
@@ -970,9 +1145,10 @@ function telaMais() {
   const it = (t, ico, lab, sub, extra = "") => `<button class="row" data-a="ir" data-t="${t}"><span class="ico">${ic(ico, 18)}</span><div class="main"><b>${lab}</b>${sub ? `<span>${sub}</span>` : ""}</div>${extra}${ic("chev", 18)}</button>`;
   const dH = diaObj(S.diaHoje), sos = (S.viagem && S.viagem.emergencia) || "112";
   const ativos = S.historico.filter((h) => !h.desfeito).length;
-  return `${header({ titulo: "Mais", sub: nomeViagem() })}<main id="main"><div class="pad"><h1>Mais</h1>
+  const contaH = AUTH && S.conta ? `<div class="list"><div class="row"><span class="num">${esc((S.conta.nome || S.conta.email || "?")[0].toUpperCase())}</span><div class="main"><b>${esc(S.conta.nome || "Minha conta")}</b><span>${esc(S.conta.email)}${S.marcoOn ? " · Marco liberado" : S.semAcesso ? " · Marco ainda não liberado" : ""}</span></div><button class="pill neu" data-a="sairConta">Sair</button></div></div>` : "";
+  return `${header({ titulo: "Mais", sub: nomeViagem() })}<main id="main"><div class="pad"><h1>Mais</h1>${contaH}
     <div class="list">${it("perfil", "user", "Perfil da viagem", "Ritmo, limites, interesses e regras · sempre editável")}<button class="row" data-a="ajustesViagem"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Ajustes da viagem</b><span>Datas, viajantes, moedas, câmbio e carteiras · preenchidos na criação</span></div>${ic("chev", 18)}</button></div>
-    <div class="list">${it("arquivo", "doc", "Arquivo da viagem e sincronização", "QR, Quick Share, WhatsApp, exportar e juntar")}${it("historico", "history", "Histórico de alterações", ativos ? `${ativos} alteração(ões) com desfazer` : "Tudo o que for aprovado aparece aqui")}${it("consumo", "wallet", "Consumo do Marco", "Gasto com a inteligência artificial, hoje e no mês")}${LOCAL ? "" : it("acesso", "lock", "Acesso ao Marco", S.marcoOn ? `Conectado${S.quem ? " como " + esc(S.quem) : ""}` : "Digite o seu código de acesso")}</div>
+    <div class="list">${it("arquivo", "doc", "Arquivo da viagem e sincronização", "QR, Quick Share, WhatsApp, exportar e juntar")}${it("historico", "history", "Histórico de alterações", ativos ? `${ativos} alteração(ões) com desfazer` : "Tudo o que for aprovado aparece aqui")}${it("consumo", "wallet", "Consumo do Marco", "Gasto com a inteligência artificial, hoje e no mês")}${LOCAL || AUTH ? "" : it("acesso", "lock", "Acesso ao Marco", S.marcoOn ? `Conectado${S.quem ? " como " + esc(S.quem) : ""}` : "Digite o seu código de acesso")}</div>
     <div class="list">${it("checklist", "check", "Checklist", `${pendentes()} tarefas abertas`)}${it("desejos", "heart", "Desejos", "Lugares, restaurantes e compras")}${it("cofre", "lock", "Cofre", "Documentos disponíveis sem sinal")}${it("grupo", "people", "Viajantes", esc(S.viagem ? S.viagem.viajantes.join(" e ") : ""))}${it("guia", "printer", "Guia impresso", "PDF para imprimir em duas vias")}</div>
     <div class="list">${it("emergencia", "sos", '<span style="color:var(--bad)">Emergência</span>', `${sos}, frases, ficha médica, localização`)}${it("viagens", "globe", "Minhas viagens", "")}</div>
     <p class="eyebrow">Ferramentas de teste</p>
@@ -1208,9 +1384,13 @@ function telaOnboarding() {
   const at = (k) => `data-onb="${k}"`;
   let c = "";
   if (o.step === 0) {
-    c = `<h1 style="font-size:28px">Me conta sobre essa viagem.</h1><p class="sub">Para onde, com quem, quando, o que você está imaginando. Pode falar à vontade${marcoDisponivel() ? "; o Marco preenche a ficha com o que você disser" : ""}.</p>
-      <div class="campo"><textarea id="onb-fala" ${at("fala")} placeholder="Ex.: Quero levar meus pais para a Suíça em julho, uns doze dias. A gente gosta de montanha, trem e comida boa, mas sem correria.">${esc(f.fala)}</textarea></div>
-      ${marcoDisponivel() ? `<button class="btn ${o.lendo ? "sec" : ""}" data-a="onbMarco"${o.lendo ? " disabled" : ""}>${o.lendo ? "O Marco está lendo…" : `${ic("compass", 18)} Preencher a ficha com o Marco`}</button>` : `<div class="small">O Marco ainda não está ligado neste endereço: preencha a ficha abaixo.</div>`}
+    c = `<div class="saudacao fade"><div class="who"><span class="avatar">${ic("compass", 16, 2)}</span>Marco</div>
+        <div class="msg-m">Oi! Eu sou o Marco, seu agente de viagens. Bora planejar essa viagem juntos? Me conta pra onde vocês querem ir, quando e quem vai, do jeito que vier na cabeça. O resto eu organizo.</div></div>
+      <div class="campo"><label for="onb-fala">Se preferir, escreva aqui</label><textarea id="onb-fala" ${at("fala")} placeholder="Ex.: Quero levar meus pais para a Suíça em julho, uns doze dias. A gente curte montanha, trem e comida boa, mas sem correria.">${esc(f.fala)}</textarea></div>
+      ${marcoDisponivel() ? `<button class="btn ${o.lendo ? "sec" : ""}" data-a="onbMarco"${o.lendo ? " disabled" : ""}>${o.lendo ? "O Marco está lendo…" : `${ic("compass", 18)} Preencher a ficha com o Marco`}</button>`
+        : S.semAcesso && AUTH ? `<div class="card" style="gap:6px"><div style="font-size:15px;line-height:1.45">Sua conta ainda não foi liberada para conversar comigo nesta fase de testes. Enquanto isso, preencha a ficha abaixo; peça ao Wagner para incluir o seu e-mail.</div></div>`
+        : S.semAcesso ? `<div class="card" style="gap:10px"><div style="font-size:15px;line-height:1.45">Para eu preencher a ficha com você, preciso do seu código de acesso. É rapidinho: você digita uma vez e pronto.</div><button class="btn sec" data-a="ir" data-t="acesso">${ic("lock", 18)} Digitar meu código</button></div>`
+        : `<div class="small">Por aqui eu ainda não consigo conversar; preencha a ficha abaixo.</div>`}
       ${o.marcou ? '<div class="pill ok" style="align-self:flex-start">Ficha preenchida pelo Marco · confira</div>' : ""}
       <p class="eyebrow">Ficha da viagem</p>
       <div class="card">
@@ -1249,7 +1429,9 @@ function telaOnboarding() {
       <button class="btn" data-a="onbFim">Criar viagem</button>`;
   }
   return `<div class="top"><button class="iconbtn" data-a="${o.step ? "onbVoltar" : "voltar"}" aria-label="${o.step ? "Voltar" : "Fechar"}">${ic(o.step ? "back" : "x")}</button><div class="ttl"><b>Nova viagem</b></div><span style="width:36px"></span></div>
-    <main id="main"><div class="pad">${dots}${c}</div></main>`;
+    <main id="main"><div class="pad${o.step === 0 ? " com-doca" : ""}">${dots}${c}</div></main>
+    ${o.step === 0 ? `<div class="doca"><div class="doca-dica" role="status">${S.ditando === "onb-fala" ? "Estou ouvindo. Quando terminar, toque de novo." : "Prefere falar? Toque aqui e me conte do seu jeito."}</div>
+      <button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : ""}" data-a="ditar" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button></div>` : ""}`;
 }
 function aplicarCenarios(o) {
   const sl = { aventura: 50, explorar: 50, fora: 50, premium: 50 };
@@ -1276,13 +1458,13 @@ const TABS = () => [[S.fase === "viagem" ? "hoje" : "conversa", S.fase === "viag
 const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "roteiro", mapa: "mapa", carteira: "carteira", mais: "mais", checklist: "mais", desejos: "mais", cofre: "mais", grupo: "mais", guia: "mais", emergencia: "mais", ficha: "mais", arquivo: "mais", historico: "mais", perfil: "mais", consumo: "mais", acesso: "mais", lugar: null, viagens: null };
 let ultimaTela = null;
 function render() {
-  const T = { conversa: telaConversa, hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, ficha: telaFicha, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo, historico: telaHistorico, perfil: telaPerfil, consumo: telaConsumo, acesso: telaAcesso }[S.tela] || telaBoasVindas;
+  const T = { conversa: telaConversa, hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, ficha: telaFicha, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo, historico: telaHistorico, perfil: telaPerfil, consumo: telaConsumo, acesso: telaAcesso, entrar: telaEntrar, cadastro: telaCadastro, recuperar: telaRecuperar, novasenha: telaNovaSenha }[S.tela] || telaBoasVindas;
   const main0 = $("#main"), scroll = main0 && ultimaTela === S.tela ? main0.scrollTop : 0;
   // quem está digitando não perde o foco quando o Marco atualiza a tela
   const ativo = document.activeElement, focoId = ativo && ativo.id && /^(INPUT|TEXTAREA)$/.test(ativo.tagName) && ativo.type !== "range" ? ativo.id : null;
   let selIni = null; try { selIni = focoId ? ativo.selectionStart : null; } catch (e) {}
   const raiz = RAIZ[S.tela] ?? S.hist.map((h) => RAIZ[h.tela]).filter(Boolean).pop();
-  const tabbar = S.tela === "onboarding" || S.tela === "boasvindas" ? "" : `<nav class="tabbar">${TABS().map(([t, i, l]) => `<button class="tab ${raiz === t ? "on" : ""}" data-a="tab" data-t="${t}"><span>${ic(i, 24)}${t === "mais" && pendentes() ? `<i class="badge">${pendentes()}</i>` : ""}</span>${l}</button>`).join("")}</nav>`;
+  const tabbar = ["onboarding", "boasvindas", "entrar", "cadastro", "recuperar", "novasenha"].includes(S.tela) || !S.viagem ? "" : `<nav class="tabbar">${TABS().map(([t, i, l]) => `<button class="tab ${raiz === t ? "on" : ""}" data-a="tab" data-t="${t}"><span>${ic(i, 24)}${t === "mais" && pendentes() ? `<i class="badge">${pendentes()}</i>` : ""}</span>${l}</button>`).join("")}</nav>`;
   let over = "";
   if (S.overlay === "alerta") over = `<div class="alerta" role="alertdialog" aria-label="Alerta urgente"><div style="font-size:13px;color:#A1A1A6">Agora · Marco, seu agente de viagem · exemplo de teste</div><div class="ic">${ic("sos", 30, 2)}</div>
     <div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:600;color:#FF6961">Alerta urgente</div><h2>Estrada fechada no seu trajeto</h2><p>A estrada principal do trajeto de hoje está interditada. Há um desvio que mantém o horário da próxima reserva.</p></div>
@@ -1479,6 +1661,7 @@ function telaBoasVindas() {
     <div><h1 style="font-size:34px">Clé</h1><p class="sub" style="font-size:17px">Planeje e viva a viagem conversando com o Marco. Tudo fica neste celular e cabe num único arquivo da viagem.</p></div>
     <label class="btn" for="arqViagem" style="cursor:pointer">Abrir arquivo da viagem</label>
     <button class="btn sec" data-a="onb">Criar uma viagem nova com o Marco</button>
+    ${LOCAL || AUTH ? "" : `<button class="btn ghost" data-a="ir" data-t="acesso">${ic("lock", 18)} ${S.marcoOn ? `Marco conectado${S.quem ? " · " + esc(S.quem) : ""}` : "Tenho um código de acesso ao Marco"}</button>`}
     <p class="small" style="margin:0;line-height:1.5">O arquivo da viagem (.json ou .pdf) vem de quem organizou a viagem ou de outro celular. Arquivos antigos da Carteira também abrem aqui.</p>
   </div></main>`;
 }
@@ -1515,6 +1698,26 @@ function falarTexto(t, lang) {
   if (!("speechSynthesis" in window)) { toast("Este aparelho não lê textos em voz alta. Mostre a frase na tela."); render(); return; }
   speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = { en: "en-US", es: "es-ES", fr: "fr-FR", it: "it-IT", de: "de-DE", pt: "pt-BR" }[lang] || "en-US"; u.rate = 0.9; speechSynthesis.speak(u);
 }
+// ---------- ditado: o botão do Marco escreve o que você fala (reconhecimento de fala do próprio aparelho) ----------
+// Ponte até a etapa de voz (ElevenLabs Scribe + voz do Eric): sem custo, em português, funciona no Chrome do Android e no iPhone.
+const Reconhecimento = window.SpeechRecognition || window.webkitSpeechRecognition;
+let reconhecedor = null;
+function ditar(alvo, aoTerminar) {
+  if (reconhecedor) { reconhecedor.stop(); return; } // segundo toque: termina
+  if (!Reconhecimento) { toast("Este navegador não permite ditar. Use o microfone do teclado do celular, ou escreva."); render(); return; }
+  const campo = () => document.getElementById(alvo);
+  const ler = () => (alvo === "txtMarco" ? S.rascunho : (S.onb && S.onb.f.fala) || "");
+  const gravar = (t) => { if (alvo === "txtMarco") S.rascunho = t; else if (S.onb) S.onb.f.fala = t; const el = campo(); if (el) el.value = t; };
+  const base = ler().trim(); let final = "";
+  const r = new Reconhecimento();
+  r.lang = "pt-BR"; r.interimResults = true; r.continuous = true;
+  r.onresult = (e) => { let parcial = ""; for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) final += t; else parcial += t; } gravar([base, (final + parcial).trim()].filter(Boolean).join(" ")); if (alvo === "txtMarco") { S.transc = (final + parcial).trim(); const tr = document.querySelector(".transc"); if (tr) tr.textContent = S.transc; } };
+  r.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") toast("Para falar comigo, permita o uso do microfone para este app nas configurações do celular."); else if (e.error !== "no-speech" && e.error !== "aborted") toast("Não consegui ouvir agora. Tente de novo ou escreva."); };
+  r.onend = () => { reconhecedor = null; S.ditando = null; S.transc = ""; render(); if (aoTerminar) aoTerminar(final.trim()); };
+  reconhecedor = r; S.ditando = alvo; render();
+  try { r.start(); } catch (e) { reconhecedor = null; S.ditando = null; render(); }
+}
+
 function comPosicao(ok) {
   if (!navigator.geolocation) { toast("Este aparelho não informa a localização."); render(); return; }
   navigator.geolocation.getCurrentPosition((p) => ok(p.coords.latitude, p.coords.longitude), () => { toast("Não foi possível obter a localização. Verifique a permissão de localização do app."); render(); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
@@ -1542,18 +1745,15 @@ const A = {
     setTimeout(() => { toast(S.marcoOn ? `Pronto: Marco conectado${S.quem ? " para " + S.quem : ""}.` : "Código não aceito. Confira as letras e os traços."); render(); }, 1800);
   },
   async consumoAtualizar() { if (!API) return; try { S.consumo = await (await apiFetch("/consumo")).json(); } catch (e) { S.consumo = { erro: true }; } render(); },
-  falar() {
-    if (exemploWestern() && !marcoDisponivel()) {
-      if (S.voz === "ouvindo") return;
-      const frase = "Tem posto de gasolina no caminho hoje?"; S.voz = "ouvindo"; S.transc = ""; render();
-      let i = 0; const t = setInterval(() => { i += 3; S.transc = frase.slice(0, i); render(); if (i >= frase.length) { clearInterval(t); setTimeout(() => { S.voz = "parado"; S.transc = ""; pergunta("posto", frase); }, 400); } }, 60);
-      return;
-    }
-    toast("A conversa por voz (ElevenLabs: voz do Eric e transcrição Scribe) entra na próxima etapa. Por enquanto, escreva para o Marco."); render();
-    const el = $("#txtMarco"); if (el) el.focus();
-  },
+  // conversa: o que você fala vira a mensagem e vai para o Marco ao terminar
+  falar() { if (S.pensando) return; ditar("txtMarco", (t) => { if (t) { const msg = S.rascunho; S.rascunho = ""; enviarTexto(msg); } }); },
+  // onboarding: o que você fala entra na ficha; ao terminar, o Marco preenche os campos
+  ditar(ds) { ditar(ds.alvo, (t) => { if (t && marcoDisponivel() && S.onb && !S.onb.lendo) A.onbMarco(); }); },
   sairCarteira() { A.voltar(); },
   atualizarApp() { location.reload(); },
+  entrarCom(ds) { if (!AUTH) return; location.href = AUTH.url + "/authorize?provider=" + ds.p + "&redirect_to=" + encodeURIComponent(location.origin + location.pathname); },
+  verSenha(ds) { const el = document.getElementById(ds.id); if (!el) return; el.type = el.type === "password" ? "text" : "password"; const b = document.querySelector(`[data-a="verSenha"][data-id="${ds.id}"] span`); if (b) b.textContent = el.type === "password" ? "Mostrar" : "Ocultar"; },
+  sairConta() { if (confirm("Sair da conta neste celular? A viagem continua guardada no aparelho.")) sairDaConta(); },
   async dono(ds) {
     S.viagem.dono = ds.n; S.overlay = null;
     if (!S.chat || !S.chat.some((m) => m.de === "u")) S.chat = null; // a saudação recomeça com o nome de quem usa o celular
@@ -1646,7 +1846,7 @@ const A = {
     memApagar(); DIAS = []; S.viagem = null; aplicarEstado(null); S.overlay = null; S.hist = []; S.tela = "boasvindas"; render();
     toast("Viagem fechada neste aparelho. O arquivo exportado continua valendo."); render();
   },
-  onb() { S.onb = novaOnb(); ir("onboarding"); },
+  onb() { S.onb = novaOnb(); S.onb.f.nome = (S.conta && S.conta.nome) || ""; ir("onboarding"); },
   async onbMarco() {
     const o = S.onb; if (!o.f.fala.trim()) { toast("Conte primeiro sobre a viagem, no campo acima."); render(); return; }
     o.lendo = true; render();
@@ -1695,6 +1895,7 @@ document.addEventListener("click", (ev) => {
 document.addEventListener("submit", async (ev) => {
   const fm = ev.target.closest("[data-f]"); if (!fm) return;
   ev.preventDefault();
+  if (["entrar", "cadastro", "recuperar", "novasenha"].includes(fm.dataset.f)) return enviarConta(fm.dataset.f);
   if (fm.dataset.f === "marco") { const t = S.rascunho; S.rascunho = ""; await enviarTexto(t); }
   if (fm.dataset.f === "busca") {
     const b = S.busca; if (!b.q.trim()) return;
@@ -1735,6 +1936,9 @@ if (_mem && _mem.viagem && _mem.viagem.dono) {
   S.viagem = _mem.viagem; DIAS = (_mem.roteiro && _mem.roteiro.dias) || []; aplicarEstado(_mem.estado); garantirDias(); faseAuto(); S.diaSel = S.diaHoje;
   S.tela = S.fase === "viagem" ? "hoje" : "conversa";
 } else S.tela = "boasvindas";
+S.conta = (sessaoLer() || {}).user || null;
+if (AUTH && !S.conta) S.tela = "entrar";
+if (AUTH && /access_token|error_description/.test(location.hash)) lerRetornoConta().then(() => { if (sessaoLer()) entrarNoApp(); else { S.tela = "entrar"; render(); } });
 checarMarco();
 cofreAtualizar().then(render);
 // app instalável (PWA): funciona sem internet depois da primeira abertura
