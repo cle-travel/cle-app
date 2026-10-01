@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arquivos = execSync("git ls-files --cached --others --exclude-standard", { cwd: RAIZ, encoding: "utf8" }).split("\n").filter(Boolean);
 
-const CAMINHOS_PROIBIDOS = [/(^|\/)\.env/, /^exemplos\//, /^validacoes\//, /ESPECIFICACAO/i, /ONBOARDING\.md$/, /^design\//, /\.bak$/];
+const CAMINHOS_PROIBIDOS = [/(^|\/)\.env/, /^exemplos\//, /^validacoes\//, /ESPECIFICACAO/i, /ONBOARDING\.md$/, /^seguranca\//, /recovery-codes/i, /^design\//, /\.bak$/];
 const CONTEUDO_PROIBIDO = [
   [/sk_car_[A-Za-z0-9]{8,}/, "chave da Cartesia"],
   [/AIza[0-9A-Za-z_-]{30,}/, "chave do Google"],
