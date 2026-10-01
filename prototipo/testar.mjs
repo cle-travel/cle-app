@@ -78,5 +78,14 @@ const falaMarco = app.slice(app.indexOf("async function marcoFalar"), app.indexO
 confere("marcoFalar não usa a voz do aparelho", falaMarco.length > 0 && !/speechSynthesis|SpeechSynthesisUtterance/.test(falaMarco), true);
 confere("marcoFalar usa a rota /voz do servidor", /apiFetch\("\/voz"/.test(app), true);
 
+// ---------- 5. legendas do Marco (modo CC): blocos curtos, sem perder nem repetir palavras ----------
+const trechoLeg = app.slice(app.indexOf("function blocosLegenda"), app.indexOf("function legendar"));
+const blocosLegenda = new Function(trechoLeg + "; return blocosLegenda;")();
+const fraseLonga = "Olá, Wagner! Que bom ter você no Clé. Eu sou o Marco, seu concierge de viagens, e vou cuidar do planejamento junto com você: do roteiro de cada dia às reservas, gastos e imprevistos. Me conta: pra onde vocês querem ir, quando e quem vai?";
+const bl = blocosLegenda(fraseLonga);
+confere("legenda: nenhum bloco passa de 80 letras", bl.every((b) => b.length <= 80), true);
+confere("legenda: o texto inteiro aparece, na ordem", bl.join(" "), fraseLonga);
+confere("abertura da Nova viagem não fala sozinha", /onb\(\) \{ marcoCalar\(\);[^\n]*S\.onb\.intro = true; ir\("onboarding"\); \}/.test(app), true);
+
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }
 console.log(`testes: ${total} de ${total} passaram.`);
