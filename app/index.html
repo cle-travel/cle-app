@@ -559,7 +559,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.10.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.10.1"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -1652,7 +1652,7 @@ function telaOnboarding() {
       <div class="btns"><button class="btn sec" data-a="onbNext">Pular</button><button class="btn" data-a="onbNext">Continuar</button></div>`;
   } else if (o.step === 2) {
     // o "Continuar" desta tela fica no rodapé, ao lado do botão do Marco (layout aprovado)
-    c = `<h1 class="titulo-serifa">O que vocês querem nesta viagem?</h1><p class="sub" style="margin:0">Pensem só nesta viagem${f.destino ? ` para ${esc(f.destino)}` : ""}, não nos gostos de sempre. Deslize os cartões: um toque é “curto”, dois é “amo”, três é “não é comigo”.</p>${blocoInteresses(o.pf, "onb")}`;
+    c = `<h1 class="titulo-serifa">O que você quer nesta viagem?</h1><p class="sub" style="margin:0">Pense só nesta viagem${f.destino ? ` para ${esc(f.destino)}` : ""}, não nos seus gostos de sempre. Deslize os cartões: um toque é “curto”, dois é “amo”, três é “não é comigo”.</p>${blocoInteresses(o.pf, "onb")}`;
   } else if (o.step === 3) {
     c = `<h1 class="titulo-serifa">Algumas situações</h1><p class="sub" style="margin:0">Em cada situação, deslizem as fotos e toquem na opção que mais combina com o grupo.</p>
       ${blocoSituacoes(o)}
@@ -1672,7 +1672,7 @@ function telaOnboarding() {
   }
   return `<div class="top"><button class="iconbtn" data-a="${o.step ? "onbVoltar" : "voltar"}" aria-label="${o.step ? "Voltar" : "Fechar"}">${ic(o.step ? "back" : "x")}</button><div class="ttl"><b>Nova viagem</b></div>${botaoCC()}</div>
     <main id="main"><div class="pad com-doca">${o.intro ? "" : dots}${c}</div></main>
-    ${!o.intro || (marcoDisponivel() && S.vozOn) ? `<div class="doca">${S.ditando === "onb-fala" ? '<div class="doca-dica" role="status">Estou ouvindo. Toque de novo quando terminar.</div>' : !o.intro && Date.now() < (o.dicaAte || 0) ? `<div class="doca-dica" role="status" id="dicaOnb">${o.retomar ? "Toque aqui e continuamos de onde paramos." : o.pausada ? "Conversa pausada. Toque aqui para continuar." : o.step === 0 ? (o.conversou ? "Toque aqui para me responder." : "Prefere falar? Toque aqui e me conte do seu jeito.") : o.step === 3 ? "Toque em mim se quiser que eu explique as situações." : "Prefere falar? Toque aqui e me conte."}</div>` : ""}
+    ${!o.intro || (marcoDisponivel() && S.vozOn) ? `<div class="doca">${S.ditando === "onb-fala" ? '<div class="doca-dica" role="status">Estou ouvindo. Toque de novo quando terminar.</div>' : !o.intro && Date.now() < (o.dicaAte || 0) ? `<div class="doca-dica" role="status" id="dicaOnb">${o.retomar ? "Toque aqui e continuamos de onde paramos." : o.pausada ? "Conversa pausada. Toque aqui para continuar." : o.step === 0 ? (o.conversou ? "Toque aqui para me responder." : "Prefere falar? Toque aqui e me conte do seu jeito.") : ETAPAS_SO_TOQUE.includes(o.step) ? "Toque aqui e eu explico como escolher." : "Prefere falar? Toque aqui e me conte."}</div>` : ""}
       <div class="doca-linha">${o.step === 2 && S.vozAtiva ? '<button class="doca-fim" style="justify-self:end" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}<button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="${o.intro ? "onbFalar" : o.retomar ? "onbRetomar" : o.step > 0 && (!(o.etapas || {})[o.step] || ETAPAS_SO_TOQUE.includes(o.step)) ? "onbEtapa" : "ditar"}" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button>${o.step === 2 ? '<button class="btn doca-cont" data-a="onbNext">Continuar</button>' : S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}</div></div>` : ""}`;
 }
 function aplicarCenarios(o) {
@@ -2090,7 +2090,7 @@ const PERGUNTA_ETAPA = {
 function perguntaEtapa(o) {
   if (o.step !== 2) return PERGUNTA_ETAPA[o.step] || "";
   const dest = (o.f.destino || "").split(",")[0].trim();
-  return `Agora pensem só nesta viagem${dest ? " para " + dest : ""}, não nos gostos de sempre. Nesta tela a escolha é com vocês, tocando nos cartões: deslize para o lado e toque em cada um. Um toque quer dizer que vocês curtem, dois toques que vocês amam, e três que não é com vocês. Quando terminarem, é só tocar em Continuar.`;
+  return `Agora pense só nesta viagem${dest ? " para " + dest : ""}, não nos seus gostos de sempre. Nesta tela a escolha é sua, tocando nos cartões: deslize para o lado e toque em cada um. Um toque quer dizer que você curte, dois toques que você ama, e três que não é com você. Quando terminar, é só tocar em Continuar.`;
 }
 // Retomada (app reaberto com a Nova viagem pela metade): montada aqui com o que já está na ficha, sem chamar o Claude
 function resumoRetomada(o) {
@@ -2229,7 +2229,10 @@ function encerrarVoz() { S.vozAtiva = false; silencios = 0; if (reconhecedor) { 
 // liga-desliga em loop. Agora o app grava, mede o volume da fala e, quando a pessoa para por PAUSA_FALA, fecha o
 // microfone uma vez e manda o áudio para a transcrição da ElevenLabs (Scribe, rota /ouvir). Sem servidor de voz,
 // volta ao ditado do celular.
-const podeEscutaScribe = () => !!(API && marcoDisponivel() && S.vozOn && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+// DESLIGADA (Wagner, 02/10/2026): no celular a transcrição demorava, o app parecia travar e ruídos como o teclado
+// mantinham o microfone aberto. Volta o ditado do celular (método original). O código fica para uma próxima tentativa.
+const ESCUTA_SCRIBE = false;
+const podeEscutaScribe = () => ESCUTA_SCRIBE && !!(API && marcoDisponivel() && S.vozOn && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
 function escutarScribe(alvo, aoTerminar, ler, gravar) {
   const ctl = { peloUsuario: false, cancelado: false, parar: null, stop() { if (ctl.parar) ctl.parar(); else ctl.pendente = true; } };
   reconhecedor = ctl; S.ditando = alvo; S.transc = ""; render();
@@ -2338,7 +2341,6 @@ const A = {
     ditar("txtMarco", (t, peloUsuario, completo) => {
       const enviar = () => { const msg = S.rascunho; S.rascunho = ""; S.transc = ""; enviarTexto(msg); };
       // pausa natural no meio da fala: continua ouvindo e só envia quando a pessoa realmente terminou
-      if (t && !peloUsuario && !completo && S.tela === "conversa" && S.vozAtiva) { esperarPausa(() => A.falar()); return; } // só no ditado do celular
       if (S.rascunho.trim()) { enviar(); return; } // terminou (pausa longa ou toque): manda tudo junto
       if (peloUsuario || S.tela !== "conversa" || !S.vozAtiva || !presente()) { encerrarVoz(); render(); return; }
       setTimeout(() => { if (S.vozAtiva && !reconhecedor && S.tela === "conversa" && !S.pensando) A.falar(); }, 300);
@@ -2353,7 +2355,6 @@ const A = {
       if (!naFicha) return;
       const aqui = S.tela === "onboarding" && S.onb === o, pendente = o.f.fala.slice(o.falaEnviada || 0).trim();
       // pausa natural no meio da fala: continua ouvindo e só manda ao Marco quando a pessoa realmente terminou
-      if (t && !peloUsuario && !completo && aqui && S.vozAtiva) { esperarPausa(() => A.ditar({ alvo: "onb-fala" })); return; } // só no ditado do celular
       if (pendente) { if (marcoDisponivel() && !o.lendo) A.onbMarco(); return; }
       // parou sem falar nada: se foi a pessoa que tocou, a conversa pausa; se foi o Android (silêncio), volta a ouvir
       if (peloUsuario || !aqui || !S.vozAtiva || !presente()) { encerrarVoz(); if (aqui) { o.pausada = true; mostrarDica(8000); } return; }

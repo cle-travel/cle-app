@@ -122,13 +122,14 @@ confere("erro de conexão em português, não \"network error\"", /A conexão co
 confere("silêncio: pausa por tempo sem fala nem toque, não por tentativas", /const SILENCIO_MAX = 120000/.test(app) && !/\+\+silencios > 6/.test(app), true);
 // ---------- 11. regras de 02/10/2026 (noite) ----------
 confere("voz na configuração aprovada (sem idioma fixo: pt trouxe sotaque de Portugal)", !/model_id: VOZ_MARCO\.modelo, language_code/.test(http) && /previous_text: ANCORA_BR/.test(http), true);
-confere("escuta: microfone aberto uma vez, fecha após a pausa e transcreve no servidor (Scribe)", /function escutarScribe\(/.test(app) && /agora - ultimoSom > PAUSA_FALA\) encerrar\(\)/.test(app) && /rota === "ouvir"/.test(http), true);
+// Wagner, 02/10/2026: a escuta por gravação (Scribe) ficou lenta no celular; volta o ditado do celular (método original)
+confere("escuta pelo ditado do celular (gravação + Scribe desligada)", /const ESCUTA_SCRIBE = false;/.test(app), true);
 confere("frase de contexto só nas falas curtas (contagem de palavras certa)", http.includes("texto.split(/\\s+/).length < 8"), true);
 confere("Marco não usa falas curtas que soam espanhol", !nucleo.includes('ex.: "Fechado, seguimos!"') && nucleo.includes('nunca "Fechado, seguimos!"'), true);
 confere("falar não descarta cartões sem decisão", !/k\.estado = "ignorado"/.test(app) && /k\.pendenteEnviado = true/.test(app), true);
 confere("Marco decide cartões pela voz (decidir_cartoes)", /decidir_cartoes: \{/.test(nucleo) && /aplicarDecisoesFaladas\(k\)/.test(app), true);
-confere("interesses são desta viagem (tela e Marco)", /O que vocês querem nesta viagem\?/.test(app) && /interesses PARA ESTA VIAGEM/.test(nucleo), true);
-confere("pausa no meio da fala não corta a pessoa (espera antes de enviar)", /const PAUSA_FALA = 2500;/.test(app) && (app.match(/esperarPausa\(\(\) =>/g) || []).length === 2, true);
+confere("interesses são desta viagem e no singular (cada pessoa no próprio celular)", /O que você quer nesta viagem\?/.test(app) && /Nesta tela a escolha é sua/.test(app) && /interesses PARA ESTA VIAGEM/.test(nucleo), true);
+confere("sem espera de 2,5 s nem reabrir o microfone: o texto vai assim que o ditado termina", !/esperarPausa\(\(\) =>/.test(app), true);
 // ---------- 12. barra invertida perdida pelo terminal (erro repetido 4 vezes em 01-02/10/2026) ----------
 // expressões que precisam da barra: se ela sumir, o código continua rodando mas faz outra coisa
 const montar = fs.readFileSync(path.join(RAIZ, "prototipo", "montar.mjs"), "utf8");
