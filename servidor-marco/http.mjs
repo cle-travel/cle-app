@@ -66,7 +66,7 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
     const url = new URL(req.url);
     const rota = url.pathname.replace(/\/+$/, "").split("/").pop();
     const origem = req.headers.get("origin") || "";
-    const cors = { "Access-Control-Allow-Origin": origens.includes(origem) ? origem : origens[0] || "*", "Access-Control-Allow-Headers": "content-type, x-cle-acesso, authorization", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", Vary: "Origin" };
+    const cors = { "Access-Control-Allow-Origin": origens.includes(origem) ? origem : origens[0] || "*", "Access-Control-Allow-Headers": "content-type, x-cle-acesso, authorization, x-duracao-ms", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", Vary: "Origin" };
     const json = (status, obj) => new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
 
@@ -114,6 +114,23 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
       if (!r || !r.ok) { console.error("voz:", r ? r.status + " " + (await r.text()).slice(0, 200) : "sem conexão"); return json(502, { erro: "A voz do Marco não respondeu agora." }); }
       await consumo.registrar("voz", { entrada: texto.length, saida: 0, cacheLido: 0, cacheEscrito: 0, buscas: 0, chamadas: 1, usd: 0 }, quem);
       return new Response(r.body, { status: 200, headers: { ...cors, "Content-Type": "audio/mpeg", "Cache-Control": "no-store" } });
+    }
+    // escuta do Marco: o app grava a fala (microfone aberto uma vez só, fecha após 2,5 s de silêncio) e manda o áudio;
+    // a transcrição é a ElevenLabs Scribe (validação 2b, 30/09/2026: 97% dos termos-chave). No consumo, "entrada" = segundos.
+    if (rota === "ouvir" && req.method === "POST") {
+      if (!env("ELEVENLABS_API_KEY")) return json(503, { erro: "A escuta do Marco ainda não está configurada." });
+      const audio = await req.arrayBuffer().catch(() => null);
+      if (!audio || !audio.byteLength || audio.byteLength > LIMITE_CORPO) return json(400, { erro: "Áudio inválido." });
+      const tipo = (req.headers.get("content-type") || "audio/webm").split(";")[0];
+      const fd = new FormData();
+      fd.append("model_id", "scribe_v1"); fd.append("language_code", "por"); fd.append("tag_audio_events", "false");
+      fd.append("file", new Blob([audio], { type: tipo }), "fala." + (tipo.includes("mp4") ? "m4a" : tipo.includes("ogg") ? "ogg" : "webm"));
+      const r = await fetch("https://api.elevenlabs.io/v1/speech-to-text", { method: "POST", headers: { "xi-api-key": env("ELEVENLABS_API_KEY") }, body: fd }).catch(() => null);
+      if (!r || !r.ok) { console.error("ouvir:", r ? r.status + " " + (await r.text()).slice(0, 200) : "sem conexão"); return json(502, { erro: "Não consegui entender o áudio agora." }); }
+      const j = await r.json().catch(() => ({}));
+      const seg = Math.round((+req.headers.get("x-duracao-ms") || 0) / 1000);
+      await consumo.registrar("escuta", { entrada: seg, saida: 0, cacheLido: 0, cacheEscrito: 0, buscas: 0, chamadas: 1, usd: 0 }, quem);
+      return json(200, { texto: String(j.text || "").trim() });
     }
     // foto de um lugar sugerido (painel visual da tela do Marco): imagem principal do artigo da Wikipédia
     // (licença livre; o app mostra o crédito). Português primeiro, inglês se não houver. Guardada em memória.

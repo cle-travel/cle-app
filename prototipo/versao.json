@@ -1,4 +1,4 @@
 {
-  "versao": "1.9.1",
+  "versao": "1.10.0",
   "regra": "A cada publicação: último número = correção (1.0.1); do meio = recurso novo (1.1.0); primeiro = mudança grande (2.0.0). A trava de publicação recusa app alterado sem versão nova."
 }

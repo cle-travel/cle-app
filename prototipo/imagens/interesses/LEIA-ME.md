@@ -1,4 +1,4 @@
-# Fotos da tela "Do que vocês gostam?"
+# Fotos da tela "O que vocês querem nesta viagem?"
 
 Coloque aqui uma foto para cada interesse (16), com o **nome do arquivo exatamente como na lista** abaixo.
 Na próxima montagem (`node prototipo/montar.mjs`), o app passa a usar as fotos sozinho. Interesse sem foto
@@ -6,7 +6,7 @@ continua com um degradê sóbrio no lugar.
 
 | Interesse | Nome do arquivo |
 |---|---|
-| Natureza e parques | `natureza-e-parques.webp` |
+| Natureza e ar livre | `natureza-e-ar-livre.webp` |
 | Trilhas | `trilhas.webp` |
 | Cidades | `cidades.webp` |
 | Museus e história | `museus-e-historia.webp` |

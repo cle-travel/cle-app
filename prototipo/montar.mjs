@@ -21,26 +21,32 @@ const seguro = (s) => JSON.stringify(s).replace(/<\/script/gi, "<\\/script").rep
 // número da versão (padrão da Carteira): prototipo/versao.json; a trava de publicação exige subir a cada mudança
 const VERSAO_APP = JSON.parse(fs.readFileSync(path.join(HERE, "versao.json"), "utf8")).versao;
 if (!/^\d+\.\d+\.\d+$/.test(VERSAO_APP)) throw new Error("app NÃO gerado: versão inválida em prototipo/versao.json (use 1.0.0)");
-// fotos da tela de interesses: prototipo/imagens/interesses/<nome-do-interesse>.(webp|jpg|png|avif), copiadas para
-// app/imagens/interesses/ com a impressão do conteúdo no endereço (troca de foto = celular baixa a nova)
-const DIR_FOTOS = path.join(HERE, "imagens", "interesses"), APP_FOTOS = path.join(APP, "imagens", "interesses");
-const FOTOS_INTERESSES = {}, arquivosFotos = [];
-fs.rmSync(APP_FOTOS, { recursive: true, force: true });
-if (fs.existsSync(DIR_FOTOS)) {
-  fs.mkdirSync(APP_FOTOS, { recursive: true });
-  for (const f of fs.readdirSync(DIR_FOTOS).filter((x) => /\.(webp|jpe?g|png|avif)$/i.test(x))) {
-    const buf = fs.readFileSync(path.join(DIR_FOTOS, f)), slug = f.replace(/\.[^.]+$/, "").toLowerCase();
-    if (buf.length > 700 * 1024) console.warn(`  aviso: ${f} tem ${Math.round(buf.length / 1024)} KB; o ideal é até 350 KB (veja imagens/interesses/LEIA-ME.md)`);
-    fs.copyFileSync(path.join(DIR_FOTOS, f), path.join(APP_FOTOS, f));
-    FOTOS_INTERESSES[slug] = `imagens/interesses/${f}?v=${crypto.createHash("sha256").update(buf).digest("hex").slice(0, 8)}`;
-    arquivosFotos.push("./" + FOTOS_INTERESSES[slug]); // o mesmo endereço que o app pede, para funcionar sem internet
+// fotos das telas de cartões: prototipo/imagens/<pasta>/<nome>.(webp|jpg|png|avif), copiadas para app/imagens/<pasta>/
+// com a impressão do conteúdo no endereço (troca de foto = celular baixa a nova). Pastas: interesses, situacoes.
+const arquivosFotos = [];
+function fotosDa(pasta) {
+  const dir = path.join(HERE, "imagens", pasta), destino = path.join(APP, "imagens", pasta), mapa = {};
+  fs.rmSync(destino, { recursive: true, force: true });
+  if (!fs.existsSync(dir)) return { mapa, foco: {} };
+  fs.mkdirSync(destino, { recursive: true });
+  for (const f of fs.readdirSync(dir).filter((x) => /\.(webp|jpe?g|png|avif)$/i.test(x))) {
+    const buf = fs.readFileSync(path.join(dir, f)), slug = f.replace(/\.[^.]+$/, "").toLowerCase();
+    if (buf.length > 700 * 1024) console.warn(`  aviso: ${pasta}/${f} tem ${Math.round(buf.length / 1024)} KB; o ideal é até 350 KB (veja imagens/${pasta}/LEIA-ME.md)`);
+    fs.copyFileSync(path.join(dir, f), path.join(destino, f));
+    mapa[slug] = `imagens/${pasta}/${f}?v=${crypto.createHash("sha256").update(buf).digest("hex").slice(0, 8)}`;
+    arquivosFotos.push("./" + mapa[slug]); // o mesmo endereço que o app pede, para funcionar sem internet
   }
+  const fj = path.join(dir, "foco.json");
+  return { mapa, foco: fs.existsSync(fj) ? JSON.parse(fs.readFileSync(fj, "utf8")) : {} };
 }
+const FOTOS_INT = fotosDa("interesses"), FOTOS_SIT = fotosDa("situacoes");
 const html = fs.readFileSync(path.join(HERE, "app.html"), "utf8")
   .replace("/*__MONTADO__*/false", "true")
-  .replace("/*__FOTOS_INTERESSES__*/{}", () => JSON.stringify(FOTOS_INTERESSES))
+  .replace("/*__FOTOS_INTERESSES__*/{}", () => JSON.stringify(FOTOS_INT.mapa))
   // ponto de interesse de cada foto (onde o recorte do cartão estreito se centraliza): imagens/interesses/foco.json
-  .replace("/*__FOCO_INTERESSES__*/{}", () => { const f = path.join(DIR_FOTOS, "foco.json"); return fs.existsSync(f) ? JSON.stringify(JSON.parse(fs.readFileSync(f, "utf8"))) : "{}"; })
+  .replace("/*__FOCO_INTERESSES__*/{}", () => JSON.stringify(FOTOS_INT.foco))
+  .replace("/*__FOTOS_SITUACOES__*/{}", () => JSON.stringify(FOTOS_SIT.mapa))
+  .replace("/*__FOCO_SITUACOES__*/{}", () => JSON.stringify(FOTOS_SIT.foco))
   .replace('/*__VERSAO__*/"dev"', () => JSON.stringify(VERSAO_APP))
   .replace("/*__CARTEIRA__*/null", () => seguro(carteira))
   // endereço do Marco na nuvem (público; gravado por publicar-nuvem.mjs). Sem ele, o app publicado avisa que o Marco não está ligado

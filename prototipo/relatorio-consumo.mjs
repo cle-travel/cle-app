@@ -31,7 +31,7 @@ const dirL = path.join(RAIZ, "servidor-marco", "consumo");
 if (fs.existsSync(dirL)) for (const f of fs.readdirSync(dirL).filter((x) => x.endsWith(".jsonl"))) for (const l of fs.readFileSync(path.join(dirL, f), "utf8").split("\n").filter(Boolean)) { const x = JSON.parse(l); local.push({ ...x, quem: x.quem || "local", onde: "computador" }); }
 const tudo = [...nuvem, ...local];
 // a voz (ElevenLabs) não é Claude: fica fora das contas do Claude e ganha uma seção própria
-const todos = tudo.filter((x) => x.modo !== "voz"), vozes = tudo.filter((x) => x.modo === "voz");
+const todos = tudo.filter((x) => x.modo !== "voz" && x.modo !== "escuta"), vozes = tudo.filter((x) => x.modo === "voz"), escutas = tudo.filter((x) => x.modo === "escuta");
 const noDia = (x) => new Date(new Date(x.quando).getTime() - 3 * 3600e3).toISOString().slice(0, 10) === dia;
 const doDia = todos.filter(noDia), vozDia = vozes.filter(noDia);
 
@@ -75,7 +75,8 @@ let fotos = {}; try { fotos = JSON.parse(fs.readFileSync(arqFotos, "utf8")); } c
 const nInt = (v) => Math.round(v).toLocaleString("pt-BR");
 const V = vozDia.reduce((a, x) => ({ n: a.n + 1, car: a.car + x.entrada }), { n: 0, car: 0 });
 const VT = vozes.reduce((a, x) => ({ n: a.n + 1, car: a.car + x.entrada }), { n: 0, car: 0 });
-let mdVoz = `## Voz do Marco (ElevenLabs)\n\n| | Dia | Desde ${INICIO.split("-").reverse().join("/")} |\n|---|---|---|\n| Falas geradas | ${V.n} | ${VT.n} |\n| Caracteres falados | ${nInt(V.car)} | ${nInt(VT.car)} |\n`;
+const minutosEscuta = (ls) => { const s = ls.reduce((a, x) => a + (+x.entrada || 0), 0); return `${ls.length} trecho(s), ${Math.floor(s / 60)} min ${s % 60} s`; };
+let mdVoz = `## Voz do Marco (ElevenLabs)\n\n| | Dia | Desde ${INICIO.split("-").reverse().join("/")} |\n|---|---|---|\n| Falas geradas | ${V.n} | ${VT.n} |\n| Caracteres falados | ${nInt(V.car)} | ${nInt(VT.car)} |\n| Fala ouvida (Scribe) | ${minutosEscuta(escutas.filter(noDia))} | ${minutosEscuta(escutas)} |\n`;
 if (eleven) {
   fotos[dia] = { usados: eleven.usados, limite: eleven.limite, renova: eleven.renova.toISOString().slice(0, 10) };
   fs.mkdirSync(path.dirname(arqFotos), { recursive: true }); fs.writeFileSync(arqFotos, JSON.stringify(fotos, null, 1));

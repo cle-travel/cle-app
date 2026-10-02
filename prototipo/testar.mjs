@@ -121,13 +121,25 @@ confere("app refaz em partes quando o servidor avisa tarefa grande", /codigo ===
 confere("erro de conexão em português, não \"network error\"", /A conexão com o Marco caiu no meio da resposta/.test(app), true);
 confere("silêncio: pausa por tempo sem fala nem toque, não por tentativas", /const SILENCIO_MAX = 120000/.test(app) && !/\+\+silencios > 6/.test(app), true);
 // ---------- 11. regras de 02/10/2026 (noite) ----------
-confere("voz na configuração aprovada (sem idioma fixo: pt trouxe sotaque de Portugal)", !/language_code/.test(http) && /previous_text: ANCORA_BR/.test(http), true);
+confere("voz na configuração aprovada (sem idioma fixo: pt trouxe sotaque de Portugal)", !/model_id: VOZ_MARCO\.modelo, language_code/.test(http) && /previous_text: ANCORA_BR/.test(http), true);
+confere("escuta: microfone aberto uma vez, fecha após a pausa e transcreve no servidor (Scribe)", /function escutarScribe\(/.test(app) && /agora - ultimoSom > PAUSA_FALA\) encerrar\(\)/.test(app) && /rota === "ouvir"/.test(http), true);
 confere("frase de contexto só nas falas curtas (contagem de palavras certa)", http.includes("texto.split(/\\s+/).length < 8"), true);
 confere("Marco não usa falas curtas que soam espanhol", !nucleo.includes('ex.: "Fechado, seguimos!"') && nucleo.includes('nunca "Fechado, seguimos!"'), true);
 confere("falar não descarta cartões sem decisão", !/k\.estado = "ignorado"/.test(app) && /k\.pendenteEnviado = true/.test(app), true);
 confere("Marco decide cartões pela voz (decidir_cartoes)", /decidir_cartoes: \{/.test(nucleo) && /aplicarDecisoesFaladas\(k\)/.test(app), true);
 confere("interesses são desta viagem (tela e Marco)", /O que vocês querem nesta viagem\?/.test(app) && /interesses PARA ESTA VIAGEM/.test(nucleo), true);
 confere("pausa no meio da fala não corta a pessoa (espera antes de enviar)", /const PAUSA_FALA = 2500;/.test(app) && (app.match(/esperarPausa\(\(\) =>/g) || []).length === 2, true);
+// ---------- 12. barra invertida perdida pelo terminal (erro repetido 4 vezes em 01-02/10/2026) ----------
+// expressões que precisam da barra: se ela sumir, o código continua rodando mas faz outra coisa
+const montar = fs.readFileSync(path.join(RAIZ, "prototipo", "montar.mjs"), "utf8");
+const semBarra = [[montar, "/\\.(webp|jpe?g|png|avif)$/i", "montar: extensão das fotos"], [montar, "/\\.[^.]+$/", "montar: nome da foto"],
+  [http, "texto.split(/\\s+/)", "servidor: contagem de palavras"], [app, "/\\?\\s*$/", "(nenhum, só referência)"]].filter(([src, trecho, nome]) => nome.startsWith("(") ? false : !src.includes(trecho)).map(([, , n]) => n);
+confere("expressões com barra invertida intactas", semBarra, []);
+// ---------- 13. telas de cartões só por toque (Wagner, 02/10/2026) ----------
+confere("cartão renomeado para Natureza e ar livre (com foto)", app.includes('"Natureza e ar livre"') && fs.existsSync(path.join(RAIZ, "prototipo", "imagens", "interesses", "natureza-e-ar-livre.webp")), true);
+confere("interesses e situações só por toque: o Marco explica e não abre o microfone", /const ETAPAS_SO_TOQUE = \[2, 3\];/.test(app) && /S\.vozAtiva = !soToque/.test(app), true);
+confere("situações em cartões com foto", /function blocoSituacoes\(o\)/.test(app) && /__FOTOS_SITUACOES__/.test(app), true);
+confere("toda opção de situação tem nome de foto na lista do LEIA-ME", (() => { const l = fs.readFileSync(path.join(RAIZ, "prototipo", "imagens", "situacoes", "LEIA-ME.md"), "utf8"); return CEN.every((s) => s.o.every((_, k) => l.includes(`${s.id}-${k + 1}.webp`))); })(), true);
 confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }

@@ -287,6 +287,10 @@ body.legendas .com-doca{padding-bottom:210px!important}
 .pontos{display:flex;justify-content:center;gap:8px;min-height:8px;margin-top:4px}
 .pontos i{width:7px;height:7px;border-radius:4px;background:var(--fg2);opacity:.45;transition:width .25s,opacity .25s,background .25s}
 .pontos i.on{width:28px;background:var(--accent);opacity:1}
+.grupo-sit{display:flex;flex-direction:column;gap:10px}
+.sit-p{font-weight:600;font-size:17px;line-height:1.35}
+.cartao-sit{flex-basis:clamp(124px,34vw,180px);height:clamp(190px,30dvh,270px)}
+.cartao-sit b{font-family:var(--font);font-weight:600;font-size:15px;line-height:1.25;letter-spacing:-.1px}
 .doca-cont{justify-self:stretch;height:52px;border-radius:26px;max-width:240px;margin-left:auto}
 .int{background:var(--card);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left;border:1.5px solid transparent;min-height:78px}
 .int b{font-size:15px;font-weight:600}
@@ -555,7 +559,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.9.1"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.10.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -563,7 +567,7 @@ const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
 const CHAVE_ACESSO = "cle-acesso";
 const codigoAcesso = () => { try { return localStorage.getItem(CHAVE_ACESSO) || ""; } catch (e) { return ""; } };
 // pedidos ao Marco levam a conta (token) e, na transição, o código de acesso
-const apiFetch = async (rota, opc = {}) => { const t = await tokenConta(); return fetch(API + rota, { ...opc, headers: { ...(opc.body ? { "Content-Type": "application/json" } : {}), ...(LOCAL ? {} : { "x-cle-acesso": codigoAcesso() }), ...(t ? { Authorization: "Bearer " + t } : {}) } }); };
+const apiFetch = async (rota, opc = {}) => { const t = await tokenConta(); return fetch(API + rota, { ...opc, headers: { ...(opc.body ? { "Content-Type": "application/json" } : {}), ...(opc.headers || {}), ...(LOCAL ? {} : { "x-cle-acesso": codigoAcesso() }), ...(t ? { Authorization: "Bearer " + t } : {}) } }); };
 
 // ---------- conta do viajante (Supabase Auth): entrar com Google, Apple ou e-mail e senha ----------
 // A conta identifica a pessoa e libera o Marco (lista de testadores no servidor). Os dados da viagem continuam
@@ -1500,7 +1504,7 @@ function telaViagens() {
 }
 
 // ---------- perfil (camadas A e B da seção 6, sempre editáveis) ----------
-const INTERESSES = ["Natureza e parques", "Trilhas", "Cidades", "Museus e história", "Gastronomia", "Compras", "Fotografia", "Cultura local", "Shows e música", "Esportes", "Parques temáticos", "Aventura radical", "Vida noturna", "Praia", "Bem-estar", "Carros e estradas cênicas"];
+const INTERESSES = ["Natureza e ar livre", "Trilhas", "Cidades", "Museus e história", "Gastronomia", "Compras", "Fotografia", "Cultura local", "Shows e música", "Esportes", "Parques temáticos", "Aventura radical", "Vida noturna", "Praia", "Bem-estar", "Carros e estradas cênicas"];
 const SLIDERS = [["aventura", "Conservador", "Aventureiro"], ["explorar", "Relaxar", "Explorar"], ["fora", "Popular", "Fora do circuito"], ["premium", "Econômico", "Premium"]];
 // ---------- Situações (cenários) da Nova viagem ----------
 // Cada situação revela o perfil do grupo sem perguntas diretas. CRITÉRIOS (Wagner, 02/10/2026), valem para
@@ -1533,7 +1537,7 @@ const CENARIOS = [
 // as 3 situações desta viagem: fila e chuva valem para todas; a terceira é a que mais combina com o grupo
 function cenariosDaViagem(o) {
   const amam = (n) => (o.pf.int || {})[n] === 1 || (o.pf.int || {})[n] === 2, dest = norm(`${o.f.destino} ${o.f.nomeViagem}`);
-  const c = { parques: amam("Parques temáticos") || /disney|universal|orlando|parque/.test(dest), natureza: amam("Natureza e parques") || amam("Trilhas"),
+  const c = { parques: amam("Parques temáticos") || /disney|universal|orlando|parque/.test(dest), natureza: amam("Natureza e ar livre") || amam("Trilhas"),
     carro: +String(o.pf.maxDirecao || "").replace(",", ".") > 0 || amam("Carros e estradas cênicas"), comida: amam("Gastronomia") || amam("Cidades") };
   const extra = CENARIOS.find((s) => s.quando && s.quando(c)) || CENARIOS.find((s) => s.id === "hotel");
   if (!o.cenIds) o.cenIds = ["fila", "chuva", extra.id]; // fixadas na primeira vez: não mudam enquanto a pessoa responde
@@ -1555,11 +1559,22 @@ function blocoSliders(pf, alvo) {
 }
 // Interesses em cartões verticais com foto, deslizando para o lado (layout aprovado por Wagner, 01/10/2026).
 // Fotos: prototipo/imagens/interesses/<slug>.webp|jpg (ver LEIA-ME.md lá); sem foto, um degradê sóbrio no lugar.
-const FOTOS_INTERESSES = {"aventura-radical":"imagens/interesses/aventura-radical.webp?v=252b5dec","bem-estar":"imagens/interesses/bem-estar.webp?v=6b68497b","carros-e-estradas-cenicas":"imagens/interesses/carros-e-estradas-cenicas.webp?v=502a7fbc","cidades":"imagens/interesses/cidades.webp?v=a5c28a61","compras":"imagens/interesses/compras.webp?v=613104d8","cultura-local":"imagens/interesses/cultura-local.webp?v=fe4a02d5","esportes":"imagens/interesses/esportes.webp?v=21ae379d","fotografia":"imagens/interesses/fotografia.webp?v=70f63544","gastronomia":"imagens/interesses/gastronomia.webp?v=26ea4b54","museus-e-historia":"imagens/interesses/museus-e-historia.webp?v=78e46128","natureza-e-parques":"imagens/interesses/natureza-e-parques.webp?v=9373725f","parques-tematicos":"imagens/interesses/parques-tematicos.webp?v=0cf31327","praia":"imagens/interesses/praia.webp?v=28101939","shows-e-musica":"imagens/interesses/shows-e-musica.webp?v=68e7758f","trilhas":"imagens/interesses/trilhas.webp?v=4595374a","vida-noturna":"imagens/interesses/vida-noturna.webp?v=8bcee2a3"}, FOCO_INTERESSES = {"aventura-radical":"12% 50%","bem-estar":"50% 50%","carros-e-estradas-cenicas":"50% 50%","cidades":"50% 50%","compras":"50% 50%","cultura-local":"50% 50%","esportes":"25% 50%","fotografia":"23% 50%","gastronomia":"28% 50%","museus-e-historia":"50% 50%","natureza-e-parques":"0% 50%","parques-tematicos":"23% 50%","praia":"50% 50%","shows-e-musica":"50% 50%","trilhas":"12% 50%","vida-noturna":"45% 50%"};
+const FOTOS_INTERESSES = {"aventura-radical":"imagens/interesses/aventura-radical.webp?v=252b5dec","bem-estar":"imagens/interesses/bem-estar.webp?v=6b68497b","carros-e-estradas-cenicas":"imagens/interesses/carros-e-estradas-cenicas.webp?v=502a7fbc","cidades":"imagens/interesses/cidades.webp?v=a5c28a61","compras":"imagens/interesses/compras.webp?v=613104d8","cultura-local":"imagens/interesses/cultura-local.webp?v=fe4a02d5","esportes":"imagens/interesses/esportes.webp?v=21ae379d","fotografia":"imagens/interesses/fotografia.webp?v=70f63544","gastronomia":"imagens/interesses/gastronomia.webp?v=26ea4b54","museus-e-historia":"imagens/interesses/museus-e-historia.webp?v=78e46128","natureza-e-ar-livre":"imagens/interesses/natureza-e-ar-livre.webp?v=9373725f","parques-tematicos":"imagens/interesses/parques-tematicos.webp?v=0cf31327","praia":"imagens/interesses/praia.webp?v=28101939","shows-e-musica":"imagens/interesses/shows-e-musica.webp?v=68e7758f","trilhas":"imagens/interesses/trilhas.webp?v=4595374a","vida-noturna":"imagens/interesses/vida-noturna.webp?v=8bcee2a3"}, FOCO_INTERESSES = {"aventura-radical":"12% 50%","bem-estar":"50% 50%","carros-e-estradas-cenicas":"50% 50%","cidades":"50% 50%","compras":"50% 50%","cultura-local":"50% 50%","esportes":"25% 50%","fotografia":"23% 50%","gastronomia":"28% 50%","museus-e-historia":"50% 50%","natureza-e-ar-livre":"0% 50%","parques-tematicos":"23% 50%","praia":"50% 50%","shows-e-musica":"50% 50%","trilhas":"12% 50%","vida-noturna":"45% 50%"};
+// fotos das opções das situações: prototipo/imagens/situacoes/<id>-<1 a 4>.webp (ver LEIA-ME.md lá)
+const FOTOS_SITUACOES = {}, FOCO_SITUACOES = {};
+// Situações em cartões com foto, escolha por toque (Wagner, 02/10/2026): uma linha de cartões por situação
+function blocoSituacoes(o) {
+  return cenariosDaViagem(o).map((s, si) => `<div class="grupo-sit"><div class="sit-p">${esc(s.p)}</div><div class="carrossel" data-id="sit-${s.id}">${s.o.map(([t], oi) => {
+    const slug = `${s.id}-${oi + 1}`, foto = FOTOS_SITUACOES[slug], foco = FOCO_SITUACOES[slug], [g1, g2] = DEGRADES[(si * 4 + oi) % DEGRADES.length], on = o.cen[s.id] === oi;
+    return `<button class="cartao-int cartao-sit ${on ? "amo" : ""}" data-a="onbCen" data-s="${s.id}" data-i="${oi}" aria-pressed="${on}" aria-label="${esc(t)}" style="--g1:${g1};--g2:${g2}${foto ? `;--foto:url('${foto}')` : ""}${foco ? `;--foco:${foco}` : ""}"><span class="foto"></span><span class="rot"><b>${esc(t)}</b><span class="estado"><i class="radio"></i>${on ? "Escolhida" : "Tocar"}</span></span></button>`;
+  }).join("")}</div></div>`).join("");
+}
 const slugInteresse = (n) => norm(n).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const DEGRADES = [["#2F5D8C", "#162E47"], ["#5B6F5A", "#1F2D24"], ["#8A6B4A", "#3A2A1C"], ["#6B5B7B", "#2A2235"], ["#3F7F8C", "#18343A"], ["#7A5A5A", "#2F1F1F"]];
 function blocoInteresses(pf, alvo) {
   // "Shows e esportes" virou dois interesses (Wagner, 02/10/2026): quem já tinha escolhido fica com os dois
+  // "Natureza e parques" virou "Natureza e ar livre" (Wagner, 02/10/2026)
+  if (pf.int && pf.int["Natureza e parques"] != null) { if (pf.int["Natureza e ar livre"] == null) pf.int["Natureza e ar livre"] = pf.int["Natureza e parques"]; delete pf.int["Natureza e parques"]; }
   if (pf.int && pf.int["Shows e esportes"] != null) { const v = pf.int["Shows e esportes"]; delete pf.int["Shows e esportes"]; for (const n of ["Shows e música", "Esportes"]) if (pf.int[n] == null) pf.int[n] = v; }
   const r = ["Tocar", "Curto", "Amo", "Não é comigo"];
   return `<div class="carrossel" id="carInt" role="list">${INTERESSES.map((n, i) => {
@@ -1570,6 +1585,7 @@ function blocoInteresses(pf, alvo) {
 }
 // depois de cada desenho: devolve o carrossel à posição em que estava e acende o ponto da página atual
 function prepararCarrossel() {
+  document.querySelectorAll(".carrossel[data-id]").forEach((c) => { c.scrollLeft = (S.rolagens || {})[c.dataset.id] || 0; });
   const c = $("#carInt"); if (!c) return;
   c.scrollLeft = S.rolagemInt || 0;
   const pontos = () => {
@@ -1638,8 +1654,8 @@ function telaOnboarding() {
     // o "Continuar" desta tela fica no rodapé, ao lado do botão do Marco (layout aprovado)
     c = `<h1 class="titulo-serifa">O que vocês querem nesta viagem?</h1><p class="sub" style="margin:0">Pensem só nesta viagem${f.destino ? ` para ${esc(f.destino)}` : ""}, não nos gostos de sempre. Deslize os cartões: um toque é “curto”, dois é “amo”, três é “não é comigo”.</p>${blocoInteresses(o.pf, "onb")}`;
   } else if (o.step === 3) {
-    c = `<h1 style="font-size:28px">Algumas situações</h1><p class="sub">Escolham a opção que mais combina com o grupo.</p>
-      ${cenariosDaViagem(o).map((s) => `<div class="grupo-op"><div style="font-weight:600">${esc(s.p)}</div>${s.o.map(([t], oi) => `<button class="opt ${o.cen[s.id] === oi ? "on" : ""}" data-a="onbCen" data-s="${s.id}" data-i="${oi}">${esc(t)}</button>`).join("")}</div>`).join("")}
+    c = `<h1 class="titulo-serifa">Algumas situações</h1><p class="sub" style="margin:0">Em cada situação, deslizem as fotos e toquem na opção que mais combina com o grupo.</p>
+      ${blocoSituacoes(o)}
       <div class="btns"><button class="btn sec" data-a="onbNext">Pular</button><button class="btn" data-a="onbNext">Continuar</button></div>`;
   } else {
     const p = paisDe(f.pais), amo = INTERESSES.filter((n) => o.pf.int[n] === 2);
@@ -1657,7 +1673,7 @@ function telaOnboarding() {
   return `<div class="top"><button class="iconbtn" data-a="${o.step ? "onbVoltar" : "voltar"}" aria-label="${o.step ? "Voltar" : "Fechar"}">${ic(o.step ? "back" : "x")}</button><div class="ttl"><b>Nova viagem</b></div>${botaoCC()}</div>
     <main id="main"><div class="pad com-doca">${o.intro ? "" : dots}${c}</div></main>
     ${!o.intro || (marcoDisponivel() && S.vozOn) ? `<div class="doca">${S.ditando === "onb-fala" ? '<div class="doca-dica" role="status">Estou ouvindo. Toque de novo quando terminar.</div>' : !o.intro && Date.now() < (o.dicaAte || 0) ? `<div class="doca-dica" role="status" id="dicaOnb">${o.retomar ? "Toque aqui e continuamos de onde paramos." : o.pausada ? "Conversa pausada. Toque aqui para continuar." : o.step === 0 ? (o.conversou ? "Toque aqui para me responder." : "Prefere falar? Toque aqui e me conte do seu jeito.") : o.step === 3 ? "Toque em mim se quiser que eu explique as situações." : "Prefere falar? Toque aqui e me conte."}</div>` : ""}
-      <div class="doca-linha">${o.step === 2 && S.vozAtiva ? '<button class="doca-fim" style="justify-self:end" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}<button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="${o.intro ? "onbFalar" : o.retomar ? "onbRetomar" : o.step > 0 && !(o.etapas || {})[o.step] ? "onbEtapa" : "ditar"}" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button>${o.step === 2 ? '<button class="btn doca-cont" data-a="onbNext">Continuar</button>' : S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}</div></div>` : ""}`;
+      <div class="doca-linha">${o.step === 2 && S.vozAtiva ? '<button class="doca-fim" style="justify-self:end" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}<button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="${o.intro ? "onbFalar" : o.retomar ? "onbRetomar" : o.step > 0 && (!(o.etapas || {})[o.step] || ETAPAS_SO_TOQUE.includes(o.step)) ? "onbEtapa" : "ditar"}" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button>${o.step === 2 ? '<button class="btn doca-cont" data-a="onbNext">Continuar</button>' : S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}</div></div>` : ""}`;
 }
 function aplicarCenarios(o) {
   const sl = { aventura: 50, explorar: 50, fora: 50, premium: 50 };
@@ -1695,6 +1711,7 @@ function render() {
   if ((S.vozAtiva || reconhecedor) && S.tela !== "conversa" && S.tela !== "onboarding") encerrarVoz();
   const main0 = $("#main"), scroll = main0 && ultimaTela === S.tela ? main0.scrollTop : 0;
   const car0 = $("#carInt"); if (car0) S.rolagemInt = car0.scrollLeft; // posição real do carrossel antes de redesenhar
+  S.rolagens = S.rolagens || {}; document.querySelectorAll(".carrossel[data-id]").forEach((c) => { S.rolagens[c.dataset.id] = c.scrollLeft; });
   // quem está digitando não perde o foco quando o Marco atualiza a tela
   const ativo = document.activeElement, focoId = ativo && ativo.id && /^(INPUT|TEXTAREA)$/.test(ativo.tagName) && ativo.type !== "range" ? ativo.id : null;
   let selIni = null; try { selIni = focoId ? ativo.selectionStart : null; } catch (e) {}
@@ -2062,17 +2079,18 @@ function mostrarDica(ms = 6000) {
 }
 function marcoCalar() { falaAtual++; if (audioMarco && !audioMarco.paused) audioMarco.pause(); pararLegenda(); marcarFalando(false); }
 // Pergunta de abertura de cada etapa da Nova viagem: cobre a tela inteira de uma vez, para a pessoa responder tudo junto
+const ETAPAS_SO_TOQUE = [2, 3];
 const PERGUNTA_ETAPA = {
   1: "Agora me conta o jeito de vocês viajarem: dias mais tranquilos, equilibrados ou intensos? Que horas costumam acordar nas férias, quantas horas topam dirigir por dia, e tem alguma regra, restrição alimentar ou medo que eu deva respeitar? Pode falar tudo de uma vez.",
   2: "", // montada na hora, com o destino: ver perguntaEtapa()
-  3: "Aqui são algumas situações rápidas. É só tocar na opção que mais combina com vocês: elas me ajudam a entender o perfil do grupo. Quando terminar, ou se preferir pular, é só me dizer pode seguir.",
+  3: "Agora umas situações rápidas, e aqui também a escolha é com vocês, tocando na tela. Em cada situação, deslize as fotos para o lado e toque na opção que mais combina com o grupo. Quando terminarem, é só tocar em Continuar.",
   4: "Quase lá! Confere o resumo aqui na tela. Quer dar um nome para a viagem, ou ajustar alguma coisa? Se estiver tudo certo, me diga que eu crio a viagem.",
 };
 // Interesses são DESTA viagem, não gostos da vida (Wagner, 02/10/2026): quem ama trilha pode não querer trilha na Disney
 function perguntaEtapa(o) {
   if (o.step !== 2) return PERGUNTA_ETAPA[o.step] || "";
   const dest = (o.f.destino || "").split(",")[0].trim();
-  return `Agora pensem só nesta viagem${dest ? " para " + dest : ""}, não nos gostos de sempre: o que vocês querem fazer lá? Deslize os cartões para o lado e toque neles: um toque quer dizer que vocês curtem, dois toques que vocês amam, e três que não é com vocês. Ou, se preferir, me fala o que querem e o que não fariam nesta viagem.`;
+  return `Agora pensem só nesta viagem${dest ? " para " + dest : ""}, não nos gostos de sempre. Nesta tela a escolha é com vocês, tocando nos cartões: deslize para o lado e toque em cada um. Um toque quer dizer que vocês curtem, dois toques que vocês amam, e três que não é com vocês. Quando terminarem, é só tocar em Continuar.`;
 }
 // Retomada (app reaberto com a Nova viagem pela metade): montada aqui com o que já está na ficha, sem chamar o Claude
 function resumoRetomada(o) {
@@ -2206,9 +2224,67 @@ function continuarOuvindo(o) {
   if (S.vozAtiva && !reconhecedor && !o.lendo) A.ditar({ alvo: "onb-fala" }); else mostrarDica();
 }
 function encerrarVoz() { S.vozAtiva = false; silencios = 0; if (reconhecedor) { reconhecedor.cancelado = true; reconhecedor.stop(); } marcoCalar(); atualizarTravaTela(); }
+// ---------- escuta do Marco (02/10/2026): microfone aberto UMA vez; fecha depois de 2,5 s de silêncio ----------
+// O ditado do próprio celular (Web Speech) desliga sozinho em poucos segundos de silêncio, e reabrir causava o
+// liga-desliga em loop. Agora o app grava, mede o volume da fala e, quando a pessoa para por PAUSA_FALA, fecha o
+// microfone uma vez e manda o áudio para a transcrição da ElevenLabs (Scribe, rota /ouvir). Sem servidor de voz,
+// volta ao ditado do celular.
+const podeEscutaScribe = () => !!(API && marcoDisponivel() && S.vozOn && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+function escutarScribe(alvo, aoTerminar, ler, gravar) {
+  const ctl = { peloUsuario: false, cancelado: false, parar: null, stop() { if (ctl.parar) ctl.parar(); else ctl.pendente = true; } };
+  reconhecedor = ctl; S.ditando = alvo; S.transc = ""; render();
+  (async () => {
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+    catch (e) { reconhecedor = null; S.ditando = null; toast("Para falar comigo, permita o uso do microfone para este app nas configurações do celular."); render(); if (aoTerminar && !ctl.cancelado) aoTerminar("", true, true); return; }
+    const tipo = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"].find((t) => MediaRecorder.isTypeSupported(t)) || "";
+    const rec = new MediaRecorder(stream, tipo ? { mimeType: tipo } : undefined), partes = [];
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) partes.push(e.data); };
+    const AC = window.AudioContext || window.webkitAudioContext, ac = new AC(), an = ac.createAnalyser(); an.fftSize = 1024;
+    ac.createMediaStreamSource(stream).connect(an);
+    const amostra = new Float32Array(an.fftSize), t0 = Date.now();
+    let piso = 0.008, fortes = 0, falou = false, ultimoSom = t0, fim = false, iv = null;
+    const encerrar = () => { if (fim) return; fim = true; clearInterval(iv); try { rec.stop(); } catch (e) {} };
+    ctl.parar = encerrar; if (ctl.pendente) encerrar();
+    rec.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop()); ac.close().catch(() => {});
+      reconhecedor = null; S.ditando = null;
+      if (ctl.cancelado) { S.transc = ""; render(); return; }
+      let texto = "";
+      if (falou && partes.length) {
+        S.transc = "Entendendo…"; S.entendendo = alvo; render();
+        try {
+          const blob = new Blob(partes, { type: (rec.mimeType || tipo || "audio/webm").split(";")[0] });
+          const r = await apiFetch("/ouvir", { method: "POST", headers: { "Content-Type": blob.type, "x-duracao-ms": String(Date.now() - t0) }, body: blob });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok) texto = String(j.texto || "").trim(); else toast(j.erro || "Não consegui entender agora. Tente de novo.");
+        } catch (e) { toast("Não consegui entender agora. Confira a internet e tente de novo."); }
+      }
+      S.entendendo = null; S.transc = "";
+      if (texto) gravar([ler().trim(), texto].filter(Boolean).join(" "));
+      render();
+      if (aoTerminar) aoTerminar(texto, ctl.peloUsuario, true);
+    };
+    rec.start(250);
+    iv = setInterval(() => {
+      an.getFloatTimeDomainData(amostra); let s = 0; for (const v of amostra) s += v * v;
+      const rms = Math.sqrt(s / amostra.length), agora = Date.now(), limiar = Math.max(piso * 3.5, 0.018);
+      if (rms > limiar) { if (++fortes >= 3) { falou = true; ultimoSom = agora; ultimaAtividade = agora; } }
+      else { fortes = 0; if (!falou) piso = piso * 0.9 + rms * 0.1; } // aprende o ruído do ambiente enquanto ninguém fala
+      const b = document.querySelector(".siri.ouvindo"); if (b) b.style.transform = `scale(${1 + Math.min(0.12, rms * 1.5)})`;
+      if (falou && agora - ultimoSom > PAUSA_FALA) encerrar(); // a pessoa terminou: fecha o microfone uma vez
+      else if (!falou && agora - t0 > SILENCIO_MAX) encerrar(); // ninguém falou por 2 min: a conversa pausa
+    }, 100);
+  })();
+}
 function ditar(alvo, aoTerminar) {
   if (reconhecedor) { reconhecedor.peloUsuario = true; reconhecedor.stop(); return; } // segundo toque: termina
   marcoCalar(); // tocar no botão interrompe o Marco, e o microfone não capta a voz dele
+  if (podeEscutaScribe()) {
+    const ler0 = () => (alvo === "txtMarco" ? S.rascunho : (S.onb && S.onb.f.fala) || "");
+    const gravar0 = (t) => { if (alvo === "txtMarco") S.rascunho = t; else if (S.onb) S.onb.f.fala = t; const el = document.getElementById(alvo); if (el) el.value = t; };
+    return escutarScribe(alvo, aoTerminar, ler0, gravar0);
+  }
   if (!Reconhecimento) { toast("Este navegador não permite ditar. Use o microfone do teclado do celular, ou escreva."); render(); return; }
   const campo = () => document.getElementById(alvo);
   const ler = () => (alvo === "txtMarco" ? S.rascunho : (S.onb && S.onb.f.fala) || "");
@@ -2259,10 +2335,10 @@ const A = {
   falar() {
     if (S.pensando) return;
     if (!reconhecedor) { S.vozAtiva = true; atualizarTravaTela(); }
-    ditar("txtMarco", (t, peloUsuario) => {
+    ditar("txtMarco", (t, peloUsuario, completo) => {
       const enviar = () => { const msg = S.rascunho; S.rascunho = ""; S.transc = ""; enviarTexto(msg); };
       // pausa natural no meio da fala: continua ouvindo e só envia quando a pessoa realmente terminou
-      if (t && !peloUsuario && S.tela === "conversa" && S.vozAtiva) { esperarPausa(() => A.falar()); return; }
+      if (t && !peloUsuario && !completo && S.tela === "conversa" && S.vozAtiva) { esperarPausa(() => A.falar()); return; } // só no ditado do celular
       if (S.rascunho.trim()) { enviar(); return; } // terminou (pausa longa ou toque): manda tudo junto
       if (peloUsuario || S.tela !== "conversa" || !S.vozAtiva || !presente()) { encerrarVoz(); render(); return; }
       setTimeout(() => { if (S.vozAtiva && !reconhecedor && S.tela === "conversa" && !S.pensando) A.falar(); }, 300);
@@ -2273,11 +2349,11 @@ const A = {
   ditar(ds) {
     const o = S.onb, naFicha = o && ds.alvo === "onb-fala";
     if (naFicha && !reconhecedor) { o.porVoz = true; o.semVoz = false; S.vozAtiva = true; atualizarTravaTela(); }
-    ditar(ds.alvo, (t, peloUsuario) => {
+    ditar(ds.alvo, (t, peloUsuario, completo) => {
       if (!naFicha) return;
       const aqui = S.tela === "onboarding" && S.onb === o, pendente = o.f.fala.slice(o.falaEnviada || 0).trim();
       // pausa natural no meio da fala: continua ouvindo e só manda ao Marco quando a pessoa realmente terminou
-      if (t && !peloUsuario && aqui && S.vozAtiva) { esperarPausa(() => A.ditar({ alvo: "onb-fala" })); return; }
+      if (t && !peloUsuario && !completo && aqui && S.vozAtiva) { esperarPausa(() => A.ditar({ alvo: "onb-fala" })); return; } // só no ditado do celular
       if (pendente) { if (marcoDisponivel() && !o.lendo) A.onbMarco(); return; }
       // parou sem falar nada: se foi a pessoa que tocou, a conversa pausa; se foi o Android (silêncio), volta a ouvir
       if (peloUsuario || !aqui || !S.vozAtiva || !presente()) { encerrarVoz(); if (aqui) { o.pausada = true; mostrarDica(8000); } return; }
@@ -2432,8 +2508,8 @@ const A = {
         if (j.avancar && o.porVoz) {
           const antes = o.step;
           if (antes === 4) { A.onbFim(); if (aqui()) continuarOuvindo(o); return; } // última tela: cria a viagem
-          A.onbNext();
-          if (o.step !== antes) A.onbEtapa(); else continuarOuvindo(o); // faltou algo obrigatório: segue a conversa
+          A.onbNext(); // já apresenta a próxima tela (onbEtapa)
+          if (o.step === antes) continuarOuvindo(o); // faltou algo obrigatório: segue a conversa
           return;
         }
         if (o.porVoz) continuarOuvindo(o); else mostrarDica();
@@ -2449,16 +2525,19 @@ const A = {
       if (falta.length) { toast(`Para começar falta: ${falta.join(", ")}.`); render(); return; }
     }
     o.step++; if (o.step === 4) { aplicarCenarios(o); buscarCambio(); }
-    render(); $("#main").scrollTop = 0; mostrarDica(6000);
+    render(); $("#main").scrollTop = 0;
+    if (o.porVoz && !o.semVoz) A.onbEtapa(); else mostrarDica(6000);
   },
   // cada etapa: o Marco faz UMA pergunta que cobre a tela inteira (texto local, sem tokens) e já fica ouvindo
   onbEtapa() {
     const o = S.onb; o.etapas = { ...(o.etapas || {}), [o.step]: true };
-    o.porVoz = true; o.semVoz = false; S.vozAtiva = true; o.marco = perguntaEtapa(o); atualizarTravaTela(); render();
-    marcoFalar(o.marco, { guardar: true, aoFim: () => { if (S.tela === "onboarding" && S.onb === o) continuarOuvindo(o); } });
+    // interesses e situações são escolhidos só tocando (Wagner, 02/10/2026): o Marco explica e não abre o microfone
+    const soToque = ETAPAS_SO_TOQUE.includes(o.step);
+    o.porVoz = true; o.semVoz = false; S.vozAtiva = !soToque; o.marco = perguntaEtapa(o); atualizarTravaTela(); render();
+    marcoFalar(o.marco, { guardar: true, aoFim: () => { if (S.tela !== "onboarding" || S.onb !== o) return; if (soToque) mostrarDica(8000); else continuarOuvindo(o); } });
   },
   onbVoltar() { encerrarVoz(); S.onb.step = Math.max(0, S.onb.step - 1); render(); },
-  onbCen(ds) { S.onb.cen[ds.s] = +ds.i; render(); },
+  onbCen(ds) { const o = S.onb; if (o.cen[ds.s] === +ds.i) delete o.cen[ds.s]; else o.cen[ds.s] = +ds.i; render(); },
   async onbFim() {
     const o = S.onb, f = o.f, p = paisDe(f.pais);
     const cot = p && p.moeda === "BRL" ? 1 : numBR(f.cotacao);
