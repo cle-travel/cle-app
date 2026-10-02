@@ -19,6 +19,7 @@ import { calcularRota } from "./rotas.mjs";
 import { buscarLugar } from "./lugares.mjs";
 
 const VOZ_MARCO = { id: "cjVigY5qzO86Huf0OWal", nome: "Eric", modelo: "eleven_v4_turbo" };
+const ANCORA_BR = "Oi, tudo bem? Aqui é o Marco, do Clé. Bora planejar essa viagem juntos, do jeitinho brasileiro.";
 const LIMITE_CORPO = 25 * 1024 * 1024; // comprovantes em PDF ou foto vão dentro da mensagem
 
 // "Bearer <token>" → "<token>" (exportada para o teste automático em prototipo/testar.mjs)
@@ -103,10 +104,12 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
       let texto; try { texto = String((await lerCorpo()).texto || "").trim().slice(0, 2500); } catch { return json(400, { erro: "Pedido inválido." }); }
       if (!texto) return json(400, { erro: "Pedido inválido." });
       const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOZ_MARCO.id}/stream?output_format=mp3_44100_128`, {
-        // voz e modelo das amostras aprovadas, MP3 128 kbps; idioma FIXO em português: sem ele, frases curtas
-        // ("Anotado!") eram detectadas como espanhol e o Marco falava com sotaque mexicano (Wagner, 02/10/2026)
+        // configuração aprovada (Eric, Turbo, MP3 128 kbps), SEM idioma fixo: o idioma fixo "pt" trouxe sotaque de
+        // Portugal (Wagner, 02/10/2026). O sotaque espanhol vinha de falas curtas que também são espanhol ("Fechado,
+        // seguimos!", medido pelo Scribe): o Marco não usa mais essas falas, e fala curta leva uma frase brasileira de
+        // contexto (previous_text, não é falada)
         method: "POST", headers: { "xi-api-key": env("ELEVENLABS_API_KEY"), "Content-Type": "application/json", Accept: "audio/mpeg" },
-        body: JSON.stringify({ text: texto, model_id: VOZ_MARCO.modelo, language_code: "pt" }),
+        body: JSON.stringify({ text: texto, model_id: VOZ_MARCO.modelo, ...(texto.split(/\s+/).length < 8 ? { previous_text: ANCORA_BR } : {}) }),
       }).catch(() => null);
       if (!r || !r.ok) { console.error("voz:", r ? r.status + " " + (await r.text()).slice(0, 200) : "sem conexão"); return json(502, { erro: "A voz do Marco não respondeu agora." }); }
       await consumo.registrar("voz", { entrada: texto.length, saida: 0, cacheLido: 0, cacheEscrito: 0, buscas: 0, chamadas: 1, usd: 0 }, quem);

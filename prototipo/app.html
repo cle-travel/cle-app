@@ -1960,8 +1960,8 @@ function falarTexto(t, lang) {
 // em 01/10/2026). A fala do Marco não aparece escrita na tela: com o botão CC (legendas) ligado, ele não emite som
 // e escreve em legendas pequenas embaixo do botão dele, trocadas como em filme. Sem a voz Eric, também vira legenda.
 // As boas-vindas (que se repetem) ficam guardadas neste aparelho para não gastar caracteres de novo.
-const CHAVE_LEGENDAS = "cle-legendas", CHAVE_APRESENTADO = "cle-marco-apresentado", CACHE_VOZ = "cle-voz-eric-v2" /* v2: idioma fixo em português */;
-try { caches.delete("cle-voz-eric-v1"); } catch (e) {} // gravações antigas, sem o idioma fixo
+const CHAVE_LEGENDAS = "cle-legendas", CHAVE_APRESENTADO = "cle-marco-apresentado", CACHE_VOZ = "cle-voz-eric-v3" /* v3: configuração inicial, sem idioma fixo */;
+try { for (const v of ["v1", "v2"]) caches.delete("cle-voz-eric-" + v); } catch (e) {} // gravações antigas
 try { S.legendas = localStorage.getItem(CHAVE_LEGENDAS) === "1" || localStorage.getItem("cle-voz-marco") === "0"; } catch (e) { S.legendas = false; }
 let audioMarco = null, falaAtual = 0, legendaTimer = null;
 // o navegador só toca som depois de um toque: o primeiro toque em qualquer lugar destrava o tocador do Marco
@@ -2067,7 +2067,7 @@ const PERGUNTA_ETAPA = {
 function perguntaEtapa(o) {
   if (o.step !== 2) return PERGUNTA_ETAPA[o.step] || "";
   const dest = (o.f.destino || "").split(",")[0].trim();
-  return `Agora pensem só nesta viagem${dest ? " para " + dest : ""}, não nos gostos de sempre: o que vocês querem fazer lá? Deslize os cartões para o lado: um toque é curto, dois toques é amo, três é não é comigo. Ou, se preferir, me fala o que querem e o que não fariam nesta viagem.`;
+  return `Agora pensem só nesta viagem${dest ? " para " + dest : ""}, não nos gostos de sempre: o que vocês querem fazer lá? Deslize os cartões para o lado e toque neles: um toque quer dizer que vocês curtem, dois toques que vocês amam, e três que não é com vocês. Ou, se preferir, me fala o que querem e o que não fariam nesta viagem.`;
 }
 // Retomada (app reaberto com a Nova viagem pela metade): montada aqui com o que já está na ficha, sem chamar o Claude
 function resumoRetomada(o) {
@@ -2130,6 +2130,14 @@ document.addEventListener("visibilitychange", () => atualizarTravaTela()); // o 
 // 2 minutos sem fala E sem nenhum toque na tela (bug de 02/10/2026: quem ficava tocando nas opções das situações
 // perdia a conversa depois de 6 reaberturas, ~40 s). Tocar na tela conta como estar presente.
 let ultimaAtividade = Date.now();
+// Pausa no meio da fala (Wagner, 02/10/2026: o microfone cortava a pessoa nas pausas). Quando o Android encerra a escuta
+// depois de uma fala, o app reabre na hora e espera PAUSA_FALA; se a pessoa voltar a falar, continua juntando; se não,
+// encerra e envia tudo de uma vez. Tocar no botão envia na hora.
+const PAUSA_FALA = 2500;
+function esperarPausa(reabrir) {
+  const t0 = Date.now(); reabrir();
+  setTimeout(() => { if (reconhecedor && ultimaAtividade <= t0) reconhecedor.stop(); }, PAUSA_FALA + 200);
+}
 const SILENCIO_MAX = 120000;
 document.addEventListener("pointerdown", () => { ultimaAtividade = Date.now(); }, { capture: true, passive: true });
 const presente = () => Date.now() - ultimaAtividade < SILENCIO_MAX;
@@ -2204,7 +2212,7 @@ function ditar(alvo, aoTerminar) {
   const r = new Reconhecimento();
   r.lang = "pt-BR"; r.interimResults = true; r.continuous = true;
   // relê TODOS os trechos a cada atualização e junta sem repetir (corrige a frase repetida no Android, 01/10/2026)
-  r.onresult = (e) => { ultimaAtividade = Date.now(); const trechos = []; for (let i = 0; i < e.results.length; i++) trechos.push(e.results[i][0].transcript); falado = juntarFala(trechos); gravar([base, falado].filter(Boolean).join(" ")); if (alvo === "txtMarco") { S.transc = falado; const tr = document.querySelector(".transc"); if (tr) tr.textContent = S.transc; } };
+  r.onresult = (e) => { ultimaAtividade = Date.now(); const trechos = []; for (let i = 0; i < e.results.length; i++) trechos.push(e.results[i][0].transcript); falado = juntarFala(trechos); gravar([base, falado].filter(Boolean).join(" ")); if (alvo === "txtMarco") { S.transc = S.rascunho; const tr = document.querySelector(".transc"); if (tr) tr.textContent = S.transc; } };
   r.onerror = (e) => { if (/not-allowed|service-not-allowed|audio-capture/.test(e.error)) r.peloUsuario = true; // microfone indisponível: pausa a conversa em vez de insistir
     if (e.error === "not-allowed" || e.error === "service-not-allowed") toast("Para falar comigo, permita o uso do microfone para este app nas configurações do celular."); else if (e.error !== "no-speech" && e.error !== "aborted") toast("Não consegui ouvir agora. Tente de novo ou escreva."); };
   r.onend = () => { reconhecedor = null; S.ditando = null; S.transc = ""; render(); if (aoTerminar && !r.cancelado) aoTerminar(falado.trim(), !!r.peloUsuario); };
@@ -2247,7 +2255,10 @@ const A = {
     if (S.pensando) return;
     if (!reconhecedor) { S.vozAtiva = true; atualizarTravaTela(); }
     ditar("txtMarco", (t, peloUsuario) => {
-      if (t) { const msg = S.rascunho; S.rascunho = ""; enviarTexto(msg); return; }
+      const enviar = () => { const msg = S.rascunho; S.rascunho = ""; S.transc = ""; enviarTexto(msg); };
+      // pausa natural no meio da fala: continua ouvindo e só envia quando a pessoa realmente terminou
+      if (t && !peloUsuario && S.tela === "conversa" && S.vozAtiva) { esperarPausa(() => A.falar()); return; }
+      if (S.rascunho.trim()) { enviar(); return; } // terminou (pausa longa ou toque): manda tudo junto
       if (peloUsuario || S.tela !== "conversa" || !S.vozAtiva || !presente()) { encerrarVoz(); render(); return; }
       setTimeout(() => { if (S.vozAtiva && !reconhecedor && S.tela === "conversa" && !S.pensando) A.falar(); }, 300);
     });
@@ -2259,8 +2270,10 @@ const A = {
     if (naFicha && !reconhecedor) { o.porVoz = true; o.semVoz = false; S.vozAtiva = true; atualizarTravaTela(); }
     ditar(ds.alvo, (t, peloUsuario) => {
       if (!naFicha) return;
-      if (t) { silencios = 0; if (marcoDisponivel() && !o.lendo) A.onbMarco(); return; }
-      const aqui = S.tela === "onboarding" && S.onb === o;
+      const aqui = S.tela === "onboarding" && S.onb === o, pendente = o.f.fala.slice(o.falaEnviada || 0).trim();
+      // pausa natural no meio da fala: continua ouvindo e só manda ao Marco quando a pessoa realmente terminou
+      if (t && !peloUsuario && aqui && S.vozAtiva) { esperarPausa(() => A.ditar({ alvo: "onb-fala" })); return; }
+      if (pendente) { if (marcoDisponivel() && !o.lendo) A.onbMarco(); return; }
       // parou sem falar nada: se foi a pessoa que tocou, a conversa pausa; se foi o Android (silêncio), volta a ouvir
       if (peloUsuario || !aqui || !S.vozAtiva || !presente()) { encerrarVoz(); if (aqui) { o.pausada = true; mostrarDica(8000); } return; }
       setTimeout(() => { if (S.vozAtiva && !reconhecedor && S.tela === "onboarding" && S.onb === o) A.ditar({ alvo: "onb-fala" }); }, 300);
