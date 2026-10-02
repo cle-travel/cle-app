@@ -118,7 +118,7 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
       let b; try { b = await lerCorpo(); } catch { return json(400, { erro: "Pedido inválido." }); }
       const c = await prontoParaClaude(); if (c.erro) return c.erro;
       try {
-        const r = rota === "ficha" ? await fichaOnboarding({ client: c.client, fala: String(b.fala || "").slice(-6000), hoje: b.hoje, quem: b.quem, ficha: b.ficha, ultima: String(b.ultima || "").slice(0, 1500) }) : await resumirConversa({ client: c.client, texto: String(b.texto || "") });
+        const r = rota === "ficha" ? await fichaOnboarding({ client: c.client, fala: String(b.fala || "").slice(-6000), hoje: b.hoje, quem: b.quem, ficha: b.ficha, perfil: b.perfil, etapa: +b.etapa || 0, ultima: String(b.ultima || "").slice(0, 1500) }) : await resumirConversa({ client: c.client, texto: String(b.texto || "") });
         await consumo.registrar(rota === "ficha" ? "ficha" : "resumo", r.consumo, quem);
         return json(200, r);
       } catch (e) { console.error("avulso:", e.message); return json(502, { erro: /credit balance|billing|insufficient/i.test(String(e.message)) ? CREDITOS_ACABARAM : "O Marco não conseguiu responder agora." }); }

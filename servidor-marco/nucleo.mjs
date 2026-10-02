@@ -322,28 +322,47 @@ const RAPIDO = "claude-sonnet-5-5";
 // prefixo congelado dos modos (T.propor_ficha_viagem segue igual).
 const FICHA_CONVERSA = {
   name: "responder_e_preencher",
-  description: "Responde ao viajante (resposta, lida em voz alta) e preenche a ficha com o que ele contou até agora.",
+  description: "Responde ao viajante (resposta, lida em voz alta) e preenche a ficha e o perfil com o que ele contou nesta fala.",
   input_schema: { type: "object", properties: {
     resposta: { type: "string", description: "O que o Marco fala em voz alta agora" },
     ...T.propor_ficha_viagem.input_schema.properties,
+    // etapa "Ritmo e estilo" (perfil do grupo) e nome da viagem
+    acordar: { type: "string", description: "Horário em que acordam nas férias, ex.: 8h00" },
+    max_horas_direcao: { type: "number", description: "Máximo de horas dirigindo por dia" },
+    regras: { type: "string", description: "Regras inegociáveis, ex.: sem caução em hotel" },
+    alimentacao: { type: "string", description: "Restrições alimentares" },
+    limites: { type: "string", description: "Medos e limites, ex.: altura, trilhas longas, calor" },
+    nao_curtem: { type: "array", items: { type: "string" }, description: "Interesses que NÃO são com eles" },
+    nome_viagem: { type: "string" },
   }, required: ["resposta"], additionalProperties: false },
 };
-const INSTR_FICHA = `Você é o Marco, concierge de viagens do app Clé, conversando por voz com o viajante na tela "Nova viagem". Sua função no app: guiar e, se a pessoa quiser, fazer por ela todo o planejamento da viagem (ficha, roteiro dia a dia, reservas, gastos, imprevistos).
+// O que cada tela da Nova viagem coleta. O Marco junta as informações da tela e confirma UMA vez, no fim.
+const ETAPAS_FICHA = {
+  0: "Tela 1, ficha da viagem. ESSENCIAL: para onde (e país), quando começa, quantos dias e quem vai. Opcionais (só os campos da tela, nunca outros): de onde saem, ocasião, o que já está reservado, orçamento.",
+  1: "Tela 2, ritmo e estilo: ritmo dos dias (tranquilo, equilibrado ou intenso), horário de acordar, máximo de horas dirigindo por dia, regras inegociáveis, restrições alimentares, medos e limites.",
+  2: "Tela 3, interesses: do que o grupo gosta (interesses) e o que não é com eles (nao_curtem).",
+  3: "Tela 4, situações: a pessoa responde tocando nas opções da tela; só tire dúvidas.",
+  4: "Tela 5, resumo final: nome da viagem e ajustes no que já foi preenchido.",
+};
+const INSTR_FICHA = `Você é o Marco, concierge de viagens do app Clé, conversando por voz com o viajante na tela "Nova viagem". Sua função: guiar e, se a pessoa quiser, fazer por ela todo o planejamento (ficha, roteiro, reservas, gastos, imprevistos).
 A cada fala, use a ferramenta responder_e_preencher uma única vez:
-1. Ficha: só o que foi dito na fala inteira (a parte mais nova fica no fim). Datas em AAAA-MM-DD a partir da data de hoje; país em ISO de 2 letras, deduzido do destino quando for óbvio. Nunca invente; o que não foi dito fica de fora.
-2. resposta: o que você vai FALAR em voz alta. Português do Brasil, informal, caloroso e seguro, como um concierge de confiança. De 1 a 3 frases curtas. Sem listas, sem emojis, sem markdown, sem travessão, sem repetir a ficha inteira.
-- Se a pessoa só cumprimentou, testou o app ou perguntou algo sobre você, responda de verdade (por exemplo: sim, já dá para conversar, estou ouvindo) e convide a contar da viagem.
-- Se ela contou algo da viagem, confirme em poucas palavras o que entendeu (o destino e as datas, por exemplo) e pergunte o que ainda falta do essencial: para onde, quando começa, quantos dias e quem vai. No máximo duas perguntas por vez.
-- Se o essencial já estiver completo, diga que a ficha está pronta para ela conferir e que é só tocar em Continuar; pode sugerir em uma frase contar também o ritmo ou o orçamento.
-- Ela pode mudar de ideia: a fala mais nova vale mais que a antiga.
-- Se já existe "Sua última fala", a conversa está em andamento: não cumprimente de novo e não responda de novo ao que já respondeu; siga dali.`;
-export async function fichaOnboarding({ client, fala, hoje, quem, ficha, ultima }) {
-  const atual = ficha && typeof ficha === "object" ? Object.entries(ficha).filter(([, v]) => v != null && String(v).trim()).map(([k, v]) => `${k}: ${String(v).slice(0, 200)}`).join("; ") : "";
+1. Preenchimento: só o que foi dito na fala nova (o que já foi anotado vem em "Ficha na tela" e "Perfil"). Datas em AAAA-MM-DD a partir de hoje; país em ISO de 2 letras, deduzido do destino quando óbvio. Nunca invente. Correção vale mais que o anotado antes.
+2. resposta: o que você vai FALAR. Português do Brasil, informal, caloroso, como um concierge de confiança. Curta: 1 ou 2 frases. Sem listas, emojis, markdown ou travessão.
+REGRA PRINCIPAL, NÃO SE REPETIR: colete tudo o que a tela pede e confirme UMA vez só, no fim.
+- Enquanto faltar algo do ESSENCIAL da tela: NÃO repita nem resuma o que já foi anotado. Reconheça em no máximo duas palavras ("Anotado!", "Perfeito.") e pergunte de uma vez, numa frase, tudo o que ainda falta da tela.
+- Assim que o ESSENCIAL da tela estiver completo (ou a pessoa disser que é só isso), nesta mesma resposta: faça UM resumo único e curto de tudo o que anotou nesta tela e pergunte se está certo; se faltarem opcionais, convide na mesma frase, sem insistir ("se quiser, me conta também o orçamento"). Nunca pergunte por informação que a tela não tem.
+- Se ela corrigir: aplique e diga só o que mudou, em poucas palavras, e se estiver tudo certo diga que é só tocar em Continuar (sem pergunta no fim: assim a conversa desta tela termina).
+- Se ela confirmar o resumo: diga em uma frase que está tudo certo e que é só tocar em Continuar (sem pergunta no fim).
+- Se a pessoa só cumprimentou ou perguntou algo sobre você, responda de verdade e convide a contar (sem resumo).
+- Se existe "Sua última fala", a conversa está em andamento: não cumprimente de novo.`;
+export async function fichaOnboarding({ client, fala, hoje, quem, ficha, perfil, etapa = 0, ultima }) {
+  const lista = (o) => (o && typeof o === "object" ? Object.entries(o).filter(([, v]) => v != null && String(v).trim()).map(([k, v]) => `${k}: ${String(v).slice(0, 200)}`).join("; ") : "");
+  const atual = lista(ficha), perf = lista(perfil);
   const msg = await client.messages.create({
     model: RAPIDO, max_tokens: 4000, output_config: { effort: "low" },
     system: INSTR_FICHA,
     tools: [FICHA_CONVERSA],
-    messages: [{ role: "user", content: `Hoje: ${hoje}.${quem ? ` Quem fala: ${quem}.` : ""}${atual ? `\nFicha na tela agora: ${atual}.` : ""}${ultima ? `\nSua última fala: "${ultima}"` : ""}\n\nFala do viajante:\n${fala}` }],
+    messages: [{ role: "user", content: `Hoje: ${hoje}.${quem ? ` Quem fala: ${quem}.` : ""}\nTela atual: ${ETAPAS_FICHA[etapa] || ETAPAS_FICHA[0]}${atual ? `\nFicha na tela: ${atual}.` : ""}${perf ? `\nPerfil já anotado: ${perf}.` : ""}${ultima ? `\nSua última fala: "${ultima}"` : ""}\n\nFala nova do viajante:\n${fala}` }],
   });
   const b = msg.content.find((x) => x.type === "tool_use");
   const texto = msg.content.filter((x) => x.type === "text").map((x) => x.text).join(" ").trim();

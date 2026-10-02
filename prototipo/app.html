@@ -43,7 +43,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
 a{color:var(--accent)}
-.app{position:relative;height:100%;height:100dvh;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.app{position:relative;height:100%;height:100dvh;height:var(--altura-app,100dvh);margin:0 auto;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
 /* computador com mouse: aparelho no centro */
 @media (min-width:600px) and (hover:hover) and (pointer:fine){body{background:var(--fill)}.app{max-width:430px;height:calc(100dvh - 40px);margin-block:20px;border-radius:34px;border:1px solid var(--sep);box-shadow:0 20px 60px rgba(0,0,0,.12)}}
 /* telas largas (dobrável aberto, tablet, paisagem): o conteúdo fica numa coluna central confortável */
@@ -149,6 +149,12 @@ a.row{color:inherit;text-decoration:none}
 .doca::before{content:"";position:absolute;left:0;right:0;bottom:calc(-18px - env(safe-area-inset-bottom,0px));height:190px;z-index:-1;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--bg) 62%)}
 .doca-dica{max-width:min(320px,calc(100% - 32px));text-align:center;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border:1px solid var(--line);box-shadow:var(--sh);border-radius:16px;padding:9px 14px;font-size:14px;line-height:1.35;color:var(--fg)}
 .com-doca{padding-bottom:150px!important}
+/* teclado aberto: o botão do Marco sai do caminho do campo que está sendo digitado */
+body.teclado .doca,body.teclado .siri-flutua{display:none}
+/* botão do Marco flutuante nas telas da viagem (acima das abas), sempre à mão */
+.siri-flutua{position:absolute;right:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px));width:58px;height:58px;z-index:30}
+.siri-flutua .nucleo{inset:8px}
+.toast~.siri-flutua,.atualizar~.siri-flutua{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .doca-dica{transition:opacity .5s ease}
 .doca-linha{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;width:100%;max-width:var(--col);padding:0 16px;pointer-events:none}.doca-linha>*{pointer-events:auto}
 .doca-fim{justify-self:start;white-space:nowrap;font-size:13px;line-height:1.2;padding:8px 12px;border-radius:16px;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border:1px solid var(--line);color:var(--fg2)}.doca-dica.some{opacity:0;pointer-events:none}
@@ -1458,9 +1464,9 @@ function telaOnboarding() {
       <button class="btn" data-a="onbFim">Criar viagem</button>`;
   }
   return `<div class="top"><button class="iconbtn" data-a="${o.step ? "onbVoltar" : "voltar"}" aria-label="${o.step ? "Voltar" : "Fechar"}">${ic(o.step ? "back" : "x")}</button><div class="ttl"><b>Nova viagem</b></div>${botaoCC()}</div>
-    <main id="main"><div class="pad${o.step === 0 ? " com-doca" : ""}">${o.intro ? "" : dots}${c}</div></main>
-    ${o.step === 0 && (!o.intro || (marcoDisponivel() && S.vozOn)) ? `<div class="doca">${S.ditando === "onb-fala" ? '<div class="doca-dica" role="status">Estou ouvindo. Toque de novo quando terminar.</div>' : !o.intro && Date.now() < (o.dicaAte || 0) ? `<div class="doca-dica" role="status" id="dicaOnb">${o.retomar ? "Toque aqui e continuamos de onde paramos." : o.pausada ? "Conversa pausada. Toque aqui para continuar." : o.conversou ? "Toque aqui para me responder." : "Prefere falar? Toque aqui e me conte do seu jeito."}</div>` : ""}
-      <div class="doca-linha"><span></span><button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="${o.intro ? "onbFalar" : o.retomar ? "onbRetomar" : "ditar"}" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button>${S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}</div></div>` : ""}`;
+    <main id="main"><div class="pad com-doca">${o.intro ? "" : dots}${c}</div></main>
+    ${!o.intro || (marcoDisponivel() && S.vozOn) ? `<div class="doca">${S.ditando === "onb-fala" ? '<div class="doca-dica" role="status">Estou ouvindo. Toque de novo quando terminar.</div>' : !o.intro && Date.now() < (o.dicaAte || 0) ? `<div class="doca-dica" role="status" id="dicaOnb">${o.retomar ? "Toque aqui e continuamos de onde paramos." : o.pausada ? "Conversa pausada. Toque aqui para continuar." : o.step === 0 ? (o.conversou ? "Toque aqui para me responder." : "Prefere falar? Toque aqui e me conte do seu jeito.") : o.step === 3 ? "Toque em mim se quiser que eu explique as situações." : "Prefere falar? Toque aqui e me conte."}</div>` : ""}
+      <div class="doca-linha"><span></span><button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="${o.intro ? "onbFalar" : o.retomar ? "onbRetomar" : o.step > 0 && !(o.etapas || {})[o.step] ? "onbEtapa" : "ditar"}" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button>${S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}</div></div>` : ""}`;
 }
 function aplicarCenarios(o) {
   const sl = { aventura: 50, explorar: 50, fora: 50, premium: 50 };
@@ -1472,8 +1478,14 @@ function preencherFicha(i) {
   set("destino", i.destino); if (paisDe(i.pais)) f.pais = i.pais; set("saindoDe", i.saindo_de); set("inicio", /^\d{4}-\d{2}-\d{2}$/.test(i.inicio || "") ? i.inicio : null);
   set("dias", i.dias); if (Array.isArray(i.viajantes) && i.viajantes.length) f.outros = i.viajantes.join(", ");
   set("ocasiao", i.ocasiao); set("reservado", i.reservado); set("orcamento", i.orcamento);
-  if (i.ritmo) S.onb.pf.ritmo = i.ritmo;
-  for (const t of i.interesses || []) { const n = INTERESSES.find((x) => norm(x).includes(norm(t)) || norm(t).includes(norm(x).split(" ")[0])); if (n) S.onb.pf.int[n] = 2; }
+  if (i.ritmo) { S.onb.pf.ritmo = i.ritmo; S.onb.ritmoDito = true; }
+  // perfil (etapa "Ritmo e estilo") e nome da viagem, quando ditos
+  const pf = S.onb.pf, setP = (k, v) => { if (v != null && String(v).trim()) pf[k] = String(v).trim(); };
+  setP("acordar", i.acordar); setP("maxDirecao", i.max_horas_direcao != null ? String(i.max_horas_direcao).replace(".", ",") : null);
+  setP("regras", i.regras); setP("alimentacao", i.alimentacao); setP("limites", i.limites); set("nomeViagem", i.nome_viagem);
+  const acha = (t) => INTERESSES.find((x) => norm(x).includes(norm(t)) || norm(t).includes(norm(x).split(" ")[0]));
+  for (const t of i.interesses || []) { const n = acha(t); if (n) pf.int[n] = 2; }
+  for (const t of i.nao_curtem || []) { const n = acha(t); if (n) pf.int[n] = 3; }
   S.onb.marcou = true;
 }
 async function buscarCambio() {
@@ -1521,7 +1533,9 @@ function render() {
   $("#view").hidden = naCarteira;
   if (!naCarteira) $("#view").innerHTML = T();
   $("#tabs").innerHTML = naCarteira ? "" : tabbar; // na Carteira fica só o menu dela + a seta de voltar
-  $("#over").innerHTML = over + faixaVersao + toastH;
+  // botão do Marco sempre à mão nas telas da viagem (a conversa já tem o dela; a Carteira tem menu próprio embaixo)
+  const marcoFlutua = S.viagem && tabbar && !naCarteira && S.tela !== "conversa" ? `<button class="siri siri-flutua ${S.ditando ? "ouvindo" : ""}" data-a="marcoFlutua" aria-label="Falar com o Marco"><span class="nucleo">${ic("mic", 22)}</span></button>` : "";
+  $("#over").innerHTML = over + faixaVersao + toastH + marcoFlutua;
   if (focoId) { const el = document.getElementById(focoId); if (el) { el.focus(); try { if (selIni != null) el.setSelectionRange(selIni, selIni); } catch (e) {} } }
   const m = $("#main");
   if (m) { m.scrollTop = S.tela === "conversa" && (ultimaTela !== S.tela || S.rolarFim) ? m.scrollHeight : scroll; S.rolarFim = false; }
@@ -1851,6 +1865,13 @@ function mostrarDica(ms = 6000) {
   clearTimeout(mostrarDica.t); mostrarDica.t = setTimeout(() => { const d = document.getElementById("dicaOnb"); if (d) { d.classList.add("some"); setTimeout(() => d.remove(), 600); } }, ms);
 }
 function marcoCalar() { falaAtual++; if (audioMarco && !audioMarco.paused) audioMarco.pause(); pararLegenda(); marcarFalando(false); }
+// Pergunta de abertura de cada etapa da Nova viagem: cobre a tela inteira de uma vez, para a pessoa responder tudo junto
+const PERGUNTA_ETAPA = {
+  1: "Agora me conta o jeito de vocês viajarem: dias mais tranquilos, equilibrados ou intensos? Que horas costumam acordar nas férias, quantas horas topam dirigir por dia, e tem alguma regra, restrição alimentar ou medo que eu deva respeitar? Pode falar tudo de uma vez.",
+  2: "Do que vocês mais gostam numa viagem? Natureza, trilhas, museus, gastronomia, compras, vida noturna... Me fala o que vocês amam e o que não é com vocês.",
+  3: "Aqui são algumas situações rápidas. É só tocar na opção que mais combina com vocês: elas me ajudam a entender o perfil do grupo. Se preferir, pode pular.",
+  4: "Quase lá! Confere o resumo aqui na tela. Quer dar um nome para a viagem, ou ajustar alguma coisa?",
+};
 // Retomada (app reaberto com a Nova viagem pela metade): montada aqui com o que já está na ficha, sem chamar o Claude
 function resumoRetomada(o) {
   const f = o.f, nome = (f.nome || "").trim().split(" ")[0], tem = [], falta = [];
@@ -1953,6 +1974,7 @@ const A = {
   },
   async consumoAtualizar() { if (!API) return; try { S.consumo = await (await apiFetch("/consumo")).json(); } catch (e) { S.consumo = { erro: true }; } render(); },
   // conversa: o que você fala vira a mensagem e vai para o Marco ao terminar
+  marcoFlutua() { S.hist = []; S.tela = "conversa"; S.rolarFim = true; render(); if (marcoDisponivel()) A.falar(); },
   falar() { if (S.pensando) return; ditar("txtMarco", (t) => { if (t) { const msg = S.rascunho; S.rascunho = ""; enviarTexto(msg); } }); },
   // onboarding: o que você fala entra na ficha; ao terminar, o Marco preenche os campos
   ditar(ds) {
@@ -1961,7 +1983,7 @@ const A = {
     ditar(ds.alvo, (t, peloUsuario) => {
       if (!naFicha) return;
       if (t) { silencios = 0; if (marcoDisponivel() && !o.lendo) A.onbMarco(); return; }
-      const aqui = S.tela === "onboarding" && S.onb === o && o.step === 0;
+      const aqui = S.tela === "onboarding" && S.onb === o;
       // parou sem falar nada: se foi a pessoa que tocou, a conversa pausa; se foi o Android (silêncio), volta a ouvir
       if (peloUsuario || !aqui || !S.vozAtiva || ++silencios > 6) { encerrarVoz(); if (aqui) { o.pausada = true; mostrarDica(8000); } return; }
       setTimeout(() => { if (S.vozAtiva && !reconhecedor && S.tela === "onboarding" && S.onb === o) A.ditar({ alvo: "onb-fala" }); }, 300);
@@ -1971,7 +1993,7 @@ const A = {
   // reabriu o app com a Nova viagem pela metade: o Marco resume o que já tem (sem gastar tokens) e volta a ouvir
   onbRetomar() {
     const o = S.onb; o.retomar = false; o.pausada = false; o.porVoz = true; o.semVoz = false; S.vozAtiva = true; o.marco = resumoRetomada(o); atualizarTravaTela(); render();
-    marcoFalar(o.marco, { aoFim: () => { if (S.vozAtiva && S.tela === "onboarding" && S.onb === o && o.step === 0 && !reconhecedor) A.ditar({ alvo: "onb-fala" }); } });
+    marcoFalar(o.marco, { aoFim: () => { if (S.vozAtiva && S.tela === "onboarding" && S.onb === o && !reconhecedor) A.ditar({ alvo: "onb-fala" }); } });
   },
   sairCarteira() { A.voltar(); },
   atualizarApp() { A.forcarAtualizacao(); },
@@ -2065,7 +2087,7 @@ const A = {
   },
   hospitais() { comPosicao((la, lo) => { window.open(`https://www.google.com/maps/search/hospital/@${la.toFixed(5)},${lo.toFixed(5)},14z`, "_blank"); }); },
   falarFrase(ds) { const l = idiomaLocal(); falarTexto(FRASES[+ds.i][l], l); },
-  setPerfil(ds) { const pf = ds.alvo === "onb" ? S.onb.pf : perfilAtual(); pf[ds.k] = ds.v; render(); },
+  setPerfil(ds) { const pf = ds.alvo === "onb" ? S.onb.pf : perfilAtual(); pf[ds.k] = ds.v; if (ds.alvo === "onb" && ds.k === "ritmo") S.onb.ritmoDito = true; render(); },
   setInteresse(ds) { const pf = ds.alvo === "onb" ? S.onb.pf : perfilAtual(); pf.int = pf.int || {}; pf.int[ds.n] = ((pf.int[ds.n] || 0) + 1) % 4; render(); },
   alerta() { S.overlay = "alerta"; render(); }, notif() { S.overlay = "notif"; render(); setTimeout(() => { if (S.overlay === "notif") { S.overlay = null; render(); } }, 6000); },
   fechar(ds) { S.overlay = null; render(); if (ds && ds.m) { toast(ds.m); render(); } },
@@ -2100,17 +2122,23 @@ const A = {
     o.lendo = true; marcoCalar(); render();
     try {
       // pedido avulso e barato (sem histórico): o Marco responde em voz e preenche a ficha; o viajante confere cada campo
-      const { fala, nomeViagem, cotacao, ...ficha } = o.f;
-      const r = await apiFetch("/ficha", { method: "POST", body: JSON.stringify({ fala: o.f.fala, hoje: hojeISO(), quem: o.f.nome || null, ficha, ultima: o.marco || "" }) });
+      // só o que foi dito desde o último envio vai para o Marco; o resto já está resumido na ficha e no perfil
+      // (menos tokens, e o Marco não volta a repetir o que já anotou)
+      const { fala, cotacao, ...ficha } = o.f, pf = o.pf;
+      const novo = o.f.fala.slice(o.falaEnviada || 0).trim() || o.f.fala.trim(), tamanhoEnviado = o.f.fala.length;
+      const perfil = { ritmo: o.ritmoDito ? pf.ritmo : "", acordar: pf.acordar, max_horas_direcao: pf.maxDirecao, regras: pf.regras, alimentacao: pf.alimentacao, limites: pf.limites,
+        amam: INTERESSES.filter((n) => pf.int[n] === 2).join(", "), curtem: INTERESSES.filter((n) => pf.int[n] === 1).join(", "), nao_curtem: INTERESSES.filter((n) => pf.int[n] === 3).join(", ") };
+      const r = await apiFetch("/ficha", { method: "POST", body: JSON.stringify({ fala: novo, hoje: hojeISO(), quem: o.f.nome || null, etapa: o.step, ficha, perfil, ultima: o.marco || "" }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.erro || "O Marco não respondeu.");
       if (j.ficha) preencherFicha(j.ficha);
+      o.falaEnviada = tamanhoEnviado;
       o.marco = j.resposta || (j.ficha ? "Preenchi o que entendi na ficha aqui embaixo. Confere pra mim?" : "Ainda não peguei os detalhes da viagem. Me conta pra onde vocês querem ir, quando e quem vai?");
       o.conversou = true;
       o.lendo = false; render();
       const pergunta = /\?\s*$/.test(o.marco);
       marcoFalar(o.marco, { semSom: o.semVoz, aoFim: () => {
-        if (S.vozAtiva && o.porVoz && pergunta && S.tela === "onboarding" && S.onb === o && o.step === 0 && !reconhecedor) A.ditar({ alvo: "onb-fala" });
+        if (S.vozAtiva && o.porVoz && pergunta && S.tela === "onboarding" && S.onb === o && !reconhecedor) A.ditar({ alvo: "onb-fala" });
         else { if (!pergunta) encerrarVoz(); mostrarDica(); } // sem pergunta = o Marco concluiu a tarefa; a conversa termina
       } }); return;
     } catch (e) { toast(e.message || "O Marco não respondeu. Preencha a ficha abaixo."); }
@@ -2124,9 +2152,15 @@ const A = {
       if (falta.length) { toast(`Para começar falta: ${falta.join(", ")}.`); render(); return; }
     }
     o.step++; if (o.step === 4) { aplicarCenarios(o); buscarCambio(); }
-    render(); $("#main").scrollTop = 0;
+    render(); $("#main").scrollTop = 0; mostrarDica(6000);
   },
-  onbVoltar() { S.onb.step = Math.max(0, S.onb.step - 1); render(); },
+  // cada etapa: o Marco faz UMA pergunta que cobre a tela inteira (texto local, sem tokens) e já fica ouvindo
+  onbEtapa() {
+    const o = S.onb; o.etapas = { ...(o.etapas || {}), [o.step]: true };
+    const ouvir = o.step !== 3; o.porVoz = true; o.semVoz = false; S.vozAtiva = ouvir; o.marco = PERGUNTA_ETAPA[o.step] || ""; atualizarTravaTela(); render();
+    marcoFalar(o.marco, { guardar: true, aoFim: () => { if (ouvir && S.vozAtiva && S.tela === "onboarding" && S.onb === o && !reconhecedor && !o.lendo) A.ditar({ alvo: "onb-fala" }); } });
+  },
+  onbVoltar() { encerrarVoz(); S.onb.step = Math.max(0, S.onb.step - 1); render(); },
   onbCen(ds) { S.onb.cen[+ds.s] = +ds.i; render(); },
   async onbFim() {
     const o = S.onb, f = o.f, p = paisDe(f.pais);
@@ -2187,6 +2221,21 @@ document.addEventListener("input", (ev) => {
   else if (ds.pfSl && S.viagem) { const pf = perfilAtual(); pf.sl = pf.sl || {}; pf.sl[ds.pfSl] = +t.value; memSalvar(); }
   else if (ds.saude) { const s = saudeLer(); s[ds.saude] = t.value; saudeSalvar(s); }
 });
+
+// ---------- altura real da tela ----------
+// No Chrome do Android, logo depois de recarregar (atualizações), "100dvh" às vezes é medido com a barra de
+// endereço escondida e o rodapé (botão do Marco) fica abaixo da área visível (bug de 01/10/2026). A altura do app
+// passa a ser a área visível medida de verdade. Com o teclado aberto, a altura fica como estava e o botão se esconde.
+function ajustarAltura() {
+  const vv = window.visualViewport, h = vv ? vv.height : window.innerHeight;
+  const el = document.activeElement, digitando = !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && el.type !== "file";
+  const teclado = digitando && window.innerHeight - h > 120 || (digitando && vv && screen.height - h > screen.height * 0.35);
+  document.body.classList.toggle("teclado", !!teclado);
+  if (!teclado) document.documentElement.style.setProperty("--altura-app", Math.round(h) + "px");
+}
+if (window.visualViewport) visualViewport.addEventListener("resize", ajustarAltura);
+for (const ev of ["resize", "orientationchange", "pageshow", "focusin", "focusout"]) window.addEventListener(ev, () => { ajustarAltura(); setTimeout(ajustarAltura, 350); });
+ajustarAltura(); setTimeout(ajustarAltura, 300); setTimeout(ajustarAltura, 1200);
 
 // ---------- partida ----------
 const _mem = memLer();

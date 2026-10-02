@@ -91,6 +91,10 @@ confere("abertura da Nova viagem não fala sozinha", /S\.onb\.intro = true; ir\(
 confere("tela fica acesa durante a conversa por voz", /navigator\.wakeLock\.request\("screen"\)/.test(app), true);
 confere("rascunho da Nova viagem é salvo a cada toque", /function memSalvar\(\) \{\n  rascunhoSalvar\(\);/.test(app), true);
 confere("começar do zero apaga o rascunho antigo", /\n  onb\(\) \{[^\n]*rascunhoApagar\(\)/.test(app), true);
+// ---------- 7. botão do Marco sempre disponível e dentro da tela (01/10/2026) ----------
+confere("botão do Marco em todas as etapas da Nova viagem", app.includes('${!o.intro || (marcoDisponivel() && S.vozOn) ? `<div class="doca">') && !/o\.step === 0 && \(!o\.intro/.test(app), true);
+confere("botão do Marco flutuante nas telas da viagem", /const marcoFlutua = S\.viagem && tabbar/.test(app), true);
+confere("altura do app medida pela área visível", /setProperty\("--altura-app"/.test(app) && /height:var\(--altura-app,100dvh\)/.test(app), true);
 confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }
