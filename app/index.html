@@ -255,6 +255,31 @@ body.com-tabbar #legenda{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   .voz .linha .iconbtn{width:40px!important;height:40px!important}
   .tabbar{padding-block:2px calc(4px + env(safe-area-inset-bottom,0px))}.tab{font-size:0;gap:0}
 }
+/* interesses: cartões verticais com foto, deslizando para o lado */
+:root{--serifa:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,"Noto Serif",Georgia,serif}
+.titulo-serifa{font-family:var(--serifa);font-weight:500;font-size:clamp(32px,9vw,46px);line-height:1.05;letter-spacing:-.6px;margin:0}
+.carrossel{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-padding-inline:16px;padding:2px 16px 4px;margin:0 -16px;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.carrossel::-webkit-scrollbar{display:none}
+.cartao-int{position:relative;flex:0 0 clamp(108px,27vw,200px);height:clamp(300px,50dvh,560px);border-radius:16px;overflow:hidden;scroll-snap-align:start;padding:0;text-align:left;color:#fff;border:1px solid rgba(255,255,255,.14);background:linear-gradient(165deg,var(--g1),var(--g2));transition:box-shadow .2s,border-color .2s}
+.cartao-int .foto{position:absolute;inset:0;background:var(--foto,none) center/cover no-repeat;transition:filter .3s}
+.cartao-int::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,0) 42%,rgba(0,0,0,.55) 70%,rgba(0,0,0,.86))}
+.cartao-int .rot{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:12px 12px 14px;display:flex;flex-direction:column;gap:12px}
+.cartao-int b{font-family:var(--serifa);font-weight:500;font-size:clamp(17px,4.4vw,23px);line-height:1.1;letter-spacing:-.2px;text-shadow:0 1px 10px rgba(0,0,0,.55)}
+.cartao-int .estado{display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.88)}
+.cartao-int .radio{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.92);flex-shrink:0;position:relative}
+.cartao-int.curto .radio::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#fff}
+.cartao-int.amo{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+.cartao-int.amo .radio{background:var(--accent);border-color:var(--accent)}
+.cartao-int.amo .radio::after{content:"";position:absolute;left:6px;top:2.5px;width:5px;height:10px;border:solid var(--accent-fg);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cartao-int.nao .foto{filter:grayscale(1) brightness(.5)}
+.cartao-int.nao{background:linear-gradient(165deg,#3a3a3c,#1c1c1e)}
+.cartao-int.nao b,.cartao-int.nao .estado{opacity:.6}
+.cartao-int.nao .radio::before,.cartao-int.nao .radio::after{content:"";position:absolute;left:8px;top:3px;width:2px;height:12px;background:#fff;transform:rotate(45deg)}
+.cartao-int.nao .radio::after{transform:rotate(-45deg)}
+.pontos{display:flex;justify-content:center;gap:8px;min-height:8px;margin-top:4px}
+.pontos i{width:7px;height:7px;border-radius:4px;background:var(--fg2);opacity:.45;transition:width .25s,opacity .25s,background .25s}
+.pontos i.on{width:28px;background:var(--accent);opacity:1}
+.doca-cont{justify-self:stretch;height:52px;border-radius:26px;max-width:240px;margin-left:auto}
 .int{background:var(--card);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left;border:1.5px solid transparent;min-height:78px}
 .int b{font-size:15px;font-weight:600}
 .int.amo{border-color:var(--accent)}
@@ -522,7 +547,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.5.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.6.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -1391,9 +1416,31 @@ function blocoPerfil(pf, alvo) {
 function blocoSliders(pf, alvo) {
   return SLIDERS.map(([k, a, b]) => `<div class="slider"><div class="l"><span>${a}</span><span>${b}</span></div><input type="range" min="0" max="100" value="${(pf.sl || {})[k] ?? 50}" data-${alvo}-sl="${k}" aria-label="${a} ou ${b}"></div>`).join("");
 }
+// Interesses em cartões verticais com foto, deslizando para o lado (layout aprovado por Wagner, 01/10/2026).
+// Fotos: prototipo/imagens/interesses/<slug>.webp|jpg (ver LEIA-ME.md lá); sem foto, um degradê sóbrio no lugar.
+const FOTOS_INTERESSES = {};
+const slugInteresse = (n) => norm(n).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const DEGRADES = [["#2F5D8C", "#162E47"], ["#5B6F5A", "#1F2D24"], ["#8A6B4A", "#3A2A1C"], ["#6B5B7B", "#2A2235"], ["#3F7F8C", "#18343A"], ["#7A5A5A", "#2F1F1F"]];
 function blocoInteresses(pf, alvo) {
   const r = ["Tocar", "Curto", "Amo", "Não é comigo"];
-  return `<div class="grid2">${INTERESSES.map((n, i) => { const v = (pf.int || {})[n] || 0; return `<button class="int ${v === 2 ? "amo" : v === 3 ? "nao" : ""}" data-a="setInteresse" data-alvo="${alvo}" data-n="${esc(n)}"><b>${n}</b><span class="pill ${v === 2 ? "acc" : "neu"}" style="align-self:flex-start">${r[v]}</span></button>`; }).join("")}</div>`;
+  return `<div class="carrossel" id="carInt" role="list">${INTERESSES.map((n, i) => {
+    const v = (pf.int || {})[n] || 0, foto = FOTOS_INTERESSES[slugInteresse(n)], [g1, g2] = DEGRADES[i % DEGRADES.length];
+    return `<button role="listitem" class="cartao-int ${["", "curto", "amo", "nao"][v]}" data-a="setInteresse" data-alvo="${alvo}" data-n="${esc(n)}" aria-label="${esc(n)}: ${r[v]}" style="--g1:${g1};--g2:${g2}${foto ? `;--foto:url('${foto}')` : ""}">
+      <span class="foto"></span><span class="rot"><b>${esc(n)}</b><span class="estado"><i class="radio"></i>${r[v]}</span></span></button>`;
+  }).join("")}</div><div class="pontos" id="pontosInt" aria-hidden="true"></div>`;
+}
+// depois de cada desenho: devolve o carrossel à posição em que estava e acende o ponto da página atual
+function prepararCarrossel() {
+  const c = $("#carInt"); if (!c) return;
+  c.scrollLeft = S.rolagemInt || 0;
+  const pontos = () => {
+    const p = $("#pontosInt"); if (!p) return;
+    const paginas = Math.max(1, Math.ceil(c.scrollWidth / Math.max(1, c.clientWidth) - 0.05)), max = c.scrollWidth - c.clientWidth;
+    const atual = max > 0 ? Math.round((c.scrollLeft / max) * (paginas - 1)) : 0;
+    p.innerHTML = paginas > 1 ? Array.from({ length: paginas }, (_, i) => `<i class="${i === atual ? "on" : ""}"></i>`).join("") : "";
+  };
+  c.addEventListener("scroll", () => { S.rolagemInt = c.scrollLeft; pontos(); }, { passive: true });
+  pontos();
 }
 const perfilAtual = () => { S.viagem.perfil = S.viagem.perfil || { ritmo: "equilibrado", sl: {}, int: {} }; return S.viagem.perfil; };
 function telaPerfil() {
@@ -1449,8 +1496,8 @@ function telaOnboarding() {
     c = `<h1 style="font-size:28px">Ritmo e estilo</h1><p class="sub">Isso define quanto cabe em cada dia e o que o Marco nunca propõe.</p><div class="card">${blocoPerfil(o.pf, "onb")}</div>
       <div class="btns"><button class="btn sec" data-a="onbNext">Pular</button><button class="btn" data-a="onbNext">Continuar</button></div>`;
   } else if (o.step === 2) {
-    c = `<h1 style="font-size:28px">Do que vocês gostam?</h1><p class="sub">Toque uma vez para "curto", duas para "amo", três para "não é comigo".</p>${blocoInteresses(o.pf, "onb")}
-      <div class="btns"><button class="btn sec" data-a="onbNext">Pular</button><button class="btn" data-a="onbNext">Continuar</button></div>`;
+    // o "Continuar" desta tela fica no rodapé, ao lado do botão do Marco (layout aprovado)
+    c = `<h1 class="titulo-serifa">Do que vocês gostam?</h1><p class="sub" style="margin:0">Toque uma vez para “curto”, duas para “amo”, três para “não é comigo”.</p>${blocoInteresses(o.pf, "onb")}`;
   } else if (o.step === 3) {
     c = `<h1 style="font-size:28px">Algumas situações</h1><p class="sub">Cenários ajustam o perfil melhor do que perguntas diretas.</p>
       ${CENARIOS.map((s, si) => `<div class="grupo-op"><div style="font-weight:600">${esc(s.p)}</div>${s.o.map(([t], oi) => `<button class="opt ${o.cen[si] === oi ? "on" : ""}" data-a="onbCen" data-s="${si}" data-i="${oi}">${esc(t)}</button>`).join("")}</div>`).join("")}
@@ -1471,7 +1518,7 @@ function telaOnboarding() {
   return `<div class="top"><button class="iconbtn" data-a="${o.step ? "onbVoltar" : "voltar"}" aria-label="${o.step ? "Voltar" : "Fechar"}">${ic(o.step ? "back" : "x")}</button><div class="ttl"><b>Nova viagem</b></div>${botaoCC()}</div>
     <main id="main"><div class="pad com-doca">${o.intro ? "" : dots}${c}</div></main>
     ${!o.intro || (marcoDisponivel() && S.vozOn) ? `<div class="doca">${S.ditando === "onb-fala" ? '<div class="doca-dica" role="status">Estou ouvindo. Toque de novo quando terminar.</div>' : !o.intro && Date.now() < (o.dicaAte || 0) ? `<div class="doca-dica" role="status" id="dicaOnb">${o.retomar ? "Toque aqui e continuamos de onde paramos." : o.pausada ? "Conversa pausada. Toque aqui para continuar." : o.step === 0 ? (o.conversou ? "Toque aqui para me responder." : "Prefere falar? Toque aqui e me conte do seu jeito.") : o.step === 3 ? "Toque em mim se quiser que eu explique as situações." : "Prefere falar? Toque aqui e me conte."}</div>` : ""}
-      <div class="doca-linha"><span></span><button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="${o.intro ? "onbFalar" : o.retomar ? "onbRetomar" : o.step > 0 && !(o.etapas || {})[o.step] ? "onbEtapa" : "ditar"}" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button>${S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}</div></div>` : ""}`;
+      <div class="doca-linha">${o.step === 2 && S.vozAtiva ? '<button class="doca-fim" style="justify-self:end" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}<button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="${o.intro ? "onbFalar" : o.retomar ? "onbRetomar" : o.step > 0 && !(o.etapas || {})[o.step] ? "onbEtapa" : "ditar"}" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button>${o.step === 2 ? '<button class="btn doca-cont" data-a="onbNext">Continuar</button>' : S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}</div></div>` : ""}`;
 }
 function aplicarCenarios(o) {
   const sl = { aventura: 50, explorar: 50, fora: 50, premium: 50 };
@@ -1506,6 +1553,7 @@ let ultimaTela = null;
 function render() {
   const T = { conversa: telaConversa, hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, ficha: telaFicha, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo, historico: telaHistorico, perfil: telaPerfil, consumo: telaConsumo, acesso: telaAcesso, entrar: telaEntrar, cadastro: telaCadastro, recuperar: telaRecuperar, novasenha: telaNovaSenha }[S.tela] || telaBoasVindas;
   const main0 = $("#main"), scroll = main0 && ultimaTela === S.tela ? main0.scrollTop : 0;
+  const car0 = $("#carInt"); if (car0) S.rolagemInt = car0.scrollLeft; // posição real do carrossel antes de redesenhar
   // quem está digitando não perde o foco quando o Marco atualiza a tela
   const ativo = document.activeElement, focoId = ativo && ativo.id && /^(INPUT|TEXTAREA)$/.test(ativo.tagName) && ativo.type !== "range" ? ativo.id : null;
   let selIni = null; try { selIni = focoId ? ativo.selectionStart : null; } catch (e) {}
@@ -1547,7 +1595,7 @@ function render() {
   // animação de entrada só na primeira vez que cada mensagem aparece (o streaming re-renderiza muitas vezes)
   if (S.tela === "conversa" && S.chat) for (const x of S.chat) { x.visto = true; for (const k of x.cards || []) k.visto = true; }
   ultimaTela = S.tela;
-  memSalvar(); atualizarTravaTela();
+  memSalvar(); atualizarTravaTela(); prepararCarrossel();
 }
 // A Carteira é o app financeiro (carteira/index.html) com a ponte window.CLE. Publicada, a página entrega o
 // arquivo ao quadro como conteúdo (o visualizador do Claude bloqueia quadros que buscam outra página).
@@ -1874,8 +1922,8 @@ function marcoCalar() { falaAtual++; if (audioMarco && !audioMarco.paused) audio
 const PERGUNTA_ETAPA = {
   1: "Agora me conta o jeito de vocês viajarem: dias mais tranquilos, equilibrados ou intensos? Que horas costumam acordar nas férias, quantas horas topam dirigir por dia, e tem alguma regra, restrição alimentar ou medo que eu deva respeitar? Pode falar tudo de uma vez.",
   2: "Do que vocês mais gostam numa viagem? Natureza, trilhas, museus, gastronomia, compras, vida noturna... Me fala o que vocês amam e o que não é com vocês.",
-  3: "Aqui são algumas situações rápidas. É só tocar na opção que mais combina com vocês: elas me ajudam a entender o perfil do grupo. Se preferir, pode pular.",
-  4: "Quase lá! Confere o resumo aqui na tela. Quer dar um nome para a viagem, ou ajustar alguma coisa?",
+  3: "Aqui são algumas situações rápidas. É só tocar na opção que mais combina com vocês: elas me ajudam a entender o perfil do grupo. Quando terminar, ou se preferir pular, é só me dizer pode seguir.",
+  4: "Quase lá! Confere o resumo aqui na tela. Quer dar um nome para a viagem, ou ajustar alguma coisa? Se estiver tudo certo, me diga que eu crio a viagem.",
 };
 // Retomada (app reaberto com a Nova viagem pela metade): montada aqui com o que já está na ficha, sem chamar o Claude
 function resumoRetomada(o) {
@@ -1923,7 +1971,10 @@ function juntarFala(trechos) {
 // falado nada), sai da tela, ou quando o Marco conclui a tarefa (responde sem fazer pergunta).
 let travaTelaAtiva = null, pedindoTrava = false, silencios = 0;
 async function atualizarTravaTela() {
-  const querer = !!(S.vozAtiva || S.ditando || S.marcoFalando || (S.onb && S.onb.lendo)) && !document.hidden;
+  // a tela não apaga nem bloqueia durante a conversa por voz (o microfone do navegador só funciona com a tela ligada),
+  // inclusive na Nova viagem inteira quando ela está sendo feita por voz
+  const naConversaPorVoz = S.tela === "onboarding" && S.onb && S.onb.porVoz && !S.onb.intro;
+  const querer = !!(S.vozAtiva || S.ditando || S.marcoFalando || naConversaPorVoz || (S.onb && S.onb.lendo)) && !document.hidden;
   if (querer && !travaTelaAtiva && !pedindoTrava && navigator.wakeLock) {
     pedindoTrava = true;
     try { travaTelaAtiva = await navigator.wakeLock.request("screen"); travaTelaAtiva.addEventListener("release", () => { travaTelaAtiva = null; }); } catch (e) {}
@@ -1931,6 +1982,11 @@ async function atualizarTravaTela() {
   } else if (!querer && travaTelaAtiva) { const t = travaTelaAtiva; travaTelaAtiva = null; t.release().catch(() => {}); }
 }
 document.addEventListener("visibilitychange", () => atualizarTravaTela()); // o celular solta a trava ao sair do app; ao voltar, pede de novo
+// depois de cada fala do Marco: volta a ouvir, a menos que a pessoa tenha encerrado a conversa
+function continuarOuvindo(o) {
+  if (!S.vozAtiva) S.vozAtiva = !!o.porVoz;
+  if (S.vozAtiva && !reconhecedor && !o.lendo) A.ditar({ alvo: "onb-fala" }); else mostrarDica();
+}
 function encerrarVoz() { S.vozAtiva = false; silencios = 0; if (reconhecedor) { reconhecedor.cancelado = true; reconhecedor.stop(); } marcoCalar(); atualizarTravaTela(); }
 function ditar(alvo, aoTerminar) {
   if (reconhecedor) { reconhecedor.peloUsuario = true; reconhecedor.stop(); return; } // segundo toque: termina
@@ -2141,10 +2197,19 @@ const A = {
       o.marco = j.resposta || (j.ficha ? "Preenchi o que entendi na ficha aqui embaixo. Confere pra mim?" : "Ainda não peguei os detalhes da viagem. Me conta pra onde vocês querem ir, quando e quem vai?");
       o.conversou = true;
       o.lendo = false; render();
-      const pergunta = /\?\s*$/.test(o.marco);
+      // Conversa contínua: quem diz que a tela terminou é o próprio Marco (avancar), nunca a pontuação da fala dele
+      // (bug de 01/10/2026: um resumo terminado em ponto final desligava a escuta). Sem avançar, ele volta a ouvir.
+      const aqui = () => S.tela === "onboarding" && S.onb === o;
       marcoFalar(o.marco, { semSom: o.semVoz, aoFim: () => {
-        if (S.vozAtiva && o.porVoz && pergunta && S.tela === "onboarding" && S.onb === o && !reconhecedor) A.ditar({ alvo: "onb-fala" });
-        else { if (!pergunta) encerrarVoz(); mostrarDica(); } // sem pergunta = o Marco concluiu a tarefa; a conversa termina
+        if (!aqui()) return;
+        if (j.avancar && o.porVoz) {
+          const antes = o.step;
+          if (antes === 4) { A.onbFim(); if (aqui()) continuarOuvindo(o); return; } // última tela: cria a viagem
+          A.onbNext();
+          if (o.step !== antes) A.onbEtapa(); else continuarOuvindo(o); // faltou algo obrigatório: segue a conversa
+          return;
+        }
+        if (o.porVoz) continuarOuvindo(o); else mostrarDica();
       } }); return;
     } catch (e) { toast(e.message || "O Marco não respondeu. Preencha a ficha abaixo."); }
     o.lendo = false; render();
@@ -2162,8 +2227,8 @@ const A = {
   // cada etapa: o Marco faz UMA pergunta que cobre a tela inteira (texto local, sem tokens) e já fica ouvindo
   onbEtapa() {
     const o = S.onb; o.etapas = { ...(o.etapas || {}), [o.step]: true };
-    const ouvir = o.step !== 3; o.porVoz = true; o.semVoz = false; S.vozAtiva = ouvir; o.marco = PERGUNTA_ETAPA[o.step] || ""; atualizarTravaTela(); render();
-    marcoFalar(o.marco, { guardar: true, aoFim: () => { if (ouvir && S.vozAtiva && S.tela === "onboarding" && S.onb === o && !reconhecedor && !o.lendo) A.ditar({ alvo: "onb-fala" }); } });
+    o.porVoz = true; o.semVoz = false; S.vozAtiva = true; o.marco = PERGUNTA_ETAPA[o.step] || ""; atualizarTravaTela(); render();
+    marcoFalar(o.marco, { guardar: true, aoFim: () => { if (S.tela === "onboarding" && S.onb === o) continuarOuvindo(o); } });
   },
   onbVoltar() { encerrarVoz(); S.onb.step = Math.max(0, S.onb.step - 1); render(); },
   onbCen(ds) { S.onb.cen[+ds.s] = +ds.i; render(); },

@@ -95,6 +95,12 @@ confere("começar do zero apaga o rascunho antigo", /\n  onb\(\) \{[^\n]*rascunh
 confere("botão do Marco em todas as etapas da Nova viagem", app.includes('${!o.intro || (marcoDisponivel() && S.vozOn) ? `<div class="doca">') && !/o\.step === 0 && \(!o\.intro/.test(app), true);
 confere("botão do Marco flutuante nas telas da viagem", /const marcoFlutua = S\.viagem && tabbar/.test(app), true);
 confere("altura do app medida pela área visível", /setProperty\("--altura-app"/.test(app) && /height:var\(--altura-app,100dvh\)/.test(app), true);
+// ---------- 8. conversa contínua: só o Marco diz quando a tela terminou (bug de 01/10/2026) ----------
+const nucleo = fs.readFileSync(path.join(RAIZ, "servidor-marco", "nucleo.mjs"), "utf8");
+confere("app não decide o fim da conversa pela pontuação da fala", !/\/\\\?\\s\*\$\/\.test\(o\.marco\)/.test(app), true);
+confere("Marco avisa quando a tela terminou (avancar)", /avancar: \{ type: "boolean"/.test(nucleo) && /j\.avancar && o\.porVoz/.test(app), true);
+confere("depois de cada fala o Marco volta a ouvir", /function continuarOuvindo\(o\)/.test(app), true);
+confere("interesses em carrossel de cartões", /class="carrossel" id="carInt"/.test(app), true);
 confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }

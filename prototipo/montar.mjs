@@ -21,8 +21,24 @@ const seguro = (s) => JSON.stringify(s).replace(/<\/script/gi, "<\\/script").rep
 // número da versão (padrão da Carteira): prototipo/versao.json; a trava de publicação exige subir a cada mudança
 const VERSAO_APP = JSON.parse(fs.readFileSync(path.join(HERE, "versao.json"), "utf8")).versao;
 if (!/^\d+\.\d+\.\d+$/.test(VERSAO_APP)) throw new Error("app NÃO gerado: versão inválida em prototipo/versao.json (use 1.0.0)");
+// fotos da tela de interesses: prototipo/imagens/interesses/<nome-do-interesse>.(webp|jpg|png|avif), copiadas para
+// app/imagens/interesses/ com a impressão do conteúdo no endereço (troca de foto = celular baixa a nova)
+const DIR_FOTOS = path.join(HERE, "imagens", "interesses"), APP_FOTOS = path.join(APP, "imagens", "interesses");
+const FOTOS_INTERESSES = {}, arquivosFotos = [];
+fs.rmSync(APP_FOTOS, { recursive: true, force: true });
+if (fs.existsSync(DIR_FOTOS)) {
+  fs.mkdirSync(APP_FOTOS, { recursive: true });
+  for (const f of fs.readdirSync(DIR_FOTOS).filter((x) => /\.(webp|jpe?g|png|avif)$/i.test(x))) {
+    const buf = fs.readFileSync(path.join(DIR_FOTOS, f)), slug = f.replace(/\.[^.]+$/, "").toLowerCase();
+    if (buf.length > 700 * 1024) console.warn(`  aviso: ${f} tem ${Math.round(buf.length / 1024)} KB; o ideal é até 350 KB (veja imagens/interesses/LEIA-ME.md)`);
+    fs.copyFileSync(path.join(DIR_FOTOS, f), path.join(APP_FOTOS, f));
+    FOTOS_INTERESSES[slug] = `imagens/interesses/${f}?v=${crypto.createHash("sha256").update(buf).digest("hex").slice(0, 8)}`;
+    arquivosFotos.push("./" + FOTOS_INTERESSES[slug]); // o mesmo endereço que o app pede, para funcionar sem internet
+  }
+}
 const html = fs.readFileSync(path.join(HERE, "app.html"), "utf8")
   .replace("/*__MONTADO__*/false", "true")
+  .replace("/*__FOTOS_INTERESSES__*/{}", () => JSON.stringify(FOTOS_INTERESSES))
   .replace('/*__VERSAO__*/"dev"', () => JSON.stringify(VERSAO_APP))
   .replace("/*__CARTEIRA__*/null", () => seguro(carteira))
   // endereço do Marco na nuvem (público; gravado por publicar-nuvem.mjs). Sem ele, o app publicado avisa que o Marco não está ligado
@@ -114,7 +130,7 @@ fs.writeFileSync(path.join(APP, "manifest.webmanifest"), JSON.stringify({
     { src: "icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
   ],
 }, null, 2));
-const arquivos = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./carteira/lib/qrcode.js", "./carteira/lib/jsQR.js", "./carteira/icon-192.png"];
+const arquivos = [...arquivosFotos, "./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./carteira/lib/qrcode.js", "./carteira/lib/jsQR.js", "./carteira/icon-192.png"];
 const versao = crypto.createHash("sha256").update(htmlApp).update(fs.readFileSync(path.join(APP, "carteira/lib/jsQR.js"))).digest("hex").slice(0, 10);
 fs.writeFileSync(path.join(APP, "sw.js"), `// Clé: funciona sem internet depois da primeira abertura (gerado por prototipo/montar.mjs)
 const VERSAO = "cle-v${VERSAO_APP}-${versao}";

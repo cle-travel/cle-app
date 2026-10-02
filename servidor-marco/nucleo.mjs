@@ -334,6 +334,7 @@ const FICHA_CONVERSA = {
     limites: { type: "string", description: "Medos e limites, ex.: altura, trilhas longas, calor" },
     nao_curtem: { type: "array", items: { type: "string" }, description: "Interesses que NÃO são com eles" },
     nome_viagem: { type: "string" },
+    avancar: { type: "boolean", description: "true SOMENTE quando a pessoa confirmou o resumo desta tela ou pediu para seguir/pular: o app passa sozinho para a próxima tela (na última, cria a viagem)" },
   }, required: ["resposta"], additionalProperties: false },
 };
 // O que cada tela da Nova viagem coleta. O Marco junta as informações da tela e confirma UMA vez, no fim.
@@ -341,7 +342,7 @@ const ETAPAS_FICHA = {
   0: "Tela 1, ficha da viagem. ESSENCIAL: para onde (e país), quando começa, quantos dias e quem vai. Opcionais (só os campos da tela, nunca outros): de onde saem, ocasião, o que já está reservado, orçamento.",
   1: "Tela 2, ritmo e estilo: ritmo dos dias (tranquilo, equilibrado ou intenso), horário de acordar, máximo de horas dirigindo por dia, regras inegociáveis, restrições alimentares, medos e limites.",
   2: "Tela 3, interesses: do que o grupo gosta (interesses) e o que não é com eles (nao_curtem).",
-  3: "Tela 4, situações: a pessoa responde tocando nas opções da tela; só tire dúvidas.",
+  3: "Tela 4, situações: a pessoa responde tocando nas opções da tela; tire dúvidas e, quando ela quiser seguir ou pular, avancar = true.",
   4: "Tela 5, resumo final: nome da viagem e ajustes no que já foi preenchido.",
 };
 const INSTR_FICHA = `Você é o Marco, concierge de viagens do app Clé, conversando por voz com o viajante na tela "Nova viagem". Sua função: guiar e, se a pessoa quiser, fazer por ela todo o planejamento (ficha, roteiro, reservas, gastos, imprevistos).
@@ -351,8 +352,9 @@ A cada fala, use a ferramenta responder_e_preencher uma única vez:
 REGRA PRINCIPAL, NÃO SE REPETIR: colete tudo o que a tela pede e confirme UMA vez só, no fim.
 - Enquanto faltar algo do ESSENCIAL da tela: NÃO repita nem resuma o que já foi anotado. Reconheça em no máximo duas palavras ("Anotado!", "Perfeito.") e pergunte de uma vez, numa frase, tudo o que ainda falta da tela.
 - Assim que o ESSENCIAL da tela estiver completo (ou a pessoa disser que é só isso), nesta mesma resposta: faça UM resumo único e curto de tudo o que anotou nesta tela e pergunte se está certo; se faltarem opcionais, convide na mesma frase, sem insistir ("se quiser, me conta também o orçamento"). Nunca pergunte por informação que a tela não tem.
-- Se ela corrigir: aplique e diga só o que mudou, em poucas palavras, e se estiver tudo certo diga que é só tocar em Continuar (sem pergunta no fim: assim a conversa desta tela termina).
-- Se ela confirmar o resumo: diga em uma frase que está tudo certo e que é só tocar em Continuar (sem pergunta no fim).
+- Se ela corrigir: aplique, diga só o que mudou em poucas palavras e pergunte se agora está certo.
+- Se ela confirmar o resumo, ou pedir para seguir ou pular: avancar = true e resposta bem curta (até 4 palavras, ex.: "Fechado, seguimos!"); o app vai sozinho para a próxima tela e eu já faço a pergunta dela. Na tela 5, avancar = true cria a viagem (resposta curta, ex.: "Perfeito, vou criar a viagem!").
+- A conversa é contínua: depois de cada resposta eu volto a ouvir sozinho. Não mande tocar em botões.
 - Se a pessoa só cumprimentou ou perguntou algo sobre você, responda de verdade e convide a contar (sem resumo).
 - Se existe "Sua última fala", a conversa está em andamento: não cumprimente de novo.`;
 export async function fichaOnboarding({ client, fala, hoje, quem, ficha, perfil, etapa = 0, ultima }) {
@@ -366,13 +368,15 @@ export async function fichaOnboarding({ client, fala, hoje, quem, ficha, perfil,
   });
   const b = msg.content.find((x) => x.type === "tool_use");
   const texto = msg.content.filter((x) => x.type === "text").map((x) => x.text).join(" ").trim();
-  let fichaNova = null, resposta = texto;
+  let fichaNova = null, resposta = texto, avancar = false;
   if (b) {
     const { resposta: r, ...resto } = b.input || {};
     if (r) resposta = r;
+    if (resto.avancar === true) avancar = true;
+    delete resto.avancar;
     if (Object.values(resto).some((v) => v != null && v !== "" && !(Array.isArray(v) && !v.length))) fichaNova = resto;
   }
-  return { ficha: fichaNova, resposta: resposta || null, consumo: { ...somar(ZERO, custoDe(RAPIDO, msg.usage)) } };
+  return { ficha: fichaNova, resposta: resposta || null, avancar, consumo: { ...somar(ZERO, custoDe(RAPIDO, msg.usage)) } };
 }
 export async function resumirConversa({ client, texto }) {
   const msg = await client.messages.create({
