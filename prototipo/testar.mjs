@@ -101,6 +101,17 @@ confere("app não decide o fim da conversa pela pontuação da fala", !/\/\\\?\\
 confere("Marco avisa quando a tela terminou (avancar)", /avancar: \{ type: "boolean"/.test(nucleo) && /j\.avancar && o\.porVoz/.test(app), true);
 confere("depois de cada fala o Marco volta a ouvir", /function continuarOuvindo\(o\)/.test(app), true);
 confere("interesses em carrossel de cartões", /class="carrossel" id="carInt"/.test(app), true);
+// ---------- 9. situações (cenários): critérios de qualidade de 02/10/2026 ----------
+const iniC = app.indexOf("const CENARIOS = ["), fimC = app.indexOf("\n];", iniC) + 3;
+const CEN = new Function(app.slice(iniC, fimC) + "; return CENARIOS;")();
+const EIXOS = ["aventura", "explorar", "fora", "premium"], palavras = (t) => t.trim().split(/\s+/).length;
+confere("situações: ids únicos", new Set(CEN.map((s) => s.id)).size === CEN.length, true);
+confere("situações: pergunta de até 14 palavras", CEN.filter((s) => palavras(s.p) > 14).map((s) => s.id), []);
+confere("situações: 4 opções de até 8 palavras", CEN.filter((s) => s.o.length !== 4 || s.o.some(([t]) => palavras(t) > 8)).map((s) => s.id), []);
+confere("situações: toda opção mexe em um eixo válido do perfil", CEN.filter((s) => s.o.some(([, e]) => !Object.keys(e).length || Object.keys(e).some((k) => !EIXOS.includes(k)))).map((s) => s.id), []);
+confere("situações: texto interno não aparece na tela", app.includes("Cenários ajustam o perfil"), false);
+confere("tela do Marco por voz (sem caixa de texto do Marco)", /function telaConversaEscrita\(\)/.test(app) && /falarRespostaMarco\(m\)/.test(app), true);
+confere("silêncio: pausa por tempo sem fala nem toque, não por tentativas", /const SILENCIO_MAX = 120000/.test(app) && !/\+\+silencios > 6/.test(app), true);
 confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }

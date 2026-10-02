@@ -165,10 +165,14 @@ body.teclado .doca,body.teclado .siri-flutua{display:none}
 .doca-fim{justify-self:start;white-space:nowrap;font-size:13px;line-height:1.2;padding:8px 12px;border-radius:16px;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border:1px solid var(--line);color:var(--fg2)}.doca-dica.some{opacity:0;pointer-events:none}
 /* legendas do Marco (modo para quem não pode ouvir): pequenas, embaixo do botão do Marco, trocadas como em filme */
 body.legendas .doca{bottom:calc(74px + env(safe-area-inset-bottom,0px))}
+/* telas com abas embaixo (tela do Marco): o botão e as legendas ficam acima das abas */
+body.com-tabbar .doca{bottom:calc(10px + var(--abas,62px))}
+body.com-tabbar.legendas .doca{bottom:calc(64px + var(--abas,62px))}
+body.com-tabbar #legenda{bottom:calc(14px + var(--abas,62px))}
+body.com-tabbar .doca::before{bottom:-10px}
 body.legendas .doca::before{bottom:calc(-74px - env(safe-area-inset-bottom,0px));height:250px}
 body.legendas .com-doca{padding-bottom:210px!important}
 #legenda{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:40;width:max-content;max-width:min(560px,calc(100% - 32px));text-align:center;pointer-events:none;opacity:0;transition:opacity .25s ease}
-body.com-tabbar #legenda{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 #legenda.on{opacity:1}
 #legenda span{display:inline;background:rgba(0,0,0,.78);color:#fff;font-size:16px;line-height:1.5;padding:3px 9px;border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .iconbtn.cc.on{background:var(--accent);color:var(--accent-fg)}
@@ -547,7 +551,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.6.1"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.7.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -825,6 +829,8 @@ async function rodarTurno(modo, novas, ctrl = {}) {
   if (!ok) m.reenvio = ctrl.reenvio;
   S.rolarFim = true; render();
   if (ok) checarMarco();
+  // tela do Marco por voz: ele fala a resposta (ou legenda, com CC) e volta a ouvir; com erro, a conversa pausa
+  if (ok) falarRespostaMarco(m); else if (S.vozAtiva && S.tela === "conversa") { encerrarVoz(); render(); }
   if (ok && m.encaminhar) await enviarTexto(m.encaminhar, { modo: "planejamento", semBalao: true });
   return ok;
 }
@@ -980,8 +986,34 @@ function header(opts) {
   <div class="ttl"><b>${esc(titulo)}</b>${sub ? `<span>${esc(sub)}</span>` : ""}</div>${botaoCC()}${direita ?? `<button class="iconbtn sos" data-a="ir" data-t="emergencia" aria-label="Emergência">${ic("sos")}</button>`}</div>`;
 }
 
+// Tela do Marco, no padrão aprovado na Nova viagem (02/10/2026): o Marco fala, não aparece caixa com o texto dele.
+// Na tela ficam só o que pede ação (cartões para decidir, erro) e sugestões. Com CC, ele escreve em legendas
+// embaixo do botão. A conversa escrita continua disponível no botão "Escrever" (histórico e teclado).
 function telaConversa() {
   if (!S.chat) S.chat = chatInicial();
+  if (S.modoEscrito) return telaConversaEscrita();
+  let mi = -1; for (let i = S.chat.length - 1; i >= 0; i--) if (S.chat[i].de === "m") { mi = i; break; }
+  const ult = mi >= 0 ? S.chat[mi] : null;
+  let ci0 = -1; for (let i = S.chat.length - 1; i >= 0; i--) if (S.chat[i].de === "m" && (S.chat[i].cards || []).some((k) => k.estado === "aguardando")) { ci0 = i; break; }
+  const cards = ci0 >= 0 ? `<p class="eyebrow">Para vocês decidirem</p>${S.chat[ci0].cards.map((k, ci) => cardMarco(k, ci0, ci)).join("")}` : "";
+  const erro = ult && ult.erro && !S.pensando ? `<div class="card" style="background:var(--bad-bg);gap:10px"><div style="color:var(--bad);font-weight:600;font-size:15px">${esc(ult.erro)}</div>${ult.retry || ult.reenvio ? '<button class="btn sec" data-a="retry">Tentar de novo</button>' : ""}</div>` : "";
+  const sugestoes = marcoDisponivel() ? ["O que falta resolver?", DIAS.some((d) => d.paradas.length) ? "Revise o roteiro e aponte problemas" : "Monte uma primeira versão do roteiro", "Sugira atrações para a lista de desejos", "Quanto já gastamos?"] : [];
+  const vazio = !cards && !erro ? `<div class="abertura" style="padding-top:3vh">
+      <span class="avatar" style="width:56px;height:56px;border-radius:16px">${ic("compass", 30, 1.6)}</span>
+      <h1>${marcoDisponivel() ? "Fale com o Marco" : "O Marco está desligado"}</h1>
+      <p>${marcoDisponivel() ? "Toque no botão aqui embaixo e peça o que precisar: montar o roteiro, lançar um gasto, tirar uma dúvida. Ele responde em voz alta e continua ouvindo." : esc(msgMarcoOff())}</p>
+      ${sugestoes.length ? `<div style="display:flex;flex-direction:column;gap:8px">${sugestoes.map((t) => `<button class="chip" style="align-self:flex-start" data-a="perg" data-k="txt">${esc(t)}</button>`).join("")}</div>` : ""}
+    </div>` : "";
+  const ouvindo = S.ditando === "txtMarco";
+  const dica = ouvindo ? `<div class="doca-dica" role="status">${esc(S.transc || "Estou ouvindo. Pode falar.")}</div>` : S.pensando && ult && ult.status ? `<div class="doca-dica" role="status">${esc(ult.status)}</div>` : "";
+  const lado = (a, rot, icone) => `<button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px;justify-self:${a === "comprovante" ? "end" : "start"}" data-a="${a}" ${a === "modoEscrito" ? 'data-v="1"' : ""} aria-label="${rot}">${ic(icone, 20)}</button>`;
+  return `${header({ titulo: nomeViagem(), sub: tripSub() })}
+  <main id="main"><div class="pad com-doca">${cards}${erro}${vazio}</div></main>
+  <div class="doca">${dica}<div class="doca-linha">${lado("comprovante", "Enviar comprovante", "upload")}
+    <button class="siri ${ouvindo ? "ouvindo" : S.pensando ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="falar" aria-label="${ouvindo ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(ouvindo ? "pause" : "mic", 24)}</span></button>
+    ${S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : lado("modoEscrito", "Escrever ou ver a conversa escrita", "chat")}</div></div>`;
+}
+function telaConversaEscrita() {
   const msgs = S.chat.map((m, mi) => {
     const anim = m.visto ? "" : " fade";
     if (m.de === "u") return `<div class="msg-u${anim}">${esc(m.txt)}${m.anexo ? `<div style="font-size:13px;opacity:.85;margin-top:4px;display:flex;gap:4px;align-items:center">${ic("doc", 13)} ${esc(m.anexo)}</div>` : ""}</div>`;
@@ -1008,7 +1040,7 @@ function telaConversa() {
   <div class="voz"><div class="transc">${esc(S.transc || "")}</div>
     <div class="linha"><button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="comprovante" aria-label="Enviar comprovante">${ic("upload", 20)}</button>
     <button class="siri ${S.ditando === "txtMarco" ? "ouvindo" : S.pensando ? "pensando" : ""}" data-a="falar" aria-label="${S.ditando === "txtMarco" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "txtMarco" ? "pause" : "mic", 24)}</span></button>
-    <button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="toast" data-m="O botão de pausa interrompe a escuta da conversa por voz, que entra na etapa de voz (ElevenLabs)." aria-label="Pausar">${ic("pause", 20)}</button></div>
+    <button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="modoEscrito" data-v="0" aria-label="Voltar para a conversa por voz">${ic("speaker", 20)}</button></div>
     <span class="small">${status}</span></div>`;
 }
 function cardProposta() {
@@ -1397,11 +1429,43 @@ function telaViagens() {
 // ---------- perfil (camadas A e B da seção 6, sempre editáveis) ----------
 const INTERESSES = ["Natureza e parques", "Trilhas", "Cidades", "Museus e história", "Gastronomia", "Compras", "Fotografia", "Cultura local", "Shows e música", "Esportes", "Parques temáticos", "Aventura radical", "Vida noturna", "Praia", "Bem-estar", "Carros e estradas cênicas"];
 const SLIDERS = [["aventura", "Conservador", "Aventureiro"], ["explorar", "Relaxar", "Explorar"], ["fora", "Popular", "Fora do circuito"], ["premium", "Econômico", "Premium"]];
+// ---------- Situações (cenários) da Nova viagem ----------
+// Cada situação revela o perfil do grupo sem perguntas diretas. CRITÉRIOS (Wagner, 02/10/2026), valem para
+// qualquer situação nova:
+//  1. Pergunta: uma situação concreta e plausível na viagem, em até ~14 palavras, com UMA restrição clara
+//     (tempo, dinheiro, clima ou fila); número e gênero coerentes (um mirante = "o mirante").
+//  2. Opções: 4, todas possíveis DENTRO da restrição da pergunta (3 horas livres = cabe em 3 horas, ida e volta),
+//     mutuamente exclusivas, na mesma forma (verbo na 1ª pessoa do plural), até ~8 palavras, sem jargão.
+//  3. Cada opção move principalmente UM eixo do perfil (aventura, explorar, fora do circuito, premium);
+//     nenhuma opção é "a certa" e nenhuma é caricata.
+//  4. Só aparece a situação que combina com a viagem (requisito "quando"): não se pergunta de trilha para
+//     quem não curte natureza, nem de estrada para quem não vai dirigir.
+// Testado automaticamente em prototipo/testar.mjs (quantidade de opções, tamanho, eixos válidos, ids únicos).
 const CENARIOS = [
-  { p: "Um mirante famoso e 3 horas livres. O que vocês fazem?", o: [["Ver dos mirantes, de carro", { aventura: -20, premium: -10 }], ["Trilha de 2 horas descendo", { aventura: 20, explorar: 20 }], ["Voo panorâmico de helicóptero", { aventura: 30, premium: 30, explorar: 10 }], ["Sentar e contemplar, sem pressa", { aventura: -10, explorar: -25 }]] },
-  { p: "Chove no dia do passeio ao ar livre.", o: [["Vamos assim mesmo", { aventura: 25, explorar: 10 }], ["Trocamos por um museu", { explorar: 10 }], ["Dia de descanso", { explorar: -25, aventura: -10 }], ["Dia de compras", { explorar: -5 }]] },
-  { p: "A atração famosa tem 2 horas de fila.", o: [["Encaramos a fila", { fora: -20 }], ["Pagamos o fura-fila", { premium: 30, fora: -10 }], ["Trocamos por algo menos conhecido", { fora: 30, premium: -10 }], ["Voltamos no dia seguinte bem cedo", { premium: -10 }]] },
+  { id: "fila", p: "A atração mais famosa tem 2 horas de fila. O que vocês fazem?",
+    o: [["Encaramos a fila, faz parte", { fora: -20 }], ["Pagamos pelo acesso rápido", { premium: 30 }], ["Trocamos por uma atração menos conhecida", { fora: 30 }], ["Voltamos outro dia, logo na abertura", { explorar: 10, premium: -10 }]] },
+  { id: "chuva", p: "Amanhece chovendo no dia do passeio ao ar livre. E agora?",
+    o: [["Vamos mesmo assim, de capa de chuva", { aventura: 25 }], ["Trocamos por um museu ou atração coberta", { explorar: 15 }], ["Ficamos descansando no hotel", { explorar: -25 }], ["Aproveitamos para fazer compras", { explorar: -5, premium: 10 }]] },
+  { id: "parque", quando: (c) => c.parques, p: "Último dia de parque e sobra uma tarde livre. O que vocês fazem?",
+    o: [["Repetimos as atrações favoritas", { explorar: -15 }], ["Vamos nas mais radicais que faltaram", { aventura: 25 }], ["Assistimos a um show com calma", { aventura: -15 }], ["Saímos do parque para conhecer outra coisa", { fora: 20, explorar: 10 }]] },
+  { id: "mirante", quando: (c) => c.natureza, p: "Vocês têm 3 horas livres perto de um mirante famoso. O que fazem?",
+    o: [["Vamos de carro até o mirante", { aventura: -20 }], ["Fazemos a trilha até ele, ida e volta", { aventura: 20, explorar: 10 }], ["Sobrevoamos a região de helicóptero", { premium: 30 }], ["Ficamos no mirante, contemplando sem pressa", { explorar: -25 }]] },
+  { id: "estrada", quando: (c) => c.carro, p: "Na estrada, uma placa indica uma cidadezinha a 40 minutos de desvio.",
+    o: [["Desviamos para conhecer", { explorar: 20, fora: 15 }], ["Seguimos o plano do dia", { explorar: -15 }], ["Desviamos e dormimos por lá", { aventura: 15, fora: 25 }], ["Anotamos para voltar outro dia", { explorar: -5 }]] },
+  { id: "jantar", quando: (c) => c.comida, p: "Primeira noite no destino. Onde vocês jantam?",
+    o: [["Num restaurante premiado, com reserva", { premium: 30 }], ["Onde os moradores comem", { fora: 30 }], ["No lugar famoso dos guias", { fora: -20 }], ["Algo rápido perto do hotel", { explorar: -20 }]] },
+  { id: "hotel", p: "O hotel que vocês queriam lotou. O que preferem?",
+    o: [["Um hotel mais caro na mesma região", { premium: 30 }], ["Uma pousada charmosa um pouco mais longe", { fora: 20 }], ["Um hotel simples e bem localizado", { premium: -20 }], ["Um apartamento para se sentir em casa", { explorar: -10, fora: 10 }]] },
 ];
+// as 3 situações desta viagem: fila e chuva valem para todas; a terceira é a que mais combina com o grupo
+function cenariosDaViagem(o) {
+  const amam = (n) => (o.pf.int || {})[n] === 1 || (o.pf.int || {})[n] === 2, dest = norm(`${o.f.destino} ${o.f.nomeViagem}`);
+  const c = { parques: amam("Parques temáticos") || /disney|universal|orlando|parque/.test(dest), natureza: amam("Natureza e parques") || amam("Trilhas"),
+    carro: +String(o.pf.maxDirecao || "").replace(",", ".") > 0 || amam("Carros e estradas cênicas"), comida: amam("Gastronomia") || amam("Cidades") };
+  const extra = CENARIOS.find((s) => s.quando && s.quando(c)) || CENARIOS.find((s) => s.id === "hotel");
+  if (!o.cenIds) o.cenIds = ["fila", "chuva", extra.id]; // fixadas na primeira vez: não mudam enquanto a pessoa responde
+  return o.cenIds.map((id) => CENARIOS.find((s) => s.id === id)).filter(Boolean);
+}
 const RITMOS = [["tranquilo", "Tranquilo"], ["equilibrado", "Equilibrado"], ["intenso", "Intenso"]];
 const campo = (id, rot, val, extra = "") => `<div class="campo"><label for="${id}">${rot}</label><input id="${id}" value="${esc(val ?? "")}" autocomplete="off" ${extra}></div>`;
 function blocoPerfil(pf, alvo) {
@@ -1501,8 +1565,8 @@ function telaOnboarding() {
     // o "Continuar" desta tela fica no rodapé, ao lado do botão do Marco (layout aprovado)
     c = `<h1 class="titulo-serifa">Do que vocês gostam?</h1><p class="sub" style="margin:0">Toque uma vez para “curto”, duas para “amo”, três para “não é comigo”.</p>${blocoInteresses(o.pf, "onb")}`;
   } else if (o.step === 3) {
-    c = `<h1 style="font-size:28px">Algumas situações</h1><p class="sub">Cenários ajustam o perfil melhor do que perguntas diretas.</p>
-      ${CENARIOS.map((s, si) => `<div class="grupo-op"><div style="font-weight:600">${esc(s.p)}</div>${s.o.map(([t], oi) => `<button class="opt ${o.cen[si] === oi ? "on" : ""}" data-a="onbCen" data-s="${si}" data-i="${oi}">${esc(t)}</button>`).join("")}</div>`).join("")}
+    c = `<h1 style="font-size:28px">Algumas situações</h1><p class="sub">Escolham a opção que mais combina com o grupo.</p>
+      ${cenariosDaViagem(o).map((s) => `<div class="grupo-op"><div style="font-weight:600">${esc(s.p)}</div>${s.o.map(([t], oi) => `<button class="opt ${o.cen[s.id] === oi ? "on" : ""}" data-a="onbCen" data-s="${s.id}" data-i="${oi}">${esc(t)}</button>`).join("")}</div>`).join("")}
       <div class="btns"><button class="btn sec" data-a="onbNext">Pular</button><button class="btn" data-a="onbNext">Continuar</button></div>`;
   } else {
     const p = paisDe(f.pais), amo = INTERESSES.filter((n) => o.pf.int[n] === 2);
@@ -1524,7 +1588,7 @@ function telaOnboarding() {
 }
 function aplicarCenarios(o) {
   const sl = { aventura: 50, explorar: 50, fora: 50, premium: 50 };
-  CENARIOS.forEach((s, si) => { const e = o.cen[si] != null ? s.o[o.cen[si]][1] : {}; for (const [k, v] of Object.entries(e)) sl[k] = Math.max(0, Math.min(100, sl[k] + v)); });
+  cenariosDaViagem(o).forEach((s) => { const e = o.cen[s.id] != null ? s.o[o.cen[s.id]][1] : {}; for (const [k, v] of Object.entries(e)) sl[k] = Math.max(0, Math.min(100, sl[k] + v)); });
   for (const k of Object.keys(sl)) if (o.pf.sl[k] == null || !o.slManual) o.pf.sl[k] = sl[k];
 }
 function preencherFicha(i) {
@@ -1554,6 +1618,8 @@ const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "rot
 let ultimaTela = null;
 function render() {
   const T = { conversa: telaConversa, hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, ficha: telaFicha, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo, historico: telaHistorico, perfil: telaPerfil, consumo: telaConsumo, acesso: telaAcesso, entrar: telaEntrar, cadastro: telaCadastro, recuperar: telaRecuperar, novasenha: telaNovaSenha }[S.tela] || telaBoasVindas;
+  // saiu das telas em que o Marco conversa por voz: a conversa termina (microfone e voz desligam)
+  if ((S.vozAtiva || reconhecedor) && S.tela !== "conversa" && S.tela !== "onboarding") encerrarVoz();
   const main0 = $("#main"), scroll = main0 && ultimaTela === S.tela ? main0.scrollTop : 0;
   const car0 = $("#carInt"); if (car0) S.rolagemInt = car0.scrollLeft; // posição real do carrossel antes de redesenhar
   // quem está digitando não perde o foco quando o Marco atualiza a tela
@@ -1588,6 +1654,7 @@ function render() {
   $("#view").hidden = naCarteira;
   if (!naCarteira) $("#view").innerHTML = T();
   $("#tabs").innerHTML = naCarteira ? "" : tabbar; // na Carteira fica só o menu dela + a seta de voltar
+  const abas = document.querySelector(".tabbar"); if (abas && abas.offsetHeight) document.documentElement.style.setProperty("--abas", abas.offsetHeight + "px");
   // botão do Marco sempre à mão nas telas da viagem (a conversa já tem o dela; a Carteira tem menu próprio embaixo)
   const marcoFlutua = S.viagem && tabbar && !naCarteira && S.tela !== "conversa" ? `<button class="siri siri-flutua ${S.ditando ? "ouvindo" : ""}" data-a="marcoFlutua" aria-label="Falar com o Marco"><span class="nucleo">${ic("mic", 22)}</span></button>` : "";
   $("#over").innerHTML = over + faixaVersao + toastH + marcoFlutua;
@@ -1984,6 +2051,28 @@ async function atualizarTravaTela() {
   } else if (!querer && travaTelaAtiva) { const t = travaTelaAtiva; travaTelaAtiva = null; t.release().catch(() => {}); }
 }
 document.addEventListener("visibilitychange", () => atualizarTravaTela()); // o celular solta a trava ao sair do app; ao voltar, pede de novo
+// Silêncio: o Android encerra a escuta depois de alguns segundos calado. A conversa só pausa sozinha depois de
+// 2 minutos sem fala E sem nenhum toque na tela (bug de 02/10/2026: quem ficava tocando nas opções das situações
+// perdia a conversa depois de 6 reaberturas, ~40 s). Tocar na tela conta como estar presente.
+let ultimaAtividade = Date.now();
+const SILENCIO_MAX = 120000;
+document.addEventListener("pointerdown", () => { ultimaAtividade = Date.now(); }, { capture: true, passive: true });
+const presente = () => Date.now() - ultimaAtividade < SILENCIO_MAX;
+// Fala do Marco em texto de conversa: sem marcações (negrito, listas, títulos, links), pronta para voz ou legenda
+function paraFala(t) {
+  return String(t || "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/[*_`#>]+/g, "").replace(/^\s*(?:[-•]|\d+[.)])\s+/gm, "")
+    .replace(/\s*\n+\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+// Tela do Marco (conversa por voz): depois que ele responde, fala (ou legenda, com CC) e volta a ouvir
+function falarRespostaMarco(m) {
+  if (S.tela !== "conversa" || S.modoEscrito || !m) return;
+  const t = paraFala(m.erro ? "" : m.txt);
+  if (!t) { continuarConversa(); return; }
+  marcoFalar(t, { aoFim: continuarConversa });
+}
+function continuarConversa() {
+  if (S.vozAtiva && S.tela === "conversa" && !S.modoEscrito && !S.pensando && !reconhecedor) A.falar();
+}
 // depois de cada fala do Marco: volta a ouvir, a menos que a pessoa tenha encerrado a conversa
 function continuarOuvindo(o) {
   if (!S.vozAtiva) S.vozAtiva = !!o.porVoz;
@@ -2001,7 +2090,7 @@ function ditar(alvo, aoTerminar) {
   const r = new Reconhecimento();
   r.lang = "pt-BR"; r.interimResults = true; r.continuous = true;
   // relê TODOS os trechos a cada atualização e junta sem repetir (corrige a frase repetida no Android, 01/10/2026)
-  r.onresult = (e) => { const trechos = []; for (let i = 0; i < e.results.length; i++) trechos.push(e.results[i][0].transcript); falado = juntarFala(trechos); gravar([base, falado].filter(Boolean).join(" ")); if (alvo === "txtMarco") { S.transc = falado; const tr = document.querySelector(".transc"); if (tr) tr.textContent = S.transc; } };
+  r.onresult = (e) => { ultimaAtividade = Date.now(); const trechos = []; for (let i = 0; i < e.results.length; i++) trechos.push(e.results[i][0].transcript); falado = juntarFala(trechos); gravar([base, falado].filter(Boolean).join(" ")); if (alvo === "txtMarco") { S.transc = falado; const tr = document.querySelector(".transc"); if (tr) tr.textContent = S.transc; } };
   r.onerror = (e) => { if (/not-allowed|service-not-allowed|audio-capture/.test(e.error)) r.peloUsuario = true; // microfone indisponível: pausa a conversa em vez de insistir
     if (e.error === "not-allowed" || e.error === "service-not-allowed") toast("Para falar comigo, permita o uso do microfone para este app nas configurações do celular."); else if (e.error !== "no-speech" && e.error !== "aborted") toast("Não consegui ouvir agora. Tente de novo ou escreva."); };
   r.onend = () => { reconhecedor = null; S.ditando = null; S.transc = ""; render(); if (aoTerminar && !r.cancelado) aoTerminar(falado.trim(), !!r.peloUsuario); };
@@ -2037,8 +2126,19 @@ const A = {
   },
   async consumoAtualizar() { if (!API) return; try { S.consumo = await (await apiFetch("/consumo")).json(); } catch (e) { S.consumo = { erro: true }; } render(); },
   // conversa: o que você fala vira a mensagem e vai para o Marco ao terminar
-  marcoFlutua() { S.hist = []; S.tela = "conversa"; S.rolarFim = true; render(); if (marcoDisponivel()) A.falar(); },
-  falar() { if (S.pensando) return; ditar("txtMarco", (t) => { if (t) { const msg = S.rascunho; S.rascunho = ""; enviarTexto(msg); } }); },
+  marcoFlutua() { S.modoEscrito = false; S.hist = []; S.tela = "conversa"; S.rolarFim = true; render(); if (marcoDisponivel()) A.falar(); },
+  // conversa por voz na tela do Marco: o que você fala vai para ele ao terminar; silêncio reabre a escuta;
+  // tocar no botão sem ter falado (ou 2 min sem fala nem toque) pausa a conversa
+  falar() {
+    if (S.pensando) return;
+    if (!reconhecedor) { S.vozAtiva = true; atualizarTravaTela(); }
+    ditar("txtMarco", (t, peloUsuario) => {
+      if (t) { const msg = S.rascunho; S.rascunho = ""; enviarTexto(msg); return; }
+      if (peloUsuario || S.tela !== "conversa" || !S.vozAtiva || !presente()) { encerrarVoz(); render(); return; }
+      setTimeout(() => { if (S.vozAtiva && !reconhecedor && S.tela === "conversa" && !S.pensando) A.falar(); }, 300);
+    });
+  },
+  modoEscrito(ds) { S.modoEscrito = ds.v === "1"; if (S.modoEscrito) encerrarVoz(); S.rolarFim = true; render(); },
   // onboarding: o que você fala entra na ficha; ao terminar, o Marco preenche os campos
   ditar(ds) {
     const o = S.onb, naFicha = o && ds.alvo === "onb-fala";
@@ -2048,11 +2148,11 @@ const A = {
       if (t) { silencios = 0; if (marcoDisponivel() && !o.lendo) A.onbMarco(); return; }
       const aqui = S.tela === "onboarding" && S.onb === o;
       // parou sem falar nada: se foi a pessoa que tocou, a conversa pausa; se foi o Android (silêncio), volta a ouvir
-      if (peloUsuario || !aqui || !S.vozAtiva || ++silencios > 6) { encerrarVoz(); if (aqui) { o.pausada = true; mostrarDica(8000); } return; }
+      if (peloUsuario || !aqui || !S.vozAtiva || !presente()) { encerrarVoz(); if (aqui) { o.pausada = true; mostrarDica(8000); } return; }
       setTimeout(() => { if (S.vozAtiva && !reconhecedor && S.tela === "onboarding" && S.onb === o) A.ditar({ alvo: "onb-fala" }); }, 300);
     });
   },
-  encerrarConversa() { encerrarVoz(); if (S.onb) { S.onb.pausada = true; mostrarDica(8000); } else render(); },
+  encerrarConversa() { encerrarVoz(); if (S.tela === "onboarding" && S.onb) { S.onb.pausada = true; mostrarDica(8000); } else render(); },
   // reabriu o app com a Nova viagem pela metade: o Marco resume o que já tem (sem gastar tokens) e volta a ouvir
   onbRetomar() {
     const o = S.onb; o.retomar = false; o.pausada = false; o.porVoz = true; o.semVoz = false; S.vozAtiva = true; o.marco = resumoRetomada(o); atualizarTravaTela(); render();
@@ -2233,7 +2333,7 @@ const A = {
     marcoFalar(o.marco, { guardar: true, aoFim: () => { if (S.tela === "onboarding" && S.onb === o) continuarOuvindo(o); } });
   },
   onbVoltar() { encerrarVoz(); S.onb.step = Math.max(0, S.onb.step - 1); render(); },
-  onbCen(ds) { S.onb.cen[+ds.s] = +ds.i; render(); },
+  onbCen(ds) { S.onb.cen[ds.s] = +ds.i; render(); },
   async onbFim() {
     const o = S.onb, f = o.f, p = paisDe(f.pais);
     const cot = p && p.moeda === "BRL" ? 1 : numBR(f.cotacao);
