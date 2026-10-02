@@ -256,7 +256,7 @@ body.com-tabbar #legenda{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 .carrossel{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-padding-inline:16px;padding:2px 16px 4px;margin:0 -16px;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
 .carrossel::-webkit-scrollbar{display:none}
 .cartao-int{position:relative;flex:0 0 clamp(108px,27vw,200px);height:clamp(300px,50dvh,560px);border-radius:16px;overflow:hidden;scroll-snap-align:start;padding:0;text-align:left;color:#fff;border:1px solid rgba(255,255,255,.14);background:linear-gradient(165deg,var(--g1),var(--g2));transition:box-shadow .2s,border-color .2s}
-.cartao-int .foto{position:absolute;inset:0;background:var(--foto,none) center/cover no-repeat;transition:filter .3s}
+.cartao-int .foto{position:absolute;inset:0;background:var(--foto,none) var(--foco,center)/cover no-repeat;transition:filter .3s}
 .cartao-int::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,0) 42%,rgba(0,0,0,.55) 70%,rgba(0,0,0,.86))}
 .cartao-int .rot{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:12px 12px 14px;display:flex;flex-direction:column;gap:12px}
 .cartao-int b{font-family:var(--serifa);font-weight:500;font-size:clamp(17px,4.4vw,23px);line-height:1.1;letter-spacing:-.2px;text-shadow:0 1px 10px rgba(0,0,0,.55)}
@@ -1390,7 +1390,7 @@ function telaViagens() {
 }
 
 // ---------- perfil (camadas A e B da seção 6, sempre editáveis) ----------
-const INTERESSES = ["Natureza e parques", "Trilhas", "Cidades", "Museus e história", "Gastronomia", "Compras", "Fotografia", "Cultura local", "Shows e esportes", "Parques temáticos", "Aventura radical", "Vida noturna", "Praia", "Bem-estar", "Carros e estradas cênicas"];
+const INTERESSES = ["Natureza e parques", "Trilhas", "Cidades", "Museus e história", "Gastronomia", "Compras", "Fotografia", "Cultura local", "Shows e música", "Esportes", "Parques temáticos", "Aventura radical", "Vida noturna", "Praia", "Bem-estar", "Carros e estradas cênicas"];
 const SLIDERS = [["aventura", "Conservador", "Aventureiro"], ["explorar", "Relaxar", "Explorar"], ["fora", "Popular", "Fora do circuito"], ["premium", "Econômico", "Premium"]];
 const CENARIOS = [
   { p: "Um mirante famoso e 3 horas livres. O que vocês fazem?", o: [["Ver dos mirantes, de carro", { aventura: -20, premium: -10 }], ["Trilha de 2 horas descendo", { aventura: 20, explorar: 20 }], ["Voo panorâmico de helicóptero", { aventura: 30, premium: 30, explorar: 10 }], ["Sentar e contemplar, sem pressa", { aventura: -10, explorar: -25 }]] },
@@ -1413,14 +1413,16 @@ function blocoSliders(pf, alvo) {
 }
 // Interesses em cartões verticais com foto, deslizando para o lado (layout aprovado por Wagner, 01/10/2026).
 // Fotos: prototipo/imagens/interesses/<slug>.webp|jpg (ver LEIA-ME.md lá); sem foto, um degradê sóbrio no lugar.
-const FOTOS_INTERESSES = /*__FOTOS_INTERESSES__*/{};
+const FOTOS_INTERESSES = /*__FOTOS_INTERESSES__*/{}, FOCO_INTERESSES = /*__FOCO_INTERESSES__*/{};
 const slugInteresse = (n) => norm(n).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const DEGRADES = [["#2F5D8C", "#162E47"], ["#5B6F5A", "#1F2D24"], ["#8A6B4A", "#3A2A1C"], ["#6B5B7B", "#2A2235"], ["#3F7F8C", "#18343A"], ["#7A5A5A", "#2F1F1F"]];
 function blocoInteresses(pf, alvo) {
+  // "Shows e esportes" virou dois interesses (Wagner, 02/10/2026): quem já tinha escolhido fica com os dois
+  if (pf.int && pf.int["Shows e esportes"] != null) { const v = pf.int["Shows e esportes"]; delete pf.int["Shows e esportes"]; for (const n of ["Shows e música", "Esportes"]) if (pf.int[n] == null) pf.int[n] = v; }
   const r = ["Tocar", "Curto", "Amo", "Não é comigo"];
   return `<div class="carrossel" id="carInt" role="list">${INTERESSES.map((n, i) => {
-    const v = (pf.int || {})[n] || 0, foto = FOTOS_INTERESSES[slugInteresse(n)], [g1, g2] = DEGRADES[i % DEGRADES.length];
-    return `<button role="listitem" class="cartao-int ${["", "curto", "amo", "nao"][v]}" data-a="setInteresse" data-alvo="${alvo}" data-n="${esc(n)}" aria-label="${esc(n)}: ${r[v]}" style="--g1:${g1};--g2:${g2}${foto ? `;--foto:url('${foto}')` : ""}">
+    const v = (pf.int || {})[n] || 0, foto = FOTOS_INTERESSES[slugInteresse(n)], foco = FOCO_INTERESSES[slugInteresse(n)], [g1, g2] = DEGRADES[i % DEGRADES.length];
+    return `<button role="listitem" class="cartao-int ${["", "curto", "amo", "nao"][v]}" data-a="setInteresse" data-alvo="${alvo}" data-n="${esc(n)}" aria-label="${esc(n)}: ${r[v]}" style="--g1:${g1};--g2:${g2}${foto ? `;--foto:url('${foto}')` : ""}${foco ? `;--foco:${foco}` : ""}">
       <span class="foto"></span><span class="rot"><b>${esc(n)}</b><span class="estado"><i class="radio"></i>${r[v]}</span></span></button>`;
   }).join("")}</div><div class="pontos" id="pontosInt" aria-hidden="true"></div>`;
 }

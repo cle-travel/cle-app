@@ -39,6 +39,8 @@ if (fs.existsSync(DIR_FOTOS)) {
 const html = fs.readFileSync(path.join(HERE, "app.html"), "utf8")
   .replace("/*__MONTADO__*/false", "true")
   .replace("/*__FOTOS_INTERESSES__*/{}", () => JSON.stringify(FOTOS_INTERESSES))
+  // ponto de interesse de cada foto (onde o recorte do cartão estreito se centraliza): imagens/interesses/foco.json
+  .replace("/*__FOCO_INTERESSES__*/{}", () => { const f = path.join(DIR_FOTOS, "foco.json"); return fs.existsSync(f) ? JSON.stringify(JSON.parse(fs.readFileSync(f, "utf8"))) : "{}"; })
   .replace('/*__VERSAO__*/"dev"', () => JSON.stringify(VERSAO_APP))
   .replace("/*__CARTEIRA__*/null", () => seguro(carteira))
   // endereço do Marco na nuvem (público; gravado por publicar-nuvem.mjs). Sem ele, o app publicado avisa que o Marco não está ligado

@@ -261,7 +261,7 @@ body.com-tabbar #legenda{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 .carrossel{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-padding-inline:16px;padding:2px 16px 4px;margin:0 -16px;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
 .carrossel::-webkit-scrollbar{display:none}
 .cartao-int{position:relative;flex:0 0 clamp(108px,27vw,200px);height:clamp(300px,50dvh,560px);border-radius:16px;overflow:hidden;scroll-snap-align:start;padding:0;text-align:left;color:#fff;border:1px solid rgba(255,255,255,.14);background:linear-gradient(165deg,var(--g1),var(--g2));transition:box-shadow .2s,border-color .2s}
-.cartao-int .foto{position:absolute;inset:0;background:var(--foto,none) center/cover no-repeat;transition:filter .3s}
+.cartao-int .foto{position:absolute;inset:0;background:var(--foto,none) var(--foco,center)/cover no-repeat;transition:filter .3s}
 .cartao-int::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,0) 42%,rgba(0,0,0,.55) 70%,rgba(0,0,0,.86))}
 .cartao-int .rot{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:12px 12px 14px;display:flex;flex-direction:column;gap:12px}
 .cartao-int b{font-family:var(--serifa);font-weight:500;font-size:clamp(17px,4.4vw,23px);line-height:1.1;letter-spacing:-.2px;text-shadow:0 1px 10px rgba(0,0,0,.55)}
@@ -547,7 +547,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.6.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.6.1"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -1395,7 +1395,7 @@ function telaViagens() {
 }
 
 // ---------- perfil (camadas A e B da seção 6, sempre editáveis) ----------
-const INTERESSES = ["Natureza e parques", "Trilhas", "Cidades", "Museus e história", "Gastronomia", "Compras", "Fotografia", "Cultura local", "Shows e esportes", "Parques temáticos", "Aventura radical", "Vida noturna", "Praia", "Bem-estar", "Carros e estradas cênicas"];
+const INTERESSES = ["Natureza e parques", "Trilhas", "Cidades", "Museus e história", "Gastronomia", "Compras", "Fotografia", "Cultura local", "Shows e música", "Esportes", "Parques temáticos", "Aventura radical", "Vida noturna", "Praia", "Bem-estar", "Carros e estradas cênicas"];
 const SLIDERS = [["aventura", "Conservador", "Aventureiro"], ["explorar", "Relaxar", "Explorar"], ["fora", "Popular", "Fora do circuito"], ["premium", "Econômico", "Premium"]];
 const CENARIOS = [
   { p: "Um mirante famoso e 3 horas livres. O que vocês fazem?", o: [["Ver dos mirantes, de carro", { aventura: -20, premium: -10 }], ["Trilha de 2 horas descendo", { aventura: 20, explorar: 20 }], ["Voo panorâmico de helicóptero", { aventura: 30, premium: 30, explorar: 10 }], ["Sentar e contemplar, sem pressa", { aventura: -10, explorar: -25 }]] },
@@ -1418,14 +1418,16 @@ function blocoSliders(pf, alvo) {
 }
 // Interesses em cartões verticais com foto, deslizando para o lado (layout aprovado por Wagner, 01/10/2026).
 // Fotos: prototipo/imagens/interesses/<slug>.webp|jpg (ver LEIA-ME.md lá); sem foto, um degradê sóbrio no lugar.
-const FOTOS_INTERESSES = {};
+const FOTOS_INTERESSES = {"aventura-radical":"imagens/interesses/aventura-radical.webp?v=252b5dec","bem-estar":"imagens/interesses/bem-estar.webp?v=6b68497b","carros-e-estradas-cenicas":"imagens/interesses/carros-e-estradas-cenicas.webp?v=502a7fbc","cidades":"imagens/interesses/cidades.webp?v=a5c28a61","compras":"imagens/interesses/compras.webp?v=613104d8","cultura-local":"imagens/interesses/cultura-local.webp?v=fe4a02d5","esportes":"imagens/interesses/esportes.webp?v=21ae379d","fotografia":"imagens/interesses/fotografia.webp?v=70f63544","gastronomia":"imagens/interesses/gastronomia.webp?v=26ea4b54","museus-e-historia":"imagens/interesses/museus-e-historia.webp?v=78e46128","natureza-e-parques":"imagens/interesses/natureza-e-parques.webp?v=9373725f","parques-tematicos":"imagens/interesses/parques-tematicos.webp?v=0cf31327","praia":"imagens/interesses/praia.webp?v=28101939","shows-e-musica":"imagens/interesses/shows-e-musica.webp?v=68e7758f","trilhas":"imagens/interesses/trilhas.webp?v=4595374a","vida-noturna":"imagens/interesses/vida-noturna.webp?v=8bcee2a3"}, FOCO_INTERESSES = {"aventura-radical":"12% 50%","bem-estar":"50% 50%","carros-e-estradas-cenicas":"50% 50%","cidades":"50% 50%","compras":"50% 50%","cultura-local":"50% 50%","esportes":"25% 50%","fotografia":"23% 50%","gastronomia":"28% 50%","museus-e-historia":"50% 50%","natureza-e-parques":"0% 50%","parques-tematicos":"23% 50%","praia":"50% 50%","shows-e-musica":"50% 50%","trilhas":"12% 50%","vida-noturna":"45% 50%"};
 const slugInteresse = (n) => norm(n).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const DEGRADES = [["#2F5D8C", "#162E47"], ["#5B6F5A", "#1F2D24"], ["#8A6B4A", "#3A2A1C"], ["#6B5B7B", "#2A2235"], ["#3F7F8C", "#18343A"], ["#7A5A5A", "#2F1F1F"]];
 function blocoInteresses(pf, alvo) {
+  // "Shows e esportes" virou dois interesses (Wagner, 02/10/2026): quem já tinha escolhido fica com os dois
+  if (pf.int && pf.int["Shows e esportes"] != null) { const v = pf.int["Shows e esportes"]; delete pf.int["Shows e esportes"]; for (const n of ["Shows e música", "Esportes"]) if (pf.int[n] == null) pf.int[n] = v; }
   const r = ["Tocar", "Curto", "Amo", "Não é comigo"];
   return `<div class="carrossel" id="carInt" role="list">${INTERESSES.map((n, i) => {
-    const v = (pf.int || {})[n] || 0, foto = FOTOS_INTERESSES[slugInteresse(n)], [g1, g2] = DEGRADES[i % DEGRADES.length];
-    return `<button role="listitem" class="cartao-int ${["", "curto", "amo", "nao"][v]}" data-a="setInteresse" data-alvo="${alvo}" data-n="${esc(n)}" aria-label="${esc(n)}: ${r[v]}" style="--g1:${g1};--g2:${g2}${foto ? `;--foto:url('${foto}')` : ""}">
+    const v = (pf.int || {})[n] || 0, foto = FOTOS_INTERESSES[slugInteresse(n)], foco = FOCO_INTERESSES[slugInteresse(n)], [g1, g2] = DEGRADES[i % DEGRADES.length];
+    return `<button role="listitem" class="cartao-int ${["", "curto", "amo", "nao"][v]}" data-a="setInteresse" data-alvo="${alvo}" data-n="${esc(n)}" aria-label="${esc(n)}: ${r[v]}" style="--g1:${g1};--g2:${g2}${foto ? `;--foto:url('${foto}')` : ""}${foco ? `;--foco:${foco}` : ""}">
       <span class="foto"></span><span class="rot"><b>${esc(n)}</b><span class="estado"><i class="radio"></i>${r[v]}</span></span></button>`;
   }).join("")}</div><div class="pontos" id="pontosInt" aria-hidden="true"></div>`;
 }
