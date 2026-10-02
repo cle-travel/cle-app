@@ -42,7 +42,7 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
 
   // conta do Supabase: confere o token com o próprio Supabase e procura o e-mail na lista de liberados (cache de 5 min)
   const liberados = () => { try { return Object.fromEntries(Object.entries(JSON.parse(env("PERMITIDOS") || "{}")).map(([n, e]) => [String(e).trim().toLowerCase(), n])); } catch { return {}; } };
-  const cacheContas = new Map();
+  const cacheContas = new Map(), cacheFotos = new Map();
   const quemPelaConta = async (cabecalho) => {
     const t = tokenDoCabecalho(cabecalho);
     if (!t || !env("SUPABASE_URL")) return { quem: null, motivo: "sem_conta" };
@@ -110,6 +110,34 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
       if (!r || !r.ok) { console.error("voz:", r ? r.status + " " + (await r.text()).slice(0, 200) : "sem conexão"); return json(502, { erro: "A voz do Marco não respondeu agora." }); }
       await consumo.registrar("voz", { entrada: texto.length, saida: 0, cacheLido: 0, cacheEscrito: 0, buscas: 0, chamadas: 1, usd: 0 }, quem);
       return new Response(r.body, { status: 200, headers: { ...cors, "Content-Type": "audio/mpeg", "Cache-Control": "no-store" } });
+    }
+    // foto de um lugar sugerido (painel visual da tela do Marco): imagem principal do artigo da Wikipédia
+    // (licença livre; o app mostra o crédito). Português primeiro, inglês se não houver. Guardada em memória.
+    if (rota === "foto" && req.method === "POST") {
+      let b; try { b = await lerCorpo(); } catch { return json(400, { erro: "Pedido inválido." }); }
+      const nome = String(b.nome || "").trim().slice(0, 120), onde = String(b.onde || "").trim().slice(0, 80);
+      if (!nome) return json(400, { erro: "Pedido inválido." });
+      const chave = (nome + "|" + onde).toLowerCase();
+      if (cacheFotos.has(chave)) return json(200, cacheFotos.get(chave));
+      // só foto de verdade (JPG) do próprio lugar: nada de logotipo, mapa ou desenho, e o título do artigo tem de
+      // conter uma palavra marcante do nome (evita "Magic Kingdom" virar o time "Orlando Magic")
+      const tirarAcento = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+      const marcantes = tirarAcento(nome).split(/[^a-z0-9]+/).filter((w) => w.length > 3 && !["park", "parque", "beach", "praia", "center", "centro", "museum", "museu", "lake", "lago", "international", "internacional", "national", "nacional", "state", "estadual", "passeio", "tour"].includes(w));
+      const confere = (titulo) => !marcantes.length || marcantes.filter((w) => tirarAcento(titulo).includes(w)).length >= Math.min(2, marcantes.length);
+      const fotoBoa = (src) => /\.jpe?g($|\?|\/)/i.test(src) && !/logo|wordmark|map|mapa|location|locator|flag|bandeira|seal|coat_of_arms|icon/i.test(src);
+      let r = { url: null };
+      busca: for (const [lang, q] of [["en", nome], ["pt", nome], ["en", onde ? `${nome} ${onde}` : ""], ["pt", onde ? `${nome} ${onde}` : ""]]) {
+        if (!q) continue;
+        try {
+          const u = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrlimit=4&gsrsearch=${encodeURIComponent(q)}&prop=pageimages|info&inprop=url&piprop=thumbnail&pithumbsize=720&pilicense=free&origin=*`;
+          const j = await (await fetch(u, { headers: { "User-Agent": "Cle-app/1.0 (https://cle-travel.github.io/cle-app/)" } })).json();
+          const paginas = Object.values((j && j.query && j.query.pages) || {}).sort((a, b) => a.index - b.index);
+          for (const p of paginas) if (p.thumbnail && fotoBoa(p.thumbnail.source) && confere(p.title)) { r = { url: p.thumbnail.source, titulo: p.title, pagina: p.fullurl, fonte: "Wikipédia" }; break busca; }
+        } catch {}
+      }
+      if (cacheFotos.size > 2000) cacheFotos.clear();
+      cacheFotos.set(chave, r);
+      return json(200, r);
     }
     if (rota === "lugar" && req.method === "POST") {
       try { const b = await lerCorpo(); if (!b.consulta) throw 0; return json(200, await buscarLugar(String(b.consulta), b.perto || null, chaves(), { pais: b.pais, forma: b.forma })); } catch { return json(400, { erro: "Pedido inválido." }); }

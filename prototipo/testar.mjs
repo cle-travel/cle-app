@@ -110,7 +110,15 @@ confere("situações: pergunta de até 14 palavras", CEN.filter((s) => palavras(
 confere("situações: 4 opções de até 8 palavras", CEN.filter((s) => s.o.length !== 4 || s.o.some(([t]) => palavras(t) > 8)).map((s) => s.id), []);
 confere("situações: toda opção mexe em um eixo válido do perfil", CEN.filter((s) => s.o.some(([, e]) => !Object.keys(e).length || Object.keys(e).some((k) => !EIXOS.includes(k)))).map((s) => s.id), []);
 confere("situações: texto interno não aparece na tela", app.includes("Cenários ajustam o perfil"), false);
-confere("tela do Marco por voz (sem caixa de texto do Marco)", /function telaConversaEscrita\(\)/.test(app) && /falarRespostaMarco\(m\)/.test(app), true);
+confere("tela do Marco por voz (sem caixa de texto do Marco)", /function telaConversaEscrita\(/.test(app) && /falarRespostaMarco\(m\)/.test(app), true);
+// ---------- 10. regras de 02/10/2026 (tarde) ----------
+confere("conversa escrita só com o Marco mudo (CC)", /if \(S\.legendas\) return telaConversaEscrita\(\);/.test(app), true);
+confere("histórico de conversas em Mais", /it\("conversas", "chat", "Histórico de conversas"/.test(app), true);
+confere("painel visual do planejamento na tela do Marco", /function painelPlanejamento\(\)/.test(app), true);
+confere("servidor interrompe passo longo antes do limite da nuvem", /codigo: "tempo"/.test(nucleo) && /prazoMs \+ 25000/.test(nucleo), true);
+confere("planejamento em lotes de até 3 dias", /no máximo 3 dias por resposta/.test(nucleo), true);
+confere("app refaz em partes quando o servidor avisa tarefa grande", /codigo === "tempo" && modo === "planejamento"/.test(app), true);
+confere("erro de conexão em português, não \"network error\"", /A conexão com o Marco caiu no meio da resposta/.test(app), true);
 confere("silêncio: pausa por tempo sem fala nem toque, não por tentativas", /const SILENCIO_MAX = 120000/.test(app) && !/\+\+silencios > 6/.test(app), true);
 confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
 

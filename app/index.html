@@ -280,6 +280,10 @@ body.legendas .com-doca{padding-bottom:210px!important}
 .cartao-int.nao b,.cartao-int.nao .estado{opacity:.6}
 .cartao-int.nao .radio::before,.cartao-int.nao .radio::after{content:"";position:absolute;left:8px;top:3px;width:2px;height:12px;background:#fff;transform:rotate(45deg)}
 .cartao-int.nao .radio::after{transform:rotate(-45deg)}
+/* painel da tela do Marco: desejos em cartões menores com foto */
+.cartao-mini{flex-basis:clamp(128px,36vw,180px);height:clamp(180px,30dvh,250px)}
+.cartao-mini b{font-size:clamp(16px,4.2vw,19px)}
+.cartao-mini .estado{font-size:12px}
 .pontos{display:flex;justify-content:center;gap:8px;min-height:8px;margin-top:4px}
 .pontos i{width:7px;height:7px;border-radius:4px;background:var(--fg2);opacity:.45;transition:width .25s,opacity .25s,background .25s}
 .pontos i.on{width:28px;background:var(--accent);opacity:1}
@@ -551,7 +555,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.7.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.8.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -796,7 +800,7 @@ async function enviarTexto(txt, opc = {}) {
   }
   if (opc.anexo) novas.push(opc.anexo.bloco);
   novas.push({ type: "text", text: txt });
-  const ok = await rodarTurno(modo, novas, { reenvio: { txt, opc: { ...opc, semBalao: true, modo } } });
+  const ok = await rodarTurno(modo, novas, { reenvio: { txt, opc: { ...opc, semBalao: true, modo } }, emPartes: opc.emPartes });
   if (ok) { if (pend) pend.respondido = true; if (notasUsadas) S.notas = S.notas.slice(notasUsadas); render(); }
   return ok;
 }
@@ -815,7 +819,12 @@ async function rodarTurno(modo, novas, ctrl = {}) {
     if (r.status === 409) codigo = "versao";
     else if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.erro || "O Marco não respondeu."); }
     else await lerSSE(r, (ev) => { if (tratarEvento(ev, m, fio, modo)) ok = true; if (ev.tipo === "erro" && ev.codigo) codigo = ev.codigo; });
-  } catch (e) { m.erro = navigator.onLine === false ? "Sem internet: o Marco precisa de conexão. Roteiro, mapa, Carteira e Cofre continuam funcionando." : e.message || "O Marco não respondeu."; }
+  } catch (e) {
+    // mensagens do navegador em inglês ("network error", "Failed to fetch") viram uma explicação clara
+    const rede = /network|failed to fetch|load failed|fetch|aborted|terminated/i.test(String(e && e.message));
+    m.erro = navigator.onLine === false ? "Sem internet: o Marco precisa de conexão. Roteiro, mapa, Carteira e Cofre continuam funcionando."
+      : rede ? "A conexão com o Marco caiu no meio da resposta. Tente de novo; se for um pedido grande, como o roteiro inteiro, peça alguns dias por vez." : e.message || "O Marco não respondeu.";
+  }
   m.vivo = false; m.status = null; S.pensando = false;
   if (m.continuar && !ok && !m.erro) { if (!m.txt.trim()) S.chat.splice(S.chat.indexOf(m), 1); return rodarTurno(modo, [], { ...ctrl, fioAvulso: avulso ? fio : undefined }); }
   // trava: versão nova do prefixo ou histórico recusado → recomeça a conversa com resumo e tenta uma vez
@@ -823,6 +832,12 @@ async function rodarTurno(modo, novas, ctrl = {}) {
     S.chat.splice(S.chat.indexOf(m), 1);
     await recomecarFio(modo);
     return rodarTurno(modo, novas, { ...ctrl, recomecou: true });
+  }
+  // tarefa grande demais para uma vez (o servidor interrompeu antes do limite da nuvem): refaz em partes, uma vez
+  if (!ok && codigo === "tempo" && modo === "planejamento" && !ctrl.emPartes) {
+    m.erro = null; m.status = null; m.txt = "Essa tarefa é grande; vou montar em partes, alguns dias por vez.";
+    S.rolarFim = true; render();
+    return enviarTexto("Faça em partes menores: monte agora só os próximos 2 dias ainda sem roteiro e diga quantos faltam.", { modo: "planejamento", semBalao: true, emPartes: true });
   }
   if (ok && !avulso && fio.resumo && fio.msgs.length) fio.resumo = null;
   if (!ok && !m.erro) m.erro = "O Marco não respondeu. Tente de novo.";
@@ -851,7 +866,13 @@ function tratarEvento(ev, m, fio, modo) {
       m.toolUses = asst.filter((b) => b.type === "tool_use").map((b) => b.id);
       m.cards = asst.filter((b) => b.type === "tool_use" && !(b.id in m.servidor)).map((b) => ({ id: b.id, name: b.name, input: b.input || {}, estado: "aguardando" }));
       for (const k of m.cards) if (k.name === "encaminhar_ao_planejador") { k.estado = "aprovado"; k.resultado = "Encaminhado ao planejador; o resultado aparece na conversa."; m.encaminhar = k.input.pedido; }
-      if (!m.txt.trim() && m.cards.some((k) => k.estado === "aguardando")) m.txt = m.cards.length > 1 ? "Preparei estas propostas para você decidir:" : "Preparei esta proposta para você decidir:";
+      if (!m.txt.trim() && m.cards.some((k) => k.estado === "aguardando")) {
+        // fala padrão quando o Marco não escreveu nada: diz o que preparou (a voz não pode ficar vaga)
+        const dias = m.cards.filter((k) => k.name === "propor_dia").map((k) => +k.input.dia).filter(Boolean).sort((a, b) => a - b);
+        m.txt = dias.length && dias.length === m.cards.length
+          ? (dias.length === 1 ? `Montei o dia ${dias[0]}.` : `Montei os dias ${dias[0]} a ${dias[dias.length - 1]}.`) + " Confere aqui e me diz se posso seguir com os próximos."
+          : m.cards.length > 1 ? "Preparei estas propostas para vocês decidirem." : "Preparei esta proposta para vocês decidirem.";
+      }
       if (avulso) m.respondido = true; // comprovante: conversa avulsa, não continua
     }
     return true;
@@ -906,7 +927,8 @@ function cardMarco(k, mi, ci) {
     topo = "Concluir tarefa"; corpo = `<div style="font-size:18px;font-weight:600">${esc(t ? textoTarefa(t) : i.id)}</div>`;
   } else if (k.name === "propor_desejo") {
     topo = "Para a lista de desejos";
-    corpo = `<div class="swipe" style="min-height:0;box-shadow:none;padding:0"><div class="ph">${esc(i.cidade || nomeViagem())}</div><div style="font-size:20px;font-weight:600">${esc(i.nome)}</div><div style="font-size:15px;color:var(--fg2);line-height:1.4">${esc(i.detalhe || "")}</div></div>`;
+    const f = fotoLugar(i.nome, i.cidade || ondeViagem());
+    corpo = `<div class="swipe" style="min-height:0;box-shadow:none;padding:0"><div class="ph"${f && f.u ? ` style="height:170px;color:#fff;background:linear-gradient(to top,rgba(0,0,0,.6),rgba(0,0,0,0) 55%),url('${f.u}') center/cover"` : ""}><span style="flex:1">${esc(i.cidade || nomeViagem())}</span>${f && f.u ? '<span style="font-size:11px;font-weight:500;opacity:.85">Foto: Wikipédia</span>' : ""}</div><div style="font-size:20px;font-weight:600">${esc(i.nome)}</div><div style="font-size:15px;color:var(--fg2);line-height:1.4">${esc(i.detalhe || "")}</div></div>`;
   } else if (k.name === "propor_info_viagem") {
     const rot = { seguro_central: "Central 24 h do seguro", seguro_apolice: "Apólice do seguro", seguro_nome: "Seguradora", locadora_telefone: "Telefone da locadora", consulado: "Consulado do Brasil" };
     topo = "Informação de apoio"; corpo = `<div>${kv(rot[i.campo] || i.campo, i.valor)}</div><div class="small">Fica no Cofre, na tela Emergência e no guia impresso.</div>`;
@@ -991,14 +1013,15 @@ function header(opts) {
 // embaixo do botão. A conversa escrita continua disponível no botão "Escrever" (histórico e teclado).
 function telaConversa() {
   if (!S.chat) S.chat = chatInicial();
-  if (S.modoEscrito) return telaConversaEscrita();
+  if (S.legendas) return telaConversaEscrita(); // Marco mudo (CC): a conversa aparece escrita
   let mi = -1; for (let i = S.chat.length - 1; i >= 0; i--) if (S.chat[i].de === "m") { mi = i; break; }
   const ult = mi >= 0 ? S.chat[mi] : null;
   let ci0 = -1; for (let i = S.chat.length - 1; i >= 0; i--) if (S.chat[i].de === "m" && (S.chat[i].cards || []).some((k) => k.estado === "aguardando")) { ci0 = i; break; }
   const cards = ci0 >= 0 ? `<p class="eyebrow">Para vocês decidirem</p>${S.chat[ci0].cards.map((k, ci) => cardMarco(k, ci0, ci)).join("")}` : "";
   const erro = ult && ult.erro && !S.pensando ? `<div class="card" style="background:var(--bad-bg);gap:10px"><div style="color:var(--bad);font-weight:600;font-size:15px">${esc(ult.erro)}</div>${ult.retry || ult.reenvio ? '<button class="btn sec" data-a="retry">Tentar de novo</button>' : ""}</div>` : "";
   const sugestoes = marcoDisponivel() ? ["O que falta resolver?", DIAS.some((d) => d.paradas.length) ? "Revise o roteiro e aponte problemas" : "Monte uma primeira versão do roteiro", "Sugira atrações para a lista de desejos", "Quanto já gastamos?"] : [];
-  const vazio = !cards && !erro ? `<div class="abertura" style="padding-top:3vh">
+  const painel = !cards && !erro ? painelPlanejamento() : "";
+  const vazio = !cards && !erro && !painel ? `<div class="abertura" style="padding-top:3vh">
       <span class="avatar" style="width:56px;height:56px;border-radius:16px">${ic("compass", 30, 1.6)}</span>
       <h1>${marcoDisponivel() ? "Fale com o Marco" : "O Marco está desligado"}</h1>
       <p>${marcoDisponivel() ? "Toque no botão aqui embaixo e peça o que precisar: montar o roteiro, lançar um gasto, tirar uma dúvida. Ele responde em voz alta e continua ouvindo." : esc(msgMarcoOff())}</p>
@@ -1008,12 +1031,13 @@ function telaConversa() {
   const dica = ouvindo ? `<div class="doca-dica" role="status">${esc(S.transc || "Estou ouvindo. Pode falar.")}</div>` : S.pensando && ult && ult.status ? `<div class="doca-dica" role="status">${esc(ult.status)}</div>` : "";
   const lado = (a, rot, icone) => `<button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px;justify-self:${a === "comprovante" ? "end" : "start"}" data-a="${a}" ${a === "modoEscrito" ? 'data-v="1"' : ""} aria-label="${rot}">${ic(icone, 20)}</button>`;
   return `${header({ titulo: nomeViagem(), sub: tripSub() })}
-  <main id="main"><div class="pad com-doca">${cards}${erro}${vazio}</div></main>
+  <main id="main"><div class="pad com-doca">${cards}${erro}${painel}${vazio}${painel && sugestoes.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${sugestoes.map((t) => `<button class="chip" data-a="perg" data-k="txt">${esc(t)}</button>`).join("")}</div>` : ""}</div></main>
   <div class="doca">${dica}<div class="doca-linha">${lado("comprovante", "Enviar comprovante", "upload")}
     <button class="siri ${ouvindo ? "ouvindo" : S.pensando ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="falar" aria-label="${ouvindo ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(ouvindo ? "pause" : "mic", 24)}</span></button>
-    ${S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : lado("modoEscrito", "Escrever ou ver a conversa escrita", "chat")}</div></div>`;
+    ${S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}</div></div>`;
 }
-function telaConversaEscrita() {
+function telaConversaEscrita(soLeitura = false) {
+  if (!S.chat) S.chat = chatInicial();
   const msgs = S.chat.map((m, mi) => {
     const anim = m.visto ? "" : " fade";
     if (m.de === "u") return `<div class="msg-u${anim}">${esc(m.txt)}${m.anexo ? `<div style="font-size:13px;opacity:.85;margin-top:4px;display:flex;gap:4px;align-items:center">${ic("doc", 13)} ${esc(m.anexo)}</div>` : ""}</div>`;
@@ -1028,6 +1052,8 @@ function telaConversaEscrita() {
     if (!m.txt && !c && !st && !err) return "";
     return `<div class="${anim}" style="display:flex;flex-direction:column;gap:10px"><div class="who"><span class="avatar">${ic("compass", 16, 2)}</span>Marco</div>${m.txt ? `<div class="msg-m">${md(m.txt)}</div>` : ""}${st}${c}${err}</div>`;
   }).join("");
+  // Mais > Histórico de conversas: a mesma lista, só para ler
+  if (soLeitura) return `${header({ titulo: "Histórico de conversas", sub: nomeViagem(), voltar: true, direita: '<span style="width:36px"></span>' })}<main id="main"><div class="chat">${msgs || '<p class="small">Ainda não há conversa com o Marco nesta viagem.</p>'}</div></main>`;
   const orbCls = S.pensando ? "pensando" : S.voz === "ouvindo" ? "ouvindo" : "";
   const status = S.pensando ? "Pensando…" : S.voz === "ouvindo" ? "Ouvindo" : marcoDisponivel() ? "Toque para falar ou escreva" : "Marco desligado neste endereço";
   const chips = marcoDisponivel()
@@ -1040,7 +1066,7 @@ function telaConversaEscrita() {
   <div class="voz"><div class="transc">${esc(S.transc || "")}</div>
     <div class="linha"><button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="comprovante" aria-label="Enviar comprovante">${ic("upload", 20)}</button>
     <button class="siri ${S.ditando === "txtMarco" ? "ouvindo" : S.pensando ? "pensando" : ""}" data-a="falar" aria-label="${S.ditando === "txtMarco" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "txtMarco" ? "pause" : "mic", 24)}</span></button>
-    <button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="modoEscrito" data-v="0" aria-label="Voltar para a conversa por voz">${ic("speaker", 20)}</button></div>
+    <button class="iconbtn" style="background:var(--fill);color:var(--fg);width:46px;height:46px;border-radius:23px" data-a="legendas" aria-label="Voltar a ouvir o Marco (desliga as legendas)">${ic("speaker", 20)}</button></div>
     <span class="small">${status}</span></div>`;
 }
 function cardProposta() {
@@ -1235,7 +1261,7 @@ function telaMais() {
   const contaH = AUTH && S.conta ? `<div class="list"><div class="row"><span class="num">${esc((S.conta.nome || S.conta.email || "?")[0].toUpperCase())}</span><div class="main"><b>${esc(S.conta.nome || "Minha conta")}</b><span>${esc(S.conta.email)}${S.marcoOn ? " · Marco liberado" : S.semAcesso ? " · Marco ainda não liberado" : ""}</span></div><button class="pill neu" data-a="sairConta">Sair</button></div></div>` : "";
   return `${header({ titulo: "Mais", sub: nomeViagem() })}<main id="main"><div class="pad"><h1>Mais</h1>${contaH}
     <div class="list">${it("perfil", "user", "Perfil da viagem", "Ritmo, limites, interesses e regras · sempre editável")}<button class="row" data-a="ajustesViagem"><span class="ico">${ic("globe", 18)}</span><div class="main"><b>Ajustes da viagem</b><span>Datas, viajantes, moedas, câmbio e carteiras · preenchidos na criação</span></div>${ic("chev", 18)}</button></div>
-    <div class="list">${it("arquivo", "doc", "Arquivo da viagem e sincronização", "QR, Quick Share, WhatsApp, exportar e juntar")}${it("historico", "history", "Histórico de alterações", ativos ? `${ativos} alteração(ões) com desfazer` : "Tudo o que for aprovado aparece aqui")}${it("consumo", "wallet", "Consumo do Marco", "Gasto com a inteligência artificial, hoje e no mês")}${LOCAL || AUTH ? "" : it("acesso", "lock", "Acesso ao Marco", S.marcoOn ? `Conectado${S.quem ? " como " + esc(S.quem) : ""}` : "Digite o seu código de acesso")}</div>
+    <div class="list">${it("arquivo", "doc", "Arquivo da viagem e sincronização", "QR, Quick Share, WhatsApp, exportar e juntar")}${it("conversas", "chat", "Histórico de conversas", "Tudo o que você e o Marco conversaram")}${it("historico", "history", "Histórico de alterações", ativos ? `${ativos} alteração(ões) com desfazer` : "Tudo o que for aprovado aparece aqui")}${it("consumo", "wallet", "Consumo do Marco", "Gasto com a inteligência artificial, hoje e no mês")}${LOCAL || AUTH ? "" : it("acesso", "lock", "Acesso ao Marco", S.marcoOn ? `Conectado${S.quem ? " como " + esc(S.quem) : ""}` : "Digite o seu código de acesso")}</div>
     <div class="list">${it("checklist", "check", "Checklist", `${pendentes()} tarefas abertas`)}${it("desejos", "heart", "Desejos", "Lugares, restaurantes e compras")}${it("cofre", "lock", "Cofre", "Documentos disponíveis sem sinal")}${it("grupo", "people", "Viajantes", esc(S.viagem ? S.viagem.viajantes.join(" e ") : ""))}${it("guia", "printer", "Guia impresso", "PDF para imprimir em duas vias")}</div>
     <div class="list">${it("emergencia", "sos", '<span style="color:var(--bad)">Emergência</span>', `${sos}, frases, ficha médica, localização`)}${it("viagens", "globe", "Minhas viagens", "")}</div>
     <p class="eyebrow">Ferramentas de teste</p>
@@ -1614,10 +1640,10 @@ async function buscarCambio() {
 
 // ---------- montagem ----------
 const TABS = () => [[S.fase === "viagem" ? "hoje" : "conversa", S.fase === "viagem" ? "sun" : "chat", S.fase === "viagem" ? "Hoje" : "Marco"], ["roteiro", "list", "Roteiro"], ["mapa", "map", "Mapa"], ["carteira", "wallet", "Carteira"], ["mais", "more", "Mais"]];
-const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "roteiro", mapa: "mapa", carteira: "carteira", mais: "mais", checklist: "mais", desejos: "mais", cofre: "mais", grupo: "mais", guia: "mais", emergencia: "mais", ficha: "mais", arquivo: "mais", historico: "mais", perfil: "mais", consumo: "mais", acesso: "mais", lugar: null, viagens: null };
+const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "roteiro", mapa: "mapa", carteira: "carteira", mais: "mais", checklist: "mais", desejos: "mais", cofre: "mais", grupo: "mais", guia: "mais", emergencia: "mais", ficha: "mais", arquivo: "mais", historico: "mais", perfil: "mais", consumo: "mais", acesso: "mais", conversas: "mais", lugar: null, viagens: null };
 let ultimaTela = null;
 function render() {
-  const T = { conversa: telaConversa, hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, ficha: telaFicha, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo, historico: telaHistorico, perfil: telaPerfil, consumo: telaConsumo, acesso: telaAcesso, entrar: telaEntrar, cadastro: telaCadastro, recuperar: telaRecuperar, novasenha: telaNovaSenha }[S.tela] || telaBoasVindas;
+  const T = { conversa: telaConversa, conversas: () => telaConversaEscrita(true), hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, ficha: telaFicha, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo, historico: telaHistorico, perfil: telaPerfil, consumo: telaConsumo, acesso: telaAcesso, entrar: telaEntrar, cadastro: telaCadastro, recuperar: telaRecuperar, novasenha: telaNovaSenha }[S.tela] || telaBoasVindas;
   // saiu das telas em que o Marco conversa por voz: a conversa termina (microfone e voz desligam)
   if ((S.vozAtiva || reconhecedor) && S.tela !== "conversa" && S.tela !== "onboarding") encerrarVoz();
   const main0 = $("#main"), scroll = main0 && ultimaTela === S.tela ? main0.scrollTop : 0;
@@ -2063,15 +2089,54 @@ function paraFala(t) {
   return String(t || "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/[*_`#>]+/g, "").replace(/^\s*(?:[-•]|\d+[.)])\s+/gm, "")
     .replace(/\s*\n+\s*/g, " ").replace(/\s{2,}/g, " ").trim();
 }
-// Tela do Marco (conversa por voz): depois que ele responde, fala (ou legenda, com CC) e volta a ouvir
+// Fotos dos lugares sugeridos (painel visual da tela do Marco e cartões de desejo): imagem da Wikipédia,
+// pedida ao servidor uma vez por lugar e guardada neste aparelho. Sem foto, fica o degradê.
+const CHAVE_FOTOS = "cle-fotos";
+let FOTOS = {}; try { FOTOS = JSON.parse(localStorage.getItem(CHAVE_FOTOS) || "{}") || {}; } catch (e) {}
+const pedindoFoto = new Set();
+function fotoLugar(nome, onde) {
+  const k = norm(`${nome}|${onde || ""}`);
+  if (k in FOTOS) return FOTOS[k];
+  if (API && marcoDisponivel() && !pedindoFoto.has(k) && pedindoFoto.size < 6) {
+    pedindoFoto.add(k);
+    apiFetch("/foto", { method: "POST", body: JSON.stringify({ nome, onde }) }).then((r) => (r.ok ? r.json() : null)).then((j) => {
+      pedindoFoto.delete(k); if (!j) return;
+      FOTOS[k] = j.url ? { u: j.url, t: j.titulo || "" } : null;
+      try { localStorage.setItem(CHAVE_FOTOS, JSON.stringify(FOTOS)); } catch (e) {}
+      render();
+    }).catch(() => pedindoFoto.delete(k));
+  }
+  return undefined;
+}
+const ondeViagem = () => (S.viagem && S.viagem.destino) || "";
+// Painel da tela do Marco: o que está sendo planejado, com apelo visual (desejos com foto, roteiro, mapa)
+function painelPlanejamento() {
+  const des = ((S.listas && S.listas.desejos) || []).filter((d) => d.st === "Desejo" || d.st === "Ideia");
+  const diasCom = DIAS.filter((d) => paradasDo(d).length);
+  let h = "";
+  if (des.length) {
+    h += `<p class="eyebrow">Na lista de desejos · ${des.length}</p><div class="carrossel">${des.map((d, i) => {
+      const f = fotoLugar(d.n, ondeViagem()), [g1, g2] = DEGRADES[i % DEGRADES.length];
+      return `<div class="cartao-int cartao-mini" style="--g1:${g1};--g2:${g2}${f && f.u ? `;--foto:url('${f.u}')` : ""}"><span class="foto"></span><span class="rot"><b>${esc(d.n)}</b><span class="estado">${d.st === "Desejo" ? "Quero" : "Talvez"}</span></span></div>`;
+    }).join("")}</div>${des.some((d) => { const f = FOTOS[norm(`${d.n}|${ondeViagem()}`)]; return f && f.u; }) ? '<div class="small" style="margin-top:-6px">Fotos: Wikipédia</div>' : ""}`;
+  }
+  if (diasCom.length) {
+    h += `<p class="eyebrow">Roteiro · ${diasCom.length} de ${DIAS.length} dias montados</p><div class="card" style="gap:0">${diasCom.slice(0, 5).map((d) => `<button class="kv" style="width:100%;text-align:left" data-a="dia" data-d="${d.dia}"><span>D${d.dia} · ${esc(fmtData(d.data))}</span><span style="max-width:62%">${esc(paradasDo(d).filter((p) => p.t !== "pernoite").slice(0, 2).map((p) => p.n).join(", ") || d.titulo || "")}</span></button>`).join("")}</div>
+      <div class="btns"><button class="btn sec" data-a="tab" data-t="roteiro">${ic("list", 18)} Ver roteiro</button><button class="btn sec" data-a="tab" data-t="mapa">${ic("map", 18)} Ver no mapa</button></div>`;
+  }
+  return h;
+}
+// Tela do Marco (conversa por voz): depois que ele responde, fala e volta a ouvir. Com CC (Marco mudo),
+// a tela vira a conversa escrita, e a resposta aparece ali (Wagner, 02/10/2026)
 function falarRespostaMarco(m) {
-  if (S.tela !== "conversa" || S.modoEscrito || !m) return;
+  if (S.tela !== "conversa" || !m) return;
+  if (S.legendas) { continuarConversa(); return; }
   const t = paraFala(m.erro ? "" : m.txt);
   if (!t) { continuarConversa(); return; }
   marcoFalar(t, { aoFim: continuarConversa });
 }
 function continuarConversa() {
-  if (S.vozAtiva && S.tela === "conversa" && !S.modoEscrito && !S.pensando && !reconhecedor) A.falar();
+  if (S.vozAtiva && S.tela === "conversa" && !S.pensando && !reconhecedor) A.falar();
 }
 // depois de cada fala do Marco: volta a ouvir, a menos que a pessoa tenha encerrado a conversa
 function continuarOuvindo(o) {
@@ -2126,7 +2191,7 @@ const A = {
   },
   async consumoAtualizar() { if (!API) return; try { S.consumo = await (await apiFetch("/consumo")).json(); } catch (e) { S.consumo = { erro: true }; } render(); },
   // conversa: o que você fala vira a mensagem e vai para o Marco ao terminar
-  marcoFlutua() { S.modoEscrito = false; S.hist = []; S.tela = "conversa"; S.rolarFim = true; render(); if (marcoDisponivel()) A.falar(); },
+  marcoFlutua() { S.hist = []; S.tela = "conversa"; S.rolarFim = true; render(); if (marcoDisponivel()) A.falar(); },
   // conversa por voz na tela do Marco: o que você fala vai para ele ao terminar; silêncio reabre a escuta;
   // tocar no botão sem ter falado (ou 2 min sem fala nem toque) pausa a conversa
   falar() {

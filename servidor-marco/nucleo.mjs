@@ -47,11 +47,11 @@ CARTEIRA: lançamentos só por propor_lancamento, valor exato ao centavo, quem p
 
 ECONOMIA SEM PERDER QUALIDADE: antes de usar ferramentas, liste mentalmente tudo de que precisa e peça de uma vez, na mesma resposta, todas as consultas que não dependem umas das outras (vários buscar_lugar, calcular_rota e consultar_dia juntos). Não repita buscas já feitas nesta conversa e não consulte dias que não importam ao pedido. Faça o trabalho completo que o pedido exige: economizar é evitar repetição, nunca entregar menos.
 
-FORMA: suas respostas são FALADAS em voz alta pelo app (ou aparecem como legenda curta). No máximo 3 frases curtas, até umas 60 palavras, sem listas, títulos ou markdown. Não enumere muitos itens na fala: cite no máximo 3 e deixe o resto nos cartões ou numa próxima pergunta. Termine com uma pergunta só quando precisar de uma decisão. Dinheiro com centavos no formato brasileiro (US$ 38,50). Datas em português. Horários como 18h30. Se faltar algo essencial, pergunte uma coisa de cada vez. O que veio por voz pode ter nomes distorcidos: confira contra os lugares da viagem e confirme valores ambíguos. Em emergência de saúde ou segurança, oriente primeiro a ligar para o número de emergência do país e a usar a tela Emergência do app; você não faz diagnóstico.`;
+FORMA: suas respostas são FALADAS em voz alta pelo app (ou aparecem como legenda curta). No máximo 3 frases curtas, até umas 60 palavras, sem listas, títulos ou markdown. Não enumere muitos itens na fala: cite no máximo 3 e deixe o resto nos cartões ou numa próxima pergunta. Termine com uma pergunta só quando precisar de uma decisão. Se perguntarem sobre o próprio app (por exemplo, por que você parou de falar), responda isso primeiro, em uma frase: a voz pode ter sido desligada pelo botão CC (legendas) ou a conexão pode ter caído; depois siga com a viagem. Dinheiro com centavos no formato brasileiro (US$ 38,50). Datas em português. Horários como 18h30. Se faltar algo essencial, pergunte uma coisa de cada vez. O que veio por voz pode ter nomes distorcidos: confira contra os lugares da viagem e confirme valores ambíguos. Em emergência de saúde ou segurança, oriente primeiro a ligar para o número de emergência do país e a usar a tela Emergência do app; você não faz diagnóstico.`;
 
 const ADENDOS = {
   conversa: `MODO CONVERSA: você atende o dia a dia (dúvidas, lançamentos, tarefas, desejos, ajustes pontuais de uma parada). Quando o pedido exigir montar ou reotimizar um ou mais dias inteiros, reorganizar o roteiro, conciliar desejos do grupo ou resolver alertas de sobrecarga, use encaminhar_ao_planejador com o pedido completo e diga ao viajante, em uma frase, que o planejamento detalhado vem a seguir.`,
-  planejamento: `MODO PLANEJAMENTO: você é o motor de roteirização. Use calcular_rota para tempos reais, respeite o perfil (ritmo, máximo de horas dirigindo, hora de acordar, regras inegociáveis, limites, interesses), não mexa nas âncoras (o que já está reservado) sem pedido, preencha as lacunas e proteja os momentos especiais. Monte um dia por propor_dia; vários dias numa mesma resposta, quando pedido. Com mais de um viajante, concilie: interesses comuns viram programa do grupo; divergência forte vira atividade individual em paralelo com ponto e horário de reencontro. Considere os alertas automáticos e corrija-os.`,
+  planejamento: `MODO PLANEJAMENTO: você é o motor de roteirização. Use calcular_rota para tempos reais, respeite o perfil (ritmo, máximo de horas dirigindo, hora de acordar, regras inegociáveis, limites, interesses), não mexa nas âncoras (o que já está reservado) sem pedido, preencha as lacunas e proteja os momentos especiais. Monte um dia por propor_dia. Toda proposta encerra a sua resposta e espera a decisão do viajante: por isso faça TODAS as propostas do lote na mesma resposta (os propor_dia lado a lado) e não proponha outra coisa antes dos dias pedidos. Evento ou atração especial que você descobrir (festa, show, temporada) entra no dia certo ou é citado em uma frase. TRABALHE EM LOTES: no máximo 3 dias por resposta (os próximos ainda sem roteiro, ou os que o viajante pediu); ao terminar o lote, diga em uma frase quantos dias faltam e pergunte se pode seguir. Pesquise na web só o indispensável (horários e ingressos que mudam), no máximo 2 buscas por lote. Com mais de um viajante, concilie: interesses comuns viram programa do grupo; divergência forte vira atividade individual em paralelo com ponto e horário de reencontro. Considere os alertas automáticos e corrija-os.`,
   comprovante: `MODO COMPROVANTE: leia o comprovante enviado (foto ou PDF) e proponha, de uma vez, tudo o que ele alimenta: lançamento na Carteira (inclua saldo a pagar no local, caução e taxas), parada ou pernoite no roteiro, tarefa concluída (propor_concluir_tarefa com o id do checklist) e novos lembretes (propor_tarefa), e dados de apoio (propor_info_viagem, ex.: telefone da central do seguro). Diga em uma frase o que leu. Não faça pesquisas.`,
 };
 
@@ -166,7 +166,7 @@ export const MODOS = {
   conversa: { modelo: "claude-sonnet-5-5", esforco: "medium", passos: 15, maxTokens: 64000, ttl: "5m", compactarEm: 40000,
     ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.propor_concluir_tarefa, T.propor_desejo, T.propor_info_viagem, T.encaminhar_ao_planejador, busca(5)] },
   planejamento: { modelo: "claude-opus-5-5", esforco: "medium", passos: 40, maxTokens: 128000, ttl: "1h", compactarEm: 60000,
-    ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.propor_desejo, busca(8)] },
+    ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, busca(4)] },
   comprovante: { modelo: "claude-sonnet-5-5", esforco: "low", passos: 8, maxTokens: 32000, ttl: "5m", compactarEm: null,
     ferramentas: [T.consultar_dia, T.propor_lancamento, T.propor_parada, T.propor_tarefa, T.propor_concluir_tarefa, T.propor_info_viagem] },
 };
@@ -238,10 +238,21 @@ export async function* turnoMarco({ client, modo, historico, novas, contexto, da
         const stream = client.beta.messages.stream(req);
         fila = [];
         stream.on("text", (t) => fila.push({ tipo: "texto", texto: t }));
+        stream.on("error", () => {}); // erros chegam pelo finalMessage; a interrupção por tempo não pode derrubar o servidor
         const final = stream.finalMessage();
         let pronto = false;
         final.then(() => { pronto = true; }, () => { pronto = true; });
-        while (!pronto || fila.length) { if (fila.length) yield fila.shift(); else await new Promise((r) => setTimeout(r, 30)); }
+        while (!pronto || fila.length) {
+          // um passo só (ex.: o roteiro inteiro com buscas na web) pode passar do limite da nuvem (150 s) e a conexão
+          // cairia no meio ("network error", bug de 02/10/2026). Perto do limite, interrompe e avisa com clareza.
+          if (!pronto && prazoMs && Date.now() - t0 > prazoMs + 25000) {
+            const parcial = stream.currentMessage; stream.abort();
+            if (parcial && parcial.usage) consumo = somar(consumo, custoDe(M.modelo, parcial.usage));
+            yield { tipo: "erro", codigo: "tempo", consumo, mensagem: "Essa tarefa ficou grande demais para uma vez só. Vou fazer em partes menores." };
+            return;
+          }
+          if (fila.length) yield fila.shift(); else await new Promise((r) => setTimeout(r, 30));
+        }
         msg = await final;
       } catch (e) {
         const status = Anthropic && e instanceof Anthropic.APIError ? e.status : null, texto = String((e && e.message) || "");
