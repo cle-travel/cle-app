@@ -103,9 +103,10 @@ export function criarApi({ env, Anthropic, consumo, prazoMs = 0, origens = [], e
       let texto; try { texto = String((await lerCorpo()).texto || "").trim().slice(0, 2500); } catch { return json(400, { erro: "Pedido inválido." }); }
       if (!texto) return json(400, { erro: "Pedido inválido." });
       const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOZ_MARCO.id}/stream?output_format=mp3_44100_128`, {
-        // mesmos parâmetros das amostras aprovadas (validacoes/02-voz/gerar-elevenlabs.mjs): sem language_code, MP3 128 kbps
+        // voz e modelo das amostras aprovadas, MP3 128 kbps; idioma FIXO em português: sem ele, frases curtas
+        // ("Anotado!") eram detectadas como espanhol e o Marco falava com sotaque mexicano (Wagner, 02/10/2026)
         method: "POST", headers: { "xi-api-key": env("ELEVENLABS_API_KEY"), "Content-Type": "application/json", Accept: "audio/mpeg" },
-        body: JSON.stringify({ text: texto, model_id: VOZ_MARCO.modelo }),
+        body: JSON.stringify({ text: texto, model_id: VOZ_MARCO.modelo, language_code: "pt" }),
       }).catch(() => null);
       if (!r || !r.ok) { console.error("voz:", r ? r.status + " " + (await r.text()).slice(0, 200) : "sem conexão"); return json(502, { erro: "A voz do Marco não respondeu agora." }); }
       await consumo.registrar("voz", { entrada: texto.length, saida: 0, cacheLido: 0, cacheEscrito: 0, buscas: 0, chamadas: 1, usd: 0 }, quem);

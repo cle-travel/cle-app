@@ -555,7 +555,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.8.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.9.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -767,6 +767,43 @@ async function lerSSE(resp, cada) {
 }
 let rT = null;
 const renderLogo = () => { if (rT) return; rT = setTimeout(() => { rT = null; render(); }, 80); };
+// ---------- decisão de um cartão: pelo toque (Aprovar/Ajustar/Recusar) ou pela voz (decidir_cartoes) ----------
+function decidirCartao(m, k, v, ajuste = "", porMarco = false) {
+  if (v === "aprovar" || v === "talvez") {
+    try { const r = aplicarProposta(k, v); k.estado = v === "talvez" ? "talvez" : "aprovado"; k.resultado = r.texto; k.hist = r.hist; }
+    catch (e) { k.estado = "erro"; k.resultado = "Não foi possível aplicar: " + e.message + "."; }
+  } else if (v === "recusar") { k.estado = "recusado"; k.resultado = k.name === "propor_desejo" ? "O viajante respondeu Não: não quer este item." : "Recusado pelo viajante."; }
+  else { k.estado = "ajustar"; k.resultado = ajuste ? `O viajante quer ajustar antes de aprovar: ${ajuste}` : "O viajante quer ajustar esta proposta antes de aprovar. Pergunte o que mudar."; }
+  // os resultados seguem com a próxima mensagem desta conversa (sem chamada extra ao Marco). Cartão que já foi
+  // como "ainda sem decisão" (a pessoa falou antes de decidir) vira uma nota para o Marco saber da decisão.
+  if (k.pendenteEnviado && !porMarco) S.notas.push(`[Decisão do viajante no cartão ${resumoCartao(k)}: ${k.estado}. ${k.resultado}]`);
+  // comprovante é conversa avulsa: o que foi decidido vira uma nota para a conversa principal
+  if (m.fio === "comprovante" && m.cards.every((x) => x.estado !== "aguardando")) S.notas.push(`[Comprovante lido em conversa à parte; decisões do viajante: ${m.cards.map((x) => `${x.name.replace("propor_", "")} ${x.estado}: ${x.resultado}`).join(" | ")}]`);
+}
+function resumoCartao(k) {
+  const i = k.input || {};
+  return { propor_dia: `montagem do D${i.dia}: ${i.titulo || ""}`, propor_parada: `parada no D${i.dia}: ${i.nome || ""}`, propor_desejo: `desejo: ${i.nome || ""}`,
+    propor_lancamento: `lançamento: ${i.descricao || ""} ${i.valor || ""} ${i.moeda || ""}`, propor_tarefa: `tarefa: ${i.titulo || ""}`, propor_concluir_tarefa: `concluir tarefa ${i.id || ""}`,
+    propor_info_viagem: `informação: ${i.campo || ""}` }[k.name] || k.name;
+}
+// cartões ainda sem decisão em qualquer conversa (o Marco precisa deles para entender uma decisão falada)
+function cartoesNaTela() {
+  const L = []; for (const m of S.chat || []) for (const k of m.cards || []) if (k.estado === "aguardando" && k.name !== "decidir_cartoes" && k.name !== "encaminhar_ao_planejador") L.push(k);
+  return L;
+}
+// o Marco decidiu cartões pelo que a pessoa falou: aplica como se ela tivesse tocado
+function aplicarDecisoesFaladas(kDec) {
+  const res = [];
+  for (const d of (kDec.input && kDec.input.decisoes) || []) {
+    let alvo = null, msg = null;
+    for (const m of S.chat) for (const k of m.cards || []) if (k.id === d.id) { alvo = k; msg = m; }
+    if (!alvo) { res.push(`${d.id}: cartão não encontrado`); continue; }
+    if (alvo.estado !== "aguardando") { res.push(`${resumoCartao(alvo)}: já estava decidido (${alvo.estado})`); continue; }
+    decidirCartao(msg, alvo, d.decisao, d.ajuste || "", true);
+    res.push(`${resumoCartao(alvo)}: ${alvo.estado}${alvo.estado === "erro" ? " (" + alvo.resultado + ")" : ""}`);
+  }
+  kDec.estado = "aprovado"; kDec.resultado = res.length ? "Aplicado pelo app: " + res.join("; ") + "." : "Nenhuma decisão aplicada.";
+}
 const resultadosDe = (m) => m.toolUses.map((id) => ({ type: "tool_result", tool_use_id: id, content: id in m.servidor ? m.servidor[id] : ((m.cards || []).find((k) => k.id === id) || {}).resultado || "Sem resposta do viajante." }));
 // numa conversa recomeçada, resultados de cartões antigos viram texto (os ids antigos não existem mais)
 const semIdsAntigos = (novas) => novas.map((b) => (b.type === "tool_result" ? { type: "text", text: `Resultado de proposta anterior: ${b.content}` } : b));
@@ -794,11 +831,16 @@ async function enviarTexto(txt, opc = {}) {
   let pend = null, notasUsadas = 0;
   if (modo !== "comprovante") {
     // cartões desta conversa ainda sem resposta: o viajante mudou de assunto, e o Marco precisa saber
+    // Cartões sem decisão quando a pessoa fala: continuam NA TELA esperando (bug de 02/10/2026: eram marcados
+    // "sem resposta" e sumiam, ex.: o dia 2 sumia quando ela respondia "pode montar os próximos"). O Marco recebe
+    // que ainda não há decisão e, se a fala decidir, aplica com decidir_cartoes.
     pend = [...S.chat].reverse().find((x) => x.fio === modo && x.toolUses && !x.respondido);
-    if (pend) { for (const k of pend.cards || []) if (k.estado === "aguardando") { k.estado = "ignorado"; k.resultado = "O viajante não respondeu a este cartão e mudou de assunto."; } novas.push(...resultadosDe(pend)); }
-    if (modo === "conversa" && S.notas.length) { notasUsadas = S.notas.length; novas.push({ type: "text", text: S.notas.join("\n") }); }
+    if (pend) { for (const k of pend.cards || []) if (k.estado === "aguardando") { k.pendenteEnviado = true; k.resultado = `Ainda sem decisão; o cartão continua na tela (id ${k.id}). Se a fala a seguir decidir este cartão, use decidir_cartoes.`; } novas.push(...resultadosDe(pend)); }
+    if (S.notas.length) { notasUsadas = S.notas.length; novas.push({ type: "text", text: S.notas.join("\n") }); }
   }
   if (opc.anexo) novas.push(opc.anexo.bloco);
+  const naTela = modo === "comprovante" ? [] : cartoesNaTela();
+  if (naTela.length) novas.push({ type: "text", text: `[Cartões na tela esperando decisão: ${naTela.map((k) => `id=${k.id} (${resumoCartao(k)})`).join("; ")}]` });
   novas.push({ type: "text", text: txt });
   const ok = await rodarTurno(modo, novas, { reenvio: { txt, opc: { ...opc, semBalao: true, modo } }, emPartes: opc.emPartes });
   if (ok) { if (pend) pend.respondido = true; if (notasUsadas) S.notas = S.notas.slice(notasUsadas); render(); }
@@ -845,6 +887,7 @@ async function rodarTurno(modo, novas, ctrl = {}) {
   S.rolarFim = true; render();
   if (ok) checarMarco();
   // tela do Marco por voz: ele fala a resposta (ou legenda, com CC) e volta a ouvir; com erro, a conversa pausa
+  if (ok && m.autoContinuar && !ctrl.autoContinuou) { m.respondido = true; render(); return rodarTurno(modo, resultadosDe(m), { autoContinuou: true }); }
   if (ok) falarRespostaMarco(m); else if (S.vozAtiva && S.tela === "conversa") { encerrarVoz(); render(); }
   if (ok && m.encaminhar) await enviarTexto(m.encaminhar, { modo: "planejamento", semBalao: true });
   return ok;
@@ -865,6 +908,9 @@ function tratarEvento(ev, m, fio, modo) {
       m.servidor = ev.resultadosServidor || {};
       m.toolUses = asst.filter((b) => b.type === "tool_use").map((b) => b.id);
       m.cards = asst.filter((b) => b.type === "tool_use" && !(b.id in m.servidor)).map((b) => ({ id: b.id, name: b.name, input: b.input || {}, estado: "aguardando" }));
+      // decisão falada sobre cartões da tela: o app aplica na hora; se for só isso, o Marco continua sozinho
+      for (const k of m.cards) if (k.name === "decidir_cartoes") aplicarDecisoesFaladas(k);
+      if (m.cards.length && m.cards.every((k) => k.name === "decidir_cartoes")) m.autoContinuar = true;
       for (const k of m.cards) if (k.name === "encaminhar_ao_planejador") { k.estado = "aprovado"; k.resultado = "Encaminhado ao planejador; o resultado aparece na conversa."; m.encaminhar = k.input.pedido; }
       if (!m.txt.trim() && m.cards.some((k) => k.estado === "aguardando")) {
         // fala padrão quando o Marco não escreveu nada: diz o que preparou (a voz não pode ficar vaga)
@@ -892,6 +938,7 @@ async function recomecarFio(modo) {
 
 // ---------- cartões de proposta (Aprovar / Ajustar / Recusar; desejos: Quero / Talvez / Não) ----------
 function cardMarco(k, mi, ci) {
+  if (k.name === "decidir_cartoes") return `<span class="pill ok" style="align-self:flex-start;white-space:normal">${ic("check", 14, 2.5)} Decidido pela sua voz</span>`;
   const i = k.input || {}, d = i.dia ? diaObj(i.dia) : null;
   const bt = (v, l, cls = "sec") => `<button class="btn ${cls}" data-a="decidir" data-m="${mi}" data-c="${ci}" data-v="${v}">${l}</button>`;
   const botoes = k.name === "propor_desejo" ? `<div class="btns">${bt("recusar", "Não")}${bt("talvez", "Talvez")}${bt("aprovar", "Quero", "")}</div>`
@@ -1542,7 +1589,7 @@ function telaPerfil() {
     <p class="sub">O Marco usa este perfil em todas as sugestões. Mudou de ideia? Ajuste aqui a qualquer momento.</p>
     <div class="card">${blocoPerfil(pf, "pf")}</div>
     <p class="eyebrow">Personalidade do grupo</p><div class="card">${blocoSliders(pf, "pf")}</div>
-    <p class="eyebrow">Interesses</p>${blocoInteresses(pf, "pf")}
+    <p class="eyebrow">Interesses desta viagem</p>${blocoInteresses(pf, "pf")}
     <div class="card" style="gap:0">${[["Ocasião", pf.ocasiao], ["Saindo de", pf.saindoDe], ["Já reservado", pf.reservado], ["Orçamento", pf.orcamento]].filter(([, x]) => x).map(([a, b]) => `<div class="kv"><span>${a}</span><span style="max-width:62%">${esc(b)}</span></div>`).join("") || '<span class="small">Ocasião, origem, reservas e orçamento aparecem aqui quando informados na criação.</span>'}</div>
   </div></main>`;
 }
@@ -1589,7 +1636,7 @@ function telaOnboarding() {
       <div class="btns"><button class="btn sec" data-a="onbNext">Pular</button><button class="btn" data-a="onbNext">Continuar</button></div>`;
   } else if (o.step === 2) {
     // o "Continuar" desta tela fica no rodapé, ao lado do botão do Marco (layout aprovado)
-    c = `<h1 class="titulo-serifa">Do que vocês gostam?</h1><p class="sub" style="margin:0">Toque uma vez para “curto”, duas para “amo”, três para “não é comigo”.</p>${blocoInteresses(o.pf, "onb")}`;
+    c = `<h1 class="titulo-serifa">O que vocês querem nesta viagem?</h1><p class="sub" style="margin:0">Pensem só nesta viagem${f.destino ? ` para ${esc(f.destino)}` : ""}, não nos gostos de sempre. Deslize os cartões: um toque é “curto”, dois é “amo”, três é “não é comigo”.</p>${blocoInteresses(o.pf, "onb")}`;
   } else if (o.step === 3) {
     c = `<h1 style="font-size:28px">Algumas situações</h1><p class="sub">Escolham a opção que mais combina com o grupo.</p>
       ${cenariosDaViagem(o).map((s) => `<div class="grupo-op"><div style="font-weight:600">${esc(s.p)}</div>${s.o.map(([t], oi) => `<button class="opt ${o.cen[s.id] === oi ? "on" : ""}" data-a="onbCen" data-s="${s.id}" data-i="${oi}">${esc(t)}</button>`).join("")}</div>`).join("")}
@@ -1918,7 +1965,8 @@ function falarTexto(t, lang) {
 // em 01/10/2026). A fala do Marco não aparece escrita na tela: com o botão CC (legendas) ligado, ele não emite som
 // e escreve em legendas pequenas embaixo do botão dele, trocadas como em filme. Sem a voz Eric, também vira legenda.
 // As boas-vindas (que se repetem) ficam guardadas neste aparelho para não gastar caracteres de novo.
-const CHAVE_LEGENDAS = "cle-legendas", CHAVE_APRESENTADO = "cle-marco-apresentado", CACHE_VOZ = "cle-voz-eric-v1";
+const CHAVE_LEGENDAS = "cle-legendas", CHAVE_APRESENTADO = "cle-marco-apresentado", CACHE_VOZ = "cle-voz-eric-v2" /* v2: idioma fixo em português */;
+try { caches.delete("cle-voz-eric-v1"); } catch (e) {} // gravações antigas, sem o idioma fixo
 try { S.legendas = localStorage.getItem(CHAVE_LEGENDAS) === "1" || localStorage.getItem("cle-voz-marco") === "0"; } catch (e) { S.legendas = false; }
 let audioMarco = null, falaAtual = 0, legendaTimer = null;
 // o navegador só toca som depois de um toque: o primeiro toque em qualquer lugar destrava o tocador do Marco
@@ -2016,10 +2064,16 @@ function marcoCalar() { falaAtual++; if (audioMarco && !audioMarco.paused) audio
 // Pergunta de abertura de cada etapa da Nova viagem: cobre a tela inteira de uma vez, para a pessoa responder tudo junto
 const PERGUNTA_ETAPA = {
   1: "Agora me conta o jeito de vocês viajarem: dias mais tranquilos, equilibrados ou intensos? Que horas costumam acordar nas férias, quantas horas topam dirigir por dia, e tem alguma regra, restrição alimentar ou medo que eu deva respeitar? Pode falar tudo de uma vez.",
-  2: "Do que vocês mais gostam numa viagem? Natureza, trilhas, museus, gastronomia, compras, vida noturna... Me fala o que vocês amam e o que não é com vocês.",
+  2: "", // montada na hora, com o destino: ver perguntaEtapa()
   3: "Aqui são algumas situações rápidas. É só tocar na opção que mais combina com vocês: elas me ajudam a entender o perfil do grupo. Quando terminar, ou se preferir pular, é só me dizer pode seguir.",
   4: "Quase lá! Confere o resumo aqui na tela. Quer dar um nome para a viagem, ou ajustar alguma coisa? Se estiver tudo certo, me diga que eu crio a viagem.",
 };
+// Interesses são DESTA viagem, não gostos da vida (Wagner, 02/10/2026): quem ama trilha pode não querer trilha na Disney
+function perguntaEtapa(o) {
+  if (o.step !== 2) return PERGUNTA_ETAPA[o.step] || "";
+  const dest = (o.f.destino || "").split(",")[0].trim();
+  return `Agora pensem só nesta viagem${dest ? " para " + dest : ""}, não nos gostos de sempre: o que vocês querem fazer lá? Deslize os cartões para o lado: um toque é curto, dois toques é amo, três é não é comigo. Ou, se preferir, me fala o que querem e o que não fariam nesta viagem.`;
+}
 // Retomada (app reaberto com a Nova viagem pela metade): montada aqui com o que já está na ficha, sem chamar o Claude
 function resumoRetomada(o) {
   const f = o.f, nome = (f.nome || "").trim().split(" ")[0], tem = [], falta = [];
@@ -2275,15 +2329,8 @@ const A = {
   desfazer() { S.extras[3] = []; S.toast = null; render(); toast("Alteração desfeita."); render(); },
   decidir(ds) {
     const m = S.chat[+ds.m], k = m && m.cards && m.cards[+ds.c]; if (!k || k.estado !== "aguardando" || S.pensando) return;
-    if (ds.v === "aprovar" || ds.v === "talvez") {
-      try { const r = aplicarProposta(k, ds.v); k.estado = ds.v === "talvez" ? "talvez" : "aprovado"; k.resultado = r.texto; k.hist = r.hist; }
-      catch (e) { k.estado = "erro"; k.resultado = "Não foi possível aplicar: " + e.message + "."; }
-    } else if (ds.v === "recusar") { k.estado = "recusado"; k.resultado = k.name === "propor_desejo" ? "O viajante respondeu Não: não quer este item." : "Recusado pelo viajante."; }
-    else { k.estado = "ajustar"; k.resultado = "O viajante quer ajustar esta proposta antes de aprovar. Pergunte o que mudar."; }
+    decidirCartao(m, k, ds.v);
     render();
-    // os resultados seguem com a próxima mensagem desta conversa (sem chamada extra ao Marco);
-    // comprovante é conversa avulsa: o que foi decidido vira uma nota para a conversa principal
-    if (m.fio === "comprovante" && m.cards.every((x) => x.estado !== "aguardando")) S.notas.push(`[Comprovante lido em conversa à parte; decisões do viajante: ${m.cards.map((x) => `${x.name.replace("propor_", "")} ${x.estado}: ${x.resultado}`).join(" | ")}]`);
   },
   desfazerHist(ds) { if (desfazerHist(ds.id)) { render(); toast("Alteração desfeita."); } render(); },
   toast(ds) { toast(ds.m); render(); },
@@ -2394,7 +2441,7 @@ const A = {
   // cada etapa: o Marco faz UMA pergunta que cobre a tela inteira (texto local, sem tokens) e já fica ouvindo
   onbEtapa() {
     const o = S.onb; o.etapas = { ...(o.etapas || {}), [o.step]: true };
-    o.porVoz = true; o.semVoz = false; S.vozAtiva = true; o.marco = PERGUNTA_ETAPA[o.step] || ""; atualizarTravaTela(); render();
+    o.porVoz = true; o.semVoz = false; S.vozAtiva = true; o.marco = perguntaEtapa(o); atualizarTravaTela(); render();
     marcoFalar(o.marco, { guardar: true, aoFim: () => { if (S.tela === "onboarding" && S.onb === o) continuarOuvindo(o); } });
   },
   onbVoltar() { encerrarVoz(); S.onb.step = Math.max(0, S.onb.step - 1); render(); },

@@ -33,6 +33,8 @@ const TETO_RESULTADO = 1500; // caracteres por resultado de ferramenta (R7)
 
 const BASE = `Você é o Marco, o agente de viagens do app Clé. Fala português do Brasil, com calor humano e objetividade, como um agente experiente que conhece bem o viajante.
 
+CARTÕES POR VOZ: quando a mensagem trouxer "Cartões na tela esperando decisão" e a fala decidir algum deles, use decidir_cartoes primeiro ("sim, pode seguir" depois de você perguntar se pode seguir = aprovar os cartões mostrados). Depois do resultado, siga com o que foi pedido.
+
 REGRA DE OURO: você nunca altera a viagem diretamente. Toda mudança vira uma PROPOSTA por uma ferramenta propor_*; o viajante decide no cartão (Aprovar, Ajustar ou Recusar). Consultas e pesquisas não precisam de aprovação. Toda proposta traz o motivo e o impacto (horário, rota, custo). Depois de propor, diga em uma frase o que propôs. As decisões do viajante sobre os cartões chegam junto com a mensagem seguinte dele.
 
 CONTEXTO DA VIAGEM: chega a cada turno numa mensagem de sistema (viagem, perfil, roteiro em uma linha por dia, checklist, desejos, alertas automáticos, data de hoje). É a fonte da verdade e substitui qualquer versão anterior. Para ver as paradas de um dia, use consultar_dia.
@@ -142,6 +144,16 @@ const T = {
     description: "Propõe gravar uma informação de apoio (lida de um comprovante ou dita pelo viajante).",
     input_schema: { type: "object", properties: { campo: { type: "string", enum: ["seguro_central", "seguro_apolice", "seguro_nome", "locadora_telefone", "consulado"] }, valor: { type: "string" }, motivo: { type: "string" } }, required: ["campo", "valor", "motivo"], additionalProperties: false },
   },
+  // cartões por voz (Wagner, 02/10/2026): a decisão falada sobre um cartão que está na tela
+  decidir_cartoes: {
+    name: "decidir_cartoes",
+    description: "Aplica a decisão que o viajante FALOU sobre cartões que estão na tela esperando resposta (os ids vêm na mensagem, em \"Cartões na tela esperando decisão\"). Use só quando a fala deixar a decisão clara: \"pode aprovar\", \"aprova o dia 2\", \"esse não\", \"sim, pode seguir\" logo depois de você perguntar se pode seguir. Na dúvida, pergunte. O app aplica e devolve o resultado; aí você continua.",
+    input_schema: { type: "object", properties: { decisoes: { type: "array", items: { type: "object", properties: {
+      id: { type: "string", description: "id do cartão, exatamente como veio na mensagem" },
+      decisao: { type: "string", enum: ["aprovar", "recusar", "talvez", "ajustar"] },
+      ajuste: { type: "string", description: "Só em ajustar: o que o viajante quer mudar" },
+    }, required: ["id", "decisao"], additionalProperties: false } } }, required: ["decisoes"], additionalProperties: false },
+  },
   encaminhar_ao_planejador: {
     name: "encaminhar_ao_planejador",
     description: "Encaminha ao planejador (modelo mais potente) um pedido que exige montar ou reotimizar dias inteiros, reorganizar o roteiro ou conciliar desejos do grupo.",
@@ -164,9 +176,9 @@ const busca = (n) => ({ type: "web_search_20260209", name: "web_search", max_use
 // R5/R6: cada modo tem modelo, esforço, passos, ferramentas e duração de cache fixos
 export const MODOS = {
   conversa: { modelo: "claude-sonnet-5-5", esforco: "medium", passos: 15, maxTokens: 64000, ttl: "5m", compactarEm: 40000,
-    ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.propor_concluir_tarefa, T.propor_desejo, T.propor_info_viagem, T.encaminhar_ao_planejador, busca(5)] },
+    ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.propor_concluir_tarefa, T.propor_desejo, T.propor_info_viagem, T.decidir_cartoes, T.encaminhar_ao_planejador, busca(5)] },
   planejamento: { modelo: "claude-opus-5-5", esforco: "medium", passos: 40, maxTokens: 128000, ttl: "1h", compactarEm: 60000,
-    ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, busca(4)] },
+    ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.decidir_cartoes, busca(4)] },
   comprovante: { modelo: "claude-sonnet-5-5", esforco: "low", passos: 8, maxTokens: 32000, ttl: "5m", compactarEm: null,
     ferramentas: [T.consultar_dia, T.propor_lancamento, T.propor_parada, T.propor_tarefa, T.propor_concluir_tarefa, T.propor_info_viagem] },
 };
@@ -352,7 +364,7 @@ const FICHA_CONVERSA = {
 const ETAPAS_FICHA = {
   0: "Tela 1, ficha da viagem. ESSENCIAL: para onde (e país), quando começa, quantos dias e quem vai. Opcionais (só os campos da tela, nunca outros): de onde saem, ocasião, o que já está reservado, orçamento.",
   1: "Tela 2, ritmo e estilo: ritmo dos dias (tranquilo, equilibrado ou intenso), horário de acordar, máximo de horas dirigindo por dia, regras inegociáveis, restrições alimentares, medos e limites.",
-  2: "Tela 3, interesses: do que o grupo gosta (interesses) e o que não é com eles (nao_curtem).",
+  2: "Tela 3, interesses PARA ESTA VIAGEM (não gostos da vida): o que o grupo quer fazer neste destino (interesses) e o que não faria nesta viagem (nao_curtem). Se a pessoa falar de gostos gerais, pergunte se valem para esta viagem.",
   3: "Tela 4, situações: a pessoa responde tocando nas opções da tela; tire dúvidas e, quando ela quiser seguir ou pular, avancar = true.",
   4: "Tela 5, resumo final: nome da viagem e ajustes no que já foi preenchido.",
 };

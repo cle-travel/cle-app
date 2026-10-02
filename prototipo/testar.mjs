@@ -120,6 +120,11 @@ confere("planejamento em lotes de até 3 dias", /no máximo 3 dias por resposta/
 confere("app refaz em partes quando o servidor avisa tarefa grande", /codigo === "tempo" && modo === "planejamento"/.test(app), true);
 confere("erro de conexão em português, não \"network error\"", /A conexão com o Marco caiu no meio da resposta/.test(app), true);
 confere("silêncio: pausa por tempo sem fala nem toque, não por tentativas", /const SILENCIO_MAX = 120000/.test(app) && !/\+\+silencios > 6/.test(app), true);
+// ---------- 11. regras de 02/10/2026 (noite) ----------
+confere("voz com idioma fixo em português (sem sotaque de outra língua)", /language_code: "pt"/.test(http), true);
+confere("falar não descarta cartões sem decisão", !/k\.estado = "ignorado"/.test(app) && /k\.pendenteEnviado = true/.test(app), true);
+confere("Marco decide cartões pela voz (decidir_cartoes)", /decidir_cartoes: \{/.test(nucleo) && /aplicarDecisoesFaladas\(k\)/.test(app), true);
+confere("interesses são desta viagem (tela e Marco)", /O que vocês querem nesta viagem\?/.test(app) && /interesses PARA ESTA VIAGEM/.test(nucleo), true);
 confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }
