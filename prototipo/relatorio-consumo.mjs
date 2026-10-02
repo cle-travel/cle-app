@@ -46,7 +46,8 @@ if (saldo < 5) alertas.push(`Saldo estimado baixo: ${usd(saldo)} dos ${usd(CREDI
 if (mediaDia > 0) alertas.push(`No ritmo atual (${usd(mediaDia)}/dia de uso), os créditos durariam cerca de ${Math.max(0, Math.floor(saldo / mediaDia))} dia(s) de uso.`);
 for (const g of grupo(doDia, "modo")) {
   const taxa = (g.lido) / Math.max(1, g.entrada + g.lido + g.escrito);
-  if (g.n >= 3 && taxa < 0.5) alertas.push(`Cache baixo em "${g.nome}" (${Math.round(taxa * 100)}%): o histórico pode estar sendo reenviado sem aproveitar o cache. Investigar.`);
+  // só conversas com histórico usam cache; voz, ficha, resumo e comprovante são pedidos avulsos
+  if (["conversa", "planejamento"].includes(g.nome) && g.n >= 3 && taxa < 0.5) alertas.push(`Cache baixo em "${g.nome}" (${Math.round(taxa * 100)}%): o histórico pode estar sendo reenviado sem aproveitar o cache. Investigar.`);
 }
 const caros = [...doDia].sort((a, b) => b.usd - a.usd).slice(0, 5);
 for (const x of caros) if (x.usd > 0.5) alertas.push(`Pedido caro: ${usd(x.usd)} em "${x.modo}" às ${brt(x.quando)} (${x.chamadas} chamadas, ${x.entrada + x.cacheLido + x.cacheEscrito} tokens de entrada).`);
