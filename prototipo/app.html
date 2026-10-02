@@ -149,7 +149,9 @@ a.row{color:inherit;text-decoration:none}
 .doca::before{content:"";position:absolute;left:0;right:0;bottom:calc(-18px - env(safe-area-inset-bottom,0px));height:190px;z-index:-1;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--bg) 62%)}
 .doca-dica{max-width:min(320px,calc(100% - 32px));text-align:center;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border:1px solid var(--line);box-shadow:var(--sh);border-radius:16px;padding:9px 14px;font-size:14px;line-height:1.35;color:var(--fg)}
 .com-doca{padding-bottom:150px!important}
-.doca-dica{transition:opacity .5s ease}.doca-dica.some{opacity:0;pointer-events:none}
+.doca-dica{transition:opacity .5s ease}
+.doca-linha{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;width:100%;max-width:var(--col);padding:0 16px;pointer-events:none}.doca-linha>*{pointer-events:auto}
+.doca-fim{justify-self:start;white-space:nowrap;font-size:13px;line-height:1.2;padding:8px 12px;border-radius:16px;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border:1px solid var(--line);color:var(--fg2)}.doca-dica.some{opacity:0;pointer-events:none}
 /* legendas do Marco (modo para quem não pode ouvir): pequenas, embaixo do botão do Marco, trocadas como em filme */
 body.legendas .doca{bottom:calc(74px + env(safe-area-inset-bottom,0px))}
 body.legendas .doca::before{bottom:calc(-74px - env(safe-area-inset-bottom,0px));height:250px}
@@ -568,7 +570,7 @@ async function lerRetornoConta() {
     if (p.get("type") === "recovery") S.telaDepoisConta = "novasenha";
   } catch (e) { S.contaForm = { erro: "Não foi possível concluir o login. Tente de novo." }; }
 }
-const telaInicial = () => (S.viagem ? (S.fase === "viagem" ? "hoje" : "conversa") : "boasvindas");
+const telaInicial = () => (S.viagem ? (S.fase === "viagem" ? "hoje" : "conversa") : S.onb && S.onb.retomar ? "onboarding" : "boasvindas");
 function entrarNoApp() { S.contaForm = null; S.contaVals = null; S.hist = []; S.tela = S.telaDepoisConta || telaInicial(); S.telaDepoisConta = null; render(); checarMarco(); }
 
 const LOGO_GOOGLE = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>';
@@ -1457,8 +1459,8 @@ function telaOnboarding() {
   }
   return `<div class="top"><button class="iconbtn" data-a="${o.step ? "onbVoltar" : "voltar"}" aria-label="${o.step ? "Voltar" : "Fechar"}">${ic(o.step ? "back" : "x")}</button><div class="ttl"><b>Nova viagem</b></div>${botaoCC()}</div>
     <main id="main"><div class="pad${o.step === 0 ? " com-doca" : ""}">${o.intro ? "" : dots}${c}</div></main>
-    ${o.step === 0 && (!o.intro || (marcoDisponivel() && S.vozOn)) ? `<div class="doca">${S.ditando === "onb-fala" ? '<div class="doca-dica" role="status">Estou ouvindo. Quando terminar, toque de novo.</div>' : !o.intro && Date.now() < (o.dicaAte || 0) ? `<div class="doca-dica" role="status" id="dicaOnb">${o.conversou ? "Toque aqui para me responder." : "Prefere falar? Toque aqui e me conte do seu jeito."}</div>` : ""}
-      <button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="${o.intro ? "onbFalar" : "ditar"}" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button></div>` : ""}`;
+    ${o.step === 0 && (!o.intro || (marcoDisponivel() && S.vozOn)) ? `<div class="doca">${S.ditando === "onb-fala" ? '<div class="doca-dica" role="status">Estou ouvindo. Toque de novo quando terminar.</div>' : !o.intro && Date.now() < (o.dicaAte || 0) ? `<div class="doca-dica" role="status" id="dicaOnb">${o.retomar ? "Toque aqui e continuamos de onde paramos." : o.pausada ? "Conversa pausada. Toque aqui para continuar." : o.conversou ? "Toque aqui para me responder." : "Prefere falar? Toque aqui e me conte do seu jeito."}</div>` : ""}
+      <div class="doca-linha"><span></span><button class="siri ${S.ditando === "onb-fala" ? "ouvindo" : o.lendo ? "pensando" : S.marcoFalando ? "falando" : ""}" data-a="${o.intro ? "onbFalar" : o.retomar ? "onbRetomar" : "ditar"}" data-alvo="onb-fala" aria-label="${S.ditando === "onb-fala" ? "Parar de ouvir" : "Falar com o Marco"}"><span class="nucleo">${ic(S.ditando === "onb-fala" ? "pause" : "mic", 24)}</span></button>${S.vozAtiva ? '<button class="doca-fim" data-a="encerrarConversa">Encerrar conversa</button>' : "<span></span>"}</div></div>` : ""}`;
 }
 function aplicarCenarios(o) {
   const sl = { aventura: 50, explorar: 50, fora: 50, premium: 50 };
@@ -1526,7 +1528,7 @@ function render() {
   // animação de entrada só na primeira vez que cada mensagem aparece (o streaming re-renderiza muitas vezes)
   if (S.tela === "conversa" && S.chat) for (const x of S.chat) { x.visto = true; for (const k of x.cards || []) k.visto = true; }
   ultimaTela = S.tela;
-  memSalvar();
+  memSalvar(); atualizarTravaTela();
 }
 // A Carteira é o app financeiro (carteira/index.html) com a ponte window.CLE. Publicada, a página entrega o
 // arquivo ao quadro como conteúdo (o visualizador do Claude bloqueia quadros que buscam outra página).
@@ -1587,7 +1589,19 @@ function sheetBusca() {
 
 // ---------- memória da viagem (o "arquivo da viagem": tudo da viagem, Carteira incluída) ----------
 const MEM = "cle-viagem";
+// Rascunho da Nova viagem: tudo o que foi falado, a ficha e a última fala do Marco ficam no aparelho a cada toque.
+// Fechou o app no meio? Ao reabrir, continua de onde parou, sem repetir a conversa (nem gastar tokens de novo).
+const RASCUNHO = "cle-onb-rascunho";
+function rascunhoSalvar() {
+  const o = S.onb; if (!o || S.viagem) return;
+  const { lendo, intro, dicaAte, retomar, ...resto } = o;
+  if (!o.f.fala.trim() && !o.conversou && !["destino", "inicio", "dias", "outros"].some((k) => String(o.f[k] || "").trim())) return; // nada para guardar ainda
+  try { localStorage.setItem(RASCUNHO, JSON.stringify({ onb: resto, quando: Date.now() })); } catch (e) {}
+}
+function rascunhoLer() { try { const r = JSON.parse(localStorage.getItem(RASCUNHO) || "null"); return r && r.onb && r.onb.f ? r : null; } catch (e) { return null; } }
+function rascunhoApagar() { try { localStorage.removeItem(RASCUNHO); } catch (e) {} }
 function memSalvar() {
+  rascunhoSalvar();
   if (!S.viagem) return;
   try { localStorage.setItem(MEM, JSON.stringify({ viagem: S.viagem, estado: estadoApp(), roteiro: { dias: DIAS } })); } catch (e) {}
 }
@@ -1696,7 +1710,8 @@ function telaBoasVindas() {
   return `<main id="main"><div class="pad" style="min-height:100%;justify-content:center;padding-top:40px">
     <span class="avatar" style="width:64px;height:64px;border-radius:18px">${ic("compass", 34, 1.6)}</span>
     <div><h1 style="font-size:34px">Clé</h1><p class="sub" style="font-size:17px">Planeje e viva a viagem conversando com o Marco. Tudo fica neste celular e cabe num único arquivo da viagem.</p></div>
-    <button class="btn" data-a="onb" style="height:auto;min-height:58px;padding:9px 16px;flex-direction:column;gap:1px"><span>Criar viagem com o Marco</span><span style="font-size:13px;font-weight:500;opacity:.85">seu concierge de viagens com inteligência artificial</span></button>
+    ${(() => { const r = rascunhoLer(); return r ? `<button class="btn" data-a="onbContinuar" style="height:auto;min-height:58px;padding:9px 16px;flex-direction:column;gap:1px"><span>Continuar de onde parei</span><span style="font-size:13px;font-weight:500;opacity:.85">${esc(r.onb.f.destino || "Nova viagem")} · conversa com o Marco guardada</span></button>` : ""; })()}
+    <button class="btn${rascunhoLer() ? " sec" : ""}" data-a="onb" style="height:auto;min-height:58px;padding:9px 16px;flex-direction:column;gap:1px"><span>${rascunhoLer() ? "Começar outra viagem do zero" : "Criar viagem com o Marco"}</span><span style="font-size:13px;font-weight:500;opacity:.85">${rascunhoLer() ? "a conversa guardada será descartada" : "seu concierge de viagens com inteligência artificial"}</span></button>
     <label class="btn sec" for="arqViagem" style="cursor:pointer">${ic("importar", 18)} Importar arquivo de viagem</label>
     ${LOCAL || AUTH ? "" : `<button class="btn ghost" data-a="ir" data-t="acesso">${ic("lock", 18)} ${S.marcoOn ? `Marco conectado${S.quem ? " · " + esc(S.quem) : ""}` : "Tenho um código de acesso ao Marco"}</button>`}
     <p class="small" style="margin:0;line-height:1.5">O arquivo da viagem (.json ou .pdf) vem de quem organizou a viagem ou de outro celular. Arquivos antigos da Carteira também abrem aqui.</p>
@@ -1759,7 +1774,7 @@ function destravarAudio() {
   audioMarco.play().catch(() => {});
 }
 document.addEventListener("pointerdown", destravarAudio, { capture: true, once: true });
-function marcarFalando(on) { S.marcoFalando = on; const b = document.querySelector(".doca .siri"); if (b) b.classList.toggle("falando", on && !b.classList.contains("ouvindo") && !b.classList.contains("pensando")); }
+function marcarFalando(on) { S.marcoFalando = on; atualizarTravaTela(); const b = document.querySelector(".doca .siri"); if (b) b.classList.toggle("falando", on && !b.classList.contains("ouvindo") && !b.classList.contains("pensando")); }
 
 // legendas: blocos curtos (até ~80 letras, quebrados em frases e vírgulas), cada um no tempo de leitura (~15 letras/s)
 function blocosLegenda(t) {
@@ -1836,6 +1851,17 @@ function mostrarDica(ms = 6000) {
   clearTimeout(mostrarDica.t); mostrarDica.t = setTimeout(() => { const d = document.getElementById("dicaOnb"); if (d) { d.classList.add("some"); setTimeout(() => d.remove(), 600); } }, ms);
 }
 function marcoCalar() { falaAtual++; if (audioMarco && !audioMarco.paused) audioMarco.pause(); pararLegenda(); marcarFalando(false); }
+// Retomada (app reaberto com a Nova viagem pela metade): montada aqui com o que já está na ficha, sem chamar o Claude
+function resumoRetomada(o) {
+  const f = o.f, nome = (f.nome || "").trim().split(" ")[0], tem = [], falta = [];
+  if (f.destino) tem.push(f.destino); else falta.push("pra onde vocês vão");
+  if (f.inicio) tem.push(`a partir de ${fmtData(f.inicio, { day: "numeric", month: "long" })}`); else falta.push("quando começa");
+  if (+f.dias > 0) tem.push(`${f.dias} dias`); else falta.push("quantos dias");
+  if (f.outros) tem.push(`com ${f.outros.split(",").map((x) => x.trim()).filter(Boolean).join(" e ")}`); else falta.push("quem vai");
+  const ini = `Voltamos${nome ? ", " + nome : ""}! `;
+  if (!tem.length) return ini + "Me conta: pra onde vocês querem ir, quando e quem vai?";
+  return ini + `Até aqui eu anotei: ${tem.join(", ")}. ` + (falta.length ? `Falta só me dizer ${falta.slice(0, 2).join(" e ")}.` : "A ficha está completa. Quer ajustar alguma coisa, ou posso seguir?");
+}
 // Roteiro de boas-vindas (falado depois que a pessoa toca no botão do Marco; a abertura já explicou como funciona):
 // completo na primeira vez, curto para quem já conhece o Marco. Termina numa pergunta, e o Marco já fica ouvindo.
 function boasVindasMarco() {
@@ -1864,8 +1890,24 @@ function juntarFala(trechos) {
   return partes.join(" ");
 }
 // /*juntarFala:fim*/
+// ---------- conversa por voz contínua ----------
+// Um app web não consegue ouvir com a tela apagada (o navegador corta o microfone). Por isso, enquanto a conversa
+// por voz está ativa, a tela fica acesa (Screen Wake Lock) e, se o Android encerrar a escuta por silêncio, ela é
+// reaberta sozinha. A conversa só termina quando a pessoa toca em "Encerrar conversa" (ou para de ouvir sem ter
+// falado nada), sai da tela, ou quando o Marco conclui a tarefa (responde sem fazer pergunta).
+let travaTelaAtiva = null, pedindoTrava = false, silencios = 0;
+async function atualizarTravaTela() {
+  const querer = !!(S.vozAtiva || S.ditando || S.marcoFalando || (S.onb && S.onb.lendo)) && !document.hidden;
+  if (querer && !travaTelaAtiva && !pedindoTrava && navigator.wakeLock) {
+    pedindoTrava = true;
+    try { travaTelaAtiva = await navigator.wakeLock.request("screen"); travaTelaAtiva.addEventListener("release", () => { travaTelaAtiva = null; }); } catch (e) {}
+    pedindoTrava = false;
+  } else if (!querer && travaTelaAtiva) { const t = travaTelaAtiva; travaTelaAtiva = null; t.release().catch(() => {}); }
+}
+document.addEventListener("visibilitychange", () => atualizarTravaTela()); // o celular solta a trava ao sair do app; ao voltar, pede de novo
+function encerrarVoz() { S.vozAtiva = false; silencios = 0; if (reconhecedor) { reconhecedor.cancelado = true; reconhecedor.stop(); } marcoCalar(); atualizarTravaTela(); }
 function ditar(alvo, aoTerminar) {
-  if (reconhecedor) { reconhecedor.stop(); return; } // segundo toque: termina
+  if (reconhecedor) { reconhecedor.peloUsuario = true; reconhecedor.stop(); return; } // segundo toque: termina
   marcoCalar(); // tocar no botão interrompe o Marco, e o microfone não capta a voz dele
   if (!Reconhecimento) { toast("Este navegador não permite ditar. Use o microfone do teclado do celular, ou escreva."); render(); return; }
   const campo = () => document.getElementById(alvo);
@@ -1876,8 +1918,9 @@ function ditar(alvo, aoTerminar) {
   r.lang = "pt-BR"; r.interimResults = true; r.continuous = true;
   // relê TODOS os trechos a cada atualização e junta sem repetir (corrige a frase repetida no Android, 01/10/2026)
   r.onresult = (e) => { const trechos = []; for (let i = 0; i < e.results.length; i++) trechos.push(e.results[i][0].transcript); falado = juntarFala(trechos); gravar([base, falado].filter(Boolean).join(" ")); if (alvo === "txtMarco") { S.transc = falado; const tr = document.querySelector(".transc"); if (tr) tr.textContent = S.transc; } };
-  r.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") toast("Para falar comigo, permita o uso do microfone para este app nas configurações do celular."); else if (e.error !== "no-speech" && e.error !== "aborted") toast("Não consegui ouvir agora. Tente de novo ou escreva."); };
-  r.onend = () => { reconhecedor = null; S.ditando = null; S.transc = ""; render(); if (aoTerminar) aoTerminar(falado.trim()); };
+  r.onerror = (e) => { if (/not-allowed|service-not-allowed|audio-capture/.test(e.error)) r.peloUsuario = true; // microfone indisponível: pausa a conversa em vez de insistir
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") toast("Para falar comigo, permita o uso do microfone para este app nas configurações do celular."); else if (e.error !== "no-speech" && e.error !== "aborted") toast("Não consegui ouvir agora. Tente de novo ou escreva."); };
+  r.onend = () => { reconhecedor = null; S.ditando = null; S.transc = ""; render(); if (aoTerminar && !r.cancelado) aoTerminar(falado.trim(), !!r.peloUsuario); };
   reconhecedor = r; S.ditando = alvo; render();
   try { r.start(); } catch (e) { reconhecedor = null; S.ditando = null; render(); }
 }
@@ -1887,7 +1930,7 @@ function comPosicao(ok) {
   navigator.geolocation.getCurrentPosition((p) => ok(p.coords.latitude, p.coords.longitude), () => { toast("Não foi possível obter a localização. Verifique a permissão de localização do app."); render(); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
 }
 const A = {
-  voltar() { marcoCalar(); const h = S.hist.pop(); if (h) Object.assign(S, h); else S.tela = S.viagem ? (S.fase === "viagem" ? "hoje" : "conversa") : "boasvindas"; render(); },
+  voltar() { encerrarVoz(); const h = S.hist.pop(); if (h) Object.assign(S, h); else S.tela = S.viagem ? (S.fase === "viagem" ? "hoje" : "conversa") : "boasvindas"; render(); },
   ir(ds) { if (ds.t === (S.fase === "viagem" ? "hoje" : "conversa") && S.tela !== "onboarding") return home(); ir(ds.t); },
   irTarefa(ds) { if (ds.t !== "confirmar") return ir(ds.t); const d = DIAS.find((x) => paradasDo(x).some((p) => seloDe(p) !== "verde")); if (!d) { toast("Nenhum local para conferir."); render(); return; } const i = paradasDo(d).findIndex((p) => seloDe(p) !== "verde"); ir("lugar", { lugar: { d: d.dia, i }, diaSel: d.dia }); },
   tab(ds) { S.hist = []; S.tela = ds.t; if (ds.t === "mapa" && S.fase === "viagem") S.diaSel = S.diaHoje; render(); },
@@ -1912,7 +1955,24 @@ const A = {
   // conversa: o que você fala vira a mensagem e vai para o Marco ao terminar
   falar() { if (S.pensando) return; ditar("txtMarco", (t) => { if (t) { const msg = S.rascunho; S.rascunho = ""; enviarTexto(msg); } }); },
   // onboarding: o que você fala entra na ficha; ao terminar, o Marco preenche os campos
-  ditar(ds) { if (S.onb && ds.alvo === "onb-fala") { S.onb.porVoz = true; S.onb.semVoz = false; } ditar(ds.alvo, (t) => { if (t && marcoDisponivel() && S.onb && !S.onb.lendo) A.onbMarco(); }); },
+  ditar(ds) {
+    const o = S.onb, naFicha = o && ds.alvo === "onb-fala";
+    if (naFicha && !reconhecedor) { o.porVoz = true; o.semVoz = false; S.vozAtiva = true; atualizarTravaTela(); }
+    ditar(ds.alvo, (t, peloUsuario) => {
+      if (!naFicha) return;
+      if (t) { silencios = 0; if (marcoDisponivel() && !o.lendo) A.onbMarco(); return; }
+      const aqui = S.tela === "onboarding" && S.onb === o && o.step === 0;
+      // parou sem falar nada: se foi a pessoa que tocou, a conversa pausa; se foi o Android (silêncio), volta a ouvir
+      if (peloUsuario || !aqui || !S.vozAtiva || ++silencios > 6) { encerrarVoz(); if (aqui) { o.pausada = true; mostrarDica(8000); } return; }
+      setTimeout(() => { if (S.vozAtiva && !reconhecedor && S.tela === "onboarding" && S.onb === o) A.ditar({ alvo: "onb-fala" }); }, 300);
+    });
+  },
+  encerrarConversa() { encerrarVoz(); if (S.onb) { S.onb.pausada = true; mostrarDica(8000); } else render(); },
+  // reabriu o app com a Nova viagem pela metade: o Marco resume o que já tem (sem gastar tokens) e volta a ouvir
+  onbRetomar() {
+    const o = S.onb; o.retomar = false; o.pausada = false; o.porVoz = true; o.semVoz = false; S.vozAtiva = true; o.marco = resumoRetomada(o); atualizarTravaTela(); render();
+    marcoFalar(o.marco, { aoFim: () => { if (S.vozAtiva && S.tela === "onboarding" && S.onb === o && o.step === 0 && !reconhecedor) A.ditar({ alvo: "onb-fala" }); } });
+  },
   sairCarteira() { A.voltar(); },
   atualizarApp() { A.forcarAtualizacao(); },
   // atualização forçada: desliga o service worker, apaga os arquivos guardados do app (não os dados da viagem,
@@ -2020,12 +2080,13 @@ const A = {
     toast("Viagem fechada neste aparelho. O arquivo exportado continua valendo."); render();
   },
   // Nova viagem: primeiro a abertura limpa (nada fala sozinho); o Marco só fala depois que a pessoa toca no botão dele
-  onb() { marcoCalar(); S.onb = novaOnb(); S.onb.f.nome = (S.conta && S.conta.nome) || ""; S.onb.intro = true; ir("onboarding"); },
+  onbContinuar() { const r = rascunhoLer(); if (!r) return A.onb(); S.onb = { ...novaOnb(), ...r.onb, intro: false, lendo: false, retomar: true }; ir("onboarding"); mostrarDica(8000); },
+  onb() { encerrarVoz(); rascunhoApagar(); S.onb = novaOnb(); S.onb.f.nome = (S.conta && S.conta.nome) || ""; S.onb.intro = true; ir("onboarding"); },
   onbFalar() {
-    const o = S.onb; o.intro = false; o.porVoz = true; o.marco = boasVindasMarco(); render();
+    const o = S.onb; o.intro = false; o.porVoz = true; S.vozAtiva = true; o.marco = boasVindasMarco(); atualizarTravaTela(); render();
     try { localStorage.setItem(CHAVE_APRESENTADO, "1"); } catch (e) {}
     // terminou de falar (ou de legendar)? o Marco já fica ouvindo, como numa ligação
-    marcoFalar(o.marco, { guardar: true, aoFim: () => { if (S.tela === "onboarding" && S.onb === o && o.step === 0 && !o.lendo) A.ditar({ alvo: "onb-fala" }); } });
+    marcoFalar(o.marco, { guardar: true, aoFim: () => { if (S.vozAtiva && S.tela === "onboarding" && S.onb === o && o.step === 0 && !o.lendo && !reconhecedor) A.ditar({ alvo: "onb-fala" }); } });
   },
   onbSemVoz() { const o = S.onb; o.intro = false; o.semVoz = true; mostrarDica(); },
   legendas() {
@@ -2048,12 +2109,15 @@ const A = {
       o.conversou = true;
       o.lendo = false; render();
       const pergunta = /\?\s*$/.test(o.marco);
-      marcoFalar(o.marco, { semSom: o.semVoz, aoFim: () => { if (o.porVoz && pergunta && S.tela === "onboarding" && S.onb === o && o.step === 0 && !reconhecedor) A.ditar({ alvo: "onb-fala" }); else mostrarDica(); } }); return;
+      marcoFalar(o.marco, { semSom: o.semVoz, aoFim: () => {
+        if (S.vozAtiva && o.porVoz && pergunta && S.tela === "onboarding" && S.onb === o && o.step === 0 && !reconhecedor) A.ditar({ alvo: "onb-fala" });
+        else { if (!pergunta) encerrarVoz(); mostrarDica(); } // sem pergunta = o Marco concluiu a tarefa; a conversa termina
+      } }); return;
     } catch (e) { toast(e.message || "O Marco não respondeu. Preencha a ficha abaixo."); }
     o.lendo = false; render();
   },
   onbNext() {
-    const o = S.onb, f = o.f; marcoCalar();
+    const o = S.onb, f = o.f; encerrarVoz();
     if (o.step === 0) {
       const falta = [["nome", "seu nome"], ["destino", "o destino"], ["pais", "o país principal"], ["inicio", "a data de início"], ["dias", "quantos dias"]].filter(([k]) => !String(f[k] || "").trim()).map(([, l]) => l);
       if (!(+f.dias > 0) && !falta.includes("quantos dias")) falta.push("quantos dias");
@@ -2072,6 +2136,7 @@ const A = {
     const pf = { ...o.pf, maxDirecao: o.pf.maxDirecao ? numBR(o.pf.maxDirecao) : null, ocasiao: f.ocasiao, saindoDe: f.saindoDe, reservado: f.reservado, orcamento: f.orcamento, fala: f.fala };
     S.viagem = { nome: (f.nomeViagem || f.destino).trim(), destino: f.destino.trim(), pais: f.pais, idioma: p.lang, inicio: f.inicio, dias: +f.dias, viajantes: [nome, ...outrosN], dono: nome, emergencia: p.sos, moeda: { cod: p.moeda, simb: p.simb }, cotacao: cot, perfil: pf, info: {} };
     DIAS = []; aplicarEstado(null); garantirDias(); garantirListas(); faseAuto();
+    rascunhoApagar(); S.vozAtiva = false; // viagem criada: o rascunho cumpriu o papel
     const c = await carteiraPronta(); if (c) c.criar(cfgCarteira(S.viagem), outrosN, nome);
     S.hist = []; S.tela = S.fase === "viagem" ? "hoje" : "conversa"; S.chat = null; render();
     toast("Viagem criada. A Carteira já nasceu configurada."); render();
@@ -2128,6 +2193,10 @@ const _mem = memLer();
 if (_mem && _mem.viagem && _mem.viagem.dono) {
   S.viagem = _mem.viagem; DIAS = (_mem.roteiro && _mem.roteiro.dias) || []; aplicarEstado(_mem.estado); garantirDias(); faseAuto(); S.diaSel = S.diaHoje;
   S.tela = S.fase === "viagem" ? "hoje" : "conversa";
+} else if (rascunhoLer()) {
+  // Nova viagem pela metade: volta direto para ela, com tudo o que já foi conversado
+  S.onb = { ...novaOnb(), ...rascunhoLer().onb, intro: false, lendo: false, retomar: true, dicaAte: Date.now() + 8000 }; S.tela = "onboarding";
+  setTimeout(() => render(), 8100); // a dica de retomada some sozinha
 } else S.tela = "boasvindas";
 S.conta = (sessaoLer() || {}).user || null;
 if (AUTH && !S.conta) S.tela = "entrar";

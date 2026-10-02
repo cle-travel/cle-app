@@ -85,7 +85,13 @@ const fraseLonga = "Olá, Wagner! Que bom ter você no Clé. Eu sou o Marco, seu
 const bl = blocosLegenda(fraseLonga);
 confere("legenda: nenhum bloco passa de 80 letras", bl.every((b) => b.length <= 80), true);
 confere("legenda: o texto inteiro aparece, na ordem", bl.join(" "), fraseLonga);
-confere("abertura da Nova viagem não fala sozinha", /onb\(\) \{ marcoCalar\(\);[^\n]*S\.onb\.intro = true; ir\("onboarding"\); \}/.test(app), true);
+const linhaOnb = (app.match(/\n  onb\(\) \{[^\n]*/) || [""])[0];
+confere("abertura da Nova viagem não fala sozinha", /S\.onb\.intro = true; ir\("onboarding"\); \},?\r?$/.test(linhaOnb) && !/marcoFalar/.test(linhaOnb), true);
+// ---------- 6. conversa por voz e rascunho (01/10/2026) ----------
+confere("tela fica acesa durante a conversa por voz", /navigator\.wakeLock\.request\("screen"\)/.test(app), true);
+confere("rascunho da Nova viagem é salvo a cada toque", /function memSalvar\(\) \{\n  rascunhoSalvar\(\);/.test(app), true);
+confere("começar do zero apaga o rascunho antigo", /\n  onb\(\) \{[^\n]*rascunhoApagar\(\)/.test(app), true);
+confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }
 console.log(`testes: ${total} de ${total} passaram.`);
