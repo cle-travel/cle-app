@@ -295,6 +295,23 @@ body.legendas .com-doca{padding-bottom:210px!important}
 .menu-rot::-webkit-scrollbar{display:none}
 .menu-rot .chip{flex-shrink:0;display:inline-flex;align-items:center;gap:4px}
 .menu-rot .chip.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+/* dia no formato do briefing */
+.brief{display:flex;flex-direction:column;gap:0}
+.brief-pern{display:flex;gap:8px;align-items:flex-start;font-size:15px;line-height:1.4;padding:10px 12px;border-radius:12px;background:var(--fill);margin:4px 0}
+.brief-pern .ico,.brief-pern svg{flex-shrink:0;margin-top:2px;color:var(--accent)}
+.brief-item{display:grid;grid-template-columns:54px 1fr;gap:10px;text-align:left;padding:10px 4px;border-bottom:1px solid var(--line)}
+.brief-h{font-weight:700;font-size:15px;color:var(--accent);font-variant-numeric:tabular-nums}
+.brief-c{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:14px;line-height:1.4;color:var(--fg2)}
+.brief-c b{font-size:16px;color:var(--fg);font-weight:600;line-height:1.3}
+.brief-dur{font-weight:500;color:var(--fg2);font-size:14px}
+.brief-end{font-size:13px;overflow-wrap:anywhere}
+.brief-sug{color:var(--accent)}
+.brief-res{color:var(--fg)}
+.brief-alerta,.brief-nota.risco{color:var(--warn);font-weight:600}
+.brief-trecho{font-size:14px;color:var(--fg2);padding:6px 4px 6px 64px;font-style:italic}
+.brief-trecho span{font-style:normal;font-variant-numeric:tabular-nums}
+.brief-nota{font-size:14px;line-height:1.45;padding:8px 12px;margin-top:6px;border-left:3px solid var(--line);color:var(--fg2)}
+.brief-nota.risco{border-left-color:var(--warn);background:var(--warn-bg)}
 .doca-cont{justify-self:stretch;height:52px;border-radius:26px;max-width:240px;margin-left:auto}
 .int{background:var(--card);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left;border:1.5px solid transparent;min-height:78px}
 .int b{font-size:15px;font-weight:600}
@@ -419,7 +436,7 @@ const I = {
   search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
 };
 const ic = (n, s = 22, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n] || ""}</svg>`;
-const TIPO = { inicio: ["flag", "Saída"], pernoite: ["bed", "Hospedagem"], passeio: ["cam", "Passeio"], refeicao: ["fork", "Refeição"], abastecimento: ["fuel", "Abastecimento"], transito: ["arrow", "Trânsito"] };
+const TIPO = { inicio: ["flag", "Saída"], pernoite: ["bed", "Hospedagem"], passeio: ["cam", "Passeio"], refeicao: ["fork", "Refeição"], compras: ["sacola", "Compras"], abastecimento: ["fuel", "Abastecimento"], transito: ["arrow", "Trânsito"] };
 const CATS = { pass: "Passagens", seg: "Seguros e documentos", hosp: "Hospedagem", loc: "Locação do carro", comb: "Combustível", desl: "Deslocamentos", pas: "Passeios e ingressos", ali: "Alimentação", comp: "Compras", con: "Conectividade", out: "Outros" };
 const SITUACAO = { estimado: "Estimado", apagar: "A pagar no local", pago: "Pré-pago", realizado: "Pago na viagem" };
 
@@ -526,7 +543,7 @@ function chatInicial() {
     ];
   }
   const f = diasAte(), vazioRot = !DIAS.some((d) => d.paradas.length);
-  return [{ de: "m", txt: `Olá${dono ? ", " + dono : ""}. ${f > 0 ? `Faltam ${f} dias para a ${nomeViagem()}. ` : ""}${vazioRot ? "Me conte o que vocês querem ver e fazer. Eu monto o roteiro dia a dia, com rotas, horários e custos, e lanço tudo na Carteira." : "Em que posso ajudar? Posso ajustar o roteiro, procurar lugares, lançar gastos ou ler comprovantes."}` }];
+  return [{ de: "m", txt: `Olá${dono ? ", " + dono : ""}. ${f > 0 ? `Faltam ${f} dias para a ${nomeViagem()}. ` : ""}${vazioRot ? "Me conte o que você quer ver e fazer. Eu monto o roteiro dia a dia, com rotas, horários e custos, e lanço tudo na Carteira." : "Em que posso ajudar? Posso ajustar o roteiro, procurar lugares, lançar gastos ou ler comprovantes."}` }];
 }
 // respostas de demonstração: só para o exemplo da Western quando o Marco não está ligado
 const RESP = {
@@ -563,7 +580,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.11.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.12.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -928,7 +945,7 @@ function tratarEvento(ev, m, fio, modo) {
         const dias = m.cards.filter((k) => k.name === "propor_dia").map((k) => +k.input.dia).filter(Boolean).sort((a, b) => a - b);
         m.txt = dias.length && dias.length === m.cards.length
           ? (dias.length === 1 ? `Montei o dia ${dias[0]}.` : `Montei os dias ${dias[0]} a ${dias[dias.length - 1]}.`) + " Confere aqui e me diz se posso seguir com os próximos."
-          : m.cards.length > 1 ? "Preparei estas propostas para vocês decidirem." : "Preparei esta proposta para vocês decidirem.";
+          : m.cards.length > 1 ? "Preparei estas propostas para você decidir." : "Preparei esta proposta para você decidir.";
       }
       if (avulso) m.respondido = true; // comprovante: conversa avulsa, não continua
     }
@@ -998,7 +1015,9 @@ function cardMarco(k, mi, ci) {
 // aplica uma proposta aprovada; devolve o texto que volta ao Marco e a entrada do histórico
 function paradaDeInput(i) {
   const est = i.chegada_lat != null && i.chegada_lng != null ? (() => { const km = kmEntre({ lat: i.chegada_lat, lng: i.chegada_lng }, { lat: i.lat, lng: i.lng }); return { n: i.chegada_nome || "Ponto de chegada", lat: i.chegada_lat, lng: i.chegada_lng, km: Math.round(km * 100) / 100, min: i.trecho_pe_min || Math.max(1, Math.round(km * 15)) }; })() : null;
-  return { id: novoId(), n: i.nome, t: i.tipo || "passeio", h: i.horario || "", dur: i.duracao_min ? fmtDur(i.duracao_min) : "", lat: +i.lat, lng: +i.lng, end: i.endereco || "", tel: i.telefone || null, site: i.site || null, selo: i.selo || "vermelho", est, marco: true };
+  return { id: novoId(), n: i.nome, t: i.tipo || "passeio", h: i.horario || "", dur: i.duracao_min ? fmtDur(i.duracao_min) : "", lat: +i.lat, lng: +i.lng, end: i.endereco || "", tel: i.telefone || null, site: i.site || null, selo: i.selo || "vermelho", est, marco: true,
+    // formato do briefing: rota do trecho até aqui, nota, onde reservar, alerta de risco real, motivo da sugestão
+    rota: i.rota_ate_aqui || "", nota: i.nota || "", reserva: i.reserva || "", alerta: i.alerta || "", sug: i.sugestao_motivo || "" };
 }
 function aplicarProposta(k, v) {
   const i = k.input || {};
@@ -1013,7 +1032,8 @@ function aplicarProposta(k, v) {
     const idx = DIAS.findIndex((x) => x.dia === +i.dia); if (idx < 0) throw new Error(`a viagem não tem o dia ${i.dia}`);
     const antes = JSON.parse(JSON.stringify(DIAS[idx])), d = DIAS[idx];
     d.titulo = i.titulo; d.paradas = (i.paradas || []).filter((p) => Number.isFinite(+p.lat)).map(paradaDeInput);
-    const pn = d.paradas.find((p) => p.t === "pernoite"); d.pernoite = pn ? pn.n : null; d.poly = []; recalcRota(d);
+    const pn = [...d.paradas].reverse().find((p) => p.t === "pernoite"); d.pernoite = pn ? pn.n : null; d.poly = []; d.trechos = []; // a pernoite é a ÚLTIMA (pausa no hotel durante o dia não conta)
+    d.notas = Array.isArray(i.notas) ? i.notas.filter(Boolean) : []; d.cafe = i.cafe_amanha || ""; recalcRota(d);
     return { texto: `Aprovado e aplicado: D${d.dia} montado (${d.paradas.length} paradas).`, hist: registrar(`D${d.dia} montado: ${d.titulo}`, "dia", { dia: d.dia, antes }) };
   }
   if (k.name === "propor_lancamento") {
@@ -1055,7 +1075,7 @@ function recalcRota(d) {
   const pts = paradasDo(d).filter((p) => Number.isFinite(+p.lat)).map((p) => (p.est ? { lat: p.est.lat, lng: p.est.lng } : { lat: +p.lat, lng: +p.lng }));
   if (pts.length < 2) { d.poly = []; d.km = 0; d.min = 0; return; }
   apiFetch("/rota", { method: "POST", body: JSON.stringify({ pontos: pts.slice(0, 25), modo: "carro" }) })
-    .then((r) => r.json()).then((j) => { if (j.erro) return; d.poly = j.poly; d.km = Math.round(j.km); d.min = j.min; render(); }).catch(() => {});
+    .then((r) => r.json()).then((j) => { if (j.erro) return; d.poly = j.poly; d.km = Math.round(j.km); d.min = j.min; d.trechos = j.trechos || []; render(); }).catch(() => {});
 }
 
 // ---------- renderização ----------
@@ -1076,7 +1096,7 @@ function telaConversa() {
   let mi = -1; for (let i = S.chat.length - 1; i >= 0; i--) if (S.chat[i].de === "m") { mi = i; break; }
   const ult = mi >= 0 ? S.chat[mi] : null;
   let ci0 = -1; for (let i = S.chat.length - 1; i >= 0; i--) if (S.chat[i].de === "m" && (S.chat[i].cards || []).some((k) => k.estado === "aguardando")) { ci0 = i; break; }
-  const cards = ci0 >= 0 ? `<p class="eyebrow">Para vocês decidirem</p>${S.chat[ci0].cards.map((k, ci) => cardMarco(k, ci0, ci)).join("")}` : "";
+  const cards = ci0 >= 0 ? `<p class="eyebrow">Para você decidir</p>${S.chat[ci0].cards.map((k, ci) => cardMarco(k, ci0, ci)).join("")}` : "";
   const erro = ult && ult.erro && !S.pensando ? `<div class="card" style="background:var(--bad-bg);gap:10px"><div style="color:var(--bad);font-weight:600;font-size:15px">${esc(ult.erro)}</div>${ult.retry || ult.reenvio ? '<button class="btn sec" data-a="retry">Tentar de novo</button>' : ""}</div>` : "";
   const sugestoes = marcoDisponivel() ? ["O que falta resolver?", DIAS.some((d) => d.paradas.length) ? "Revise o roteiro e aponte problemas" : "Monte uma primeira versão do roteiro", "Sugira atrações para a lista de desejos", "Quanto já gastamos?"] : [];
   const painel = !cards && !erro ? painelPlanejamento() : "";
@@ -1179,6 +1199,32 @@ function telaHoje() {
   <div style="padding:8px 16px"><button class="row" style="background:var(--card);border-radius:26px;min-height:52px" data-a="ir" data-t="conversa"><div class="main"><span style="font-size:16px">Fale com o Marco</span></div><span class="num" style="width:36px;height:36px;border-radius:18px">${ic("mic", 18)}</span></button></div>`;
 }
 
+// Dia no formato do briefing de viagem aprovado (item 6 do briefing v37, Wagner 02/10/2026): pernoite no topo; cada
+// atividade com HORÁRIO · nome [duração], nota, endereço e GPS; entre elas o trecho "→ rota [~tempo · km]"; avisos
+// ATENÇÃO/NOTA e o CAFÉ AMANHÃ no fim. Tocar numa atividade abre o lugar (mapa, navegar, conferir o ponto).
+function diaBriefing(d) {
+  const ps = paradasDo(d), tr = d.trechos || [];
+  let ip = -1; const noPts = ps.map((p) => (Number.isFinite(+p.lat) ? ++ip : null)); // índice de cada parada nos pontos da rota
+  const pern = [...ps].reverse().find((p) => p.t === "pernoite"); // a última: pausa no hotel durante o dia não é a pernoite
+  let h = `<div class="brief">`;
+  if (pern) h += `<div class="brief-pern">${ic("bed", 16)}<span><b>Pernoite:</b> ${esc(nomeLimpo(pern.n).replace(/^(pernoite|check-in|hospedagem)\s+(no|na|em|do|da)\s+/i, ""))}${pern.nota ? " · " + esc(pern.nota) : ""}</span></div>`;
+  ps.forEach((p, i) => {
+    if (i > 0) {
+      const a = noPts[i - 1], b = noPts[i], t = a != null && b === a + 1 ? tr[a] : null;
+      if (p.rota || t) h += `<div class="brief-trecho">→ ${esc(p.rota || "Deslocamento")}${t ? ` <span>[~${esc(fmtMin(t.min))}${t.km ? ` · ${String(t.km).replace(".", ",")} km` : ""}]</span>` : ""}</div>`;
+    }
+    const gps = Number.isFinite(+p.lat) ? `${(+p.lat).toFixed(6)}, ${(+p.lng).toFixed(6)}` : "";
+    h += `<button class="brief-item" data-a="lugar" data-d="${d.dia}" data-i="${i}"><span class="brief-h">${esc(p.h || "")}</span><span class="brief-c">
+      <b>${esc(nomeLimpo(p.n))}${p.dur ? ` <span class="brief-dur">[${esc(p.dur)}]</span>` : ""}</b>
+      ${p.nota ? `<span>${esc(p.nota)}</span>` : ""}${p.sug ? `<span class="brief-sug">Sugestão do Marco: ${esc(p.sug)}</span>` : ""}
+      ${p.end ? `<span class="brief-end">Endereço: ${esc(p.end)}</span>` : ""}${gps ? `<span class="brief-end mono">GPS: ${gps}</span>` : ""}
+      ${p.reserva ? `<span class="brief-res">Onde reservar: ${esc(p.reserva)}</span>` : ""}${p.alerta ? `<span class="brief-alerta">ATENÇÃO: ${esc(p.alerta)}</span>` : ""}
+      ${seloPill(p) && seloDe(p) !== "verde" ? `<span style="margin-top:2px">${seloPill(p)}</span>` : ""}</span></button>`;
+  });
+  for (const n of d.notas || []) h += `<div class="brief-nota${/^aten/i.test(n) ? " risco" : ""}">${esc(n)}</div>`;
+  if (d.cafe) h += `<div class="brief-pern">${ic("sun", 16)}<span><b>Café amanhã (D${d.dia + 1}):</b> ${esc(d.cafe)}</span></div>`;
+  return h + "</div>";
+}
 function timeline(d) {
   const ps = paradasDo(d);
   return `<div class="list tl">${ps.map((p, i) => {
@@ -1265,7 +1311,7 @@ function telaDias(chamada = "") {
     <div class="hero"><span class="kick">${esc(datas)}</span><h1>Roteiro</h1></div>
     ${chamada}
     ${montado ? `<div class="stats"><div class="stat"><b>${DIAS.length}</b><span>dias</span></div><div class="stat"><b>${kmTot.toLocaleString("pt-BR")}</b><span>km de estrada</span></div><div class="stat"><b>${Math.round(minTot / 60)} h</b><span>dirigindo</span></div></div>`
-      : chamada ? "" : vazio("O Marco ainda não montou o roteiro", "Conte a ele o que vocês querem fazer. Cada dia abaixo se preenche com as rotas reais, os horários e os locais conferidos no mapa.")}
+      : chamada ? "" : vazio("O Marco ainda não montou o roteiro", "Conte a ele o que você quer fazer. Cada dia abaixo se preenche com as rotas reais, os horários e os locais conferidos no mapa.")}
     <div class="list">${DIAS.map((d) => {
       const n = paradasDo(d).filter((p) => seloDe(p) !== "verde").length, tv = travasDia(d);
       return `<button class="row" data-a="dia" data-d="${d.dia}"><span class="datebox"><small>${esc(fmtData(d.data, { weekday: "short" }))}</small><b>${new Date(d.data + "T12:00:00").getDate()}</b></span>
@@ -1281,7 +1327,7 @@ function telaDia() {
     <div><h1 style="font-size:26px">${esc(d.titulo)}</h1></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill neu">${d.km} km</span><span class="pill neu">${fmtMin(d.min)} dirigindo</span><span class="pill neu">${paradasDo(d).length} paradas</span>${cl ? `<span class="pill neu">${esc(climaTxt(cl))}</span>` : ""}</div>
     ${tv.length ? `<div class="card" style="background:var(--warn-bg);gap:6px">${tv.map((t) => `<div style="color:var(--warn);font-size:15px;font-weight:500">${esc(t)}</div>`).join("")}<button class="btn sec" data-a="pedirMarco" data-q="Corrija os alertas do dia ${d.dia}.">Pedir ao Marco para corrigir</button></div>` : ""}
-    ${paradasDo(d).length ? `<button class="mapa" data-a="mapa" data-d="${d.dia}" aria-label="Abrir no mapa">${svgMapa(d, { alto: 200 })}</button>${timeline(d)}`
+    ${paradasDo(d).length ? `<button class="mapa" data-a="mapa" data-d="${d.dia}" aria-label="Abrir no mapa">${svgMapa(d, { alto: 200 })}</button>${diaBriefing(d)}`
       : `<div class="card"><div style="font-weight:600">Dia ainda vazio</div><span class="small">O Marco monta o dia com as rotas reais e o selo de cada local.</span><button class="btn" data-a="pedirMarco" data-q="Monte o dia ${d.dia}.">Pedir ao Marco para montar</button></div>`}</div></main>`;
 }
 
@@ -1547,7 +1593,7 @@ const saudeSalvar = (x) => { try { localStorage.setItem(SAUDE, JSON.stringify(x)
 function telaEmergencia() {
   const sos = (S.viagem && S.viagem.emergencia) || "112", l = idiomaLocal(), info = (S.viagem && S.viagem.info) || {};
   return `${header({ titulo: "Emergência", sub: "O essencial funciona sem sinal", voltar: true, direita: "<span style='width:36px'></span>" })}<main id="main"><div class="pad">
-    <div class="card" style="background:var(--bad-bg)"><div style="font-weight:700;color:var(--bad);font-size:20px">Você está em segurança?</div><div style="font-size:15px">Se alguém corre risco, ligue primeiro para o número de emergência do país onde vocês estão.</div>
+    <div class="card" style="background:var(--bad-bg)"><div style="font-weight:700;color:var(--bad);font-size:20px">Você está em segurança?</div><div style="font-size:15px">Se alguém corre risco, ligue primeiro para o número de emergência do país onde você está.</div>
       <a class="btn danger" href="tel:${esc(sos)}" target="_blank" rel="noopener">${ic("phone", 18)} Ligar ${esc(sos)}</a><span class="small">Se o discador não abrir, disque <b class="sel">${esc(sos)}</b>.</span></div>
     <div class="list">
       <button class="row" data-a="compartilharLocal"><span class="ico">${ic("share", 18)}</span><div class="main"><b>Compartilhar minha localização</b><span>Com o grupo ou o contato de emergência (o GPS funciona sem internet)</span></div>${ic("chev", 18)}</button>
@@ -1590,26 +1636,26 @@ const SLIDERS = [["aventura", "Conservador", "Aventureiro"], ["explorar", "Relax
 //  1. Pergunta: uma situação concreta e plausível na viagem, em até ~14 palavras, com UMA restrição clara
 //     (tempo, dinheiro, clima ou fila); número e gênero coerentes (um mirante = "o mirante").
 //  2. Opções: 4, todas possíveis DENTRO da restrição da pergunta (3 horas livres = cabe em 3 horas, ida e volta),
-//     mutuamente exclusivas, na mesma forma (verbo na 1ª pessoa do plural), até ~8 palavras, sem jargão.
+//     mutuamente exclusivas, na mesma forma (verbo no infinitivo, que serve a quem viaja só ou em grupo; Wagner, 02/10/2026: tratar no singular), até ~8 palavras, sem jargão.
 //  3. Cada opção move principalmente UM eixo do perfil (aventura, explorar, fora do circuito, premium);
 //     nenhuma opção é "a certa" e nenhuma é caricata.
 //  4. Só aparece a situação que combina com a viagem (requisito "quando"): não se pergunta de trilha para
 //     quem não curte natureza, nem de estrada para quem não vai dirigir.
 // Testado automaticamente em prototipo/testar.mjs (quantidade de opções, tamanho, eixos válidos, ids únicos).
 const CENARIOS = [
-  { id: "fila", p: "A atração mais famosa tem 2 horas de fila. O que vocês fazem?",
-    o: [["Encaramos a fila, faz parte", { fora: -20 }], ["Pagamos pelo acesso rápido", { premium: 30 }], ["Trocamos por uma atração menos conhecida", { fora: 30 }], ["Voltamos outro dia, logo na abertura", { explorar: 10, premium: -10 }]] },
+  { id: "fila", p: "A atração mais famosa tem 2 horas de fila. O que você faz?",
+    o: [["Encarar a fila, faz parte", { fora: -20 }], ["Pagar pelo acesso rápido", { premium: 30 }], ["Trocar por uma atração menos conhecida", { fora: 30 }], ["Voltar outro dia, logo na abertura", { explorar: 10, premium: -10 }]] },
   { id: "chuva", p: "Amanhece chovendo no dia do passeio ao ar livre. E agora?",
-    o: [["Vamos mesmo assim, de capa de chuva", { aventura: 25 }], ["Trocamos por um museu ou atração coberta", { explorar: 15 }], ["Ficamos descansando no hotel", { explorar: -25 }], ["Aproveitamos para fazer compras", { explorar: -5, premium: 10 }]] },
-  { id: "parque", quando: (c) => c.parques, p: "Último dia de parque e sobra uma tarde livre. O que vocês fazem?",
-    o: [["Repetimos as atrações favoritas", { explorar: -15 }], ["Vamos nas mais radicais que faltaram", { aventura: 25 }], ["Assistimos a um show com calma", { aventura: -15 }], ["Saímos do parque para conhecer outra coisa", { fora: 20, explorar: 10 }]] },
-  { id: "mirante", quando: (c) => c.natureza, p: "Vocês têm 3 horas livres perto de um mirante famoso. O que fazem?",
-    o: [["Vamos de carro até o mirante", { aventura: -20 }], ["Fazemos a trilha até ele, ida e volta", { aventura: 20, explorar: 10 }], ["Sobrevoamos a região de helicóptero", { premium: 30 }], ["Ficamos no mirante, contemplando sem pressa", { explorar: -25 }]] },
+    o: [["Ir mesmo assim, de capa de chuva", { aventura: 25 }], ["Trocar por um museu ou atração coberta", { explorar: 15 }], ["Descansar no hotel", { explorar: -25 }], ["Aproveitar para fazer compras", { explorar: -5, premium: 10 }]] },
+  { id: "parque", quando: (c) => c.parques, p: "Último dia de parque e sobra uma tarde livre. O que você faz?",
+    o: [["Repetir as atrações favoritas", { explorar: -15 }], ["Ir nas mais radicais que faltaram", { aventura: 25 }], ["Assistir a um show com calma", { aventura: -15 }], ["Sair do parque para conhecer outra coisa", { fora: 20, explorar: 10 }]] },
+  { id: "mirante", quando: (c) => c.natureza, p: "Você tem 3 horas livres perto de um mirante famoso. O que faz?",
+    o: [["Ir de carro até o mirante", { aventura: -20 }], ["Fazer a trilha até ele, ida e volta", { aventura: 20, explorar: 10 }], ["Sobrevoar a região de helicóptero", { premium: 30 }], ["Ficar no mirante, contemplando sem pressa", { explorar: -25 }]] },
   { id: "estrada", quando: (c) => c.carro, p: "Na estrada, uma placa indica uma cidadezinha a 40 minutos de desvio.",
-    o: [["Desviamos para conhecer", { explorar: 20, fora: 15 }], ["Seguimos o plano do dia", { explorar: -15 }], ["Desviamos e dormimos por lá", { aventura: 15, fora: 25 }], ["Anotamos para voltar outro dia", { explorar: -5 }]] },
-  { id: "jantar", quando: (c) => c.comida, p: "Primeira noite no destino. Onde vocês jantam?",
+    o: [["Desviar para conhecer", { explorar: 20, fora: 15 }], ["Seguir o plano do dia", { explorar: -15 }], ["Desviar e dormir por lá", { aventura: 15, fora: 25 }], ["Anotar para voltar outro dia", { explorar: -5 }]] },
+  { id: "jantar", quando: (c) => c.comida, p: "Primeira noite no destino. Onde você janta?",
     o: [["Num restaurante premiado, com reserva", { premium: 30 }], ["Onde os moradores comem", { fora: 30 }], ["No lugar famoso dos guias", { fora: -20 }], ["Algo rápido perto do hotel", { explorar: -20 }]] },
-  { id: "hotel", p: "O hotel que vocês queriam lotou. O que preferem?",
+  { id: "hotel", p: "O hotel que você queria lotou. O que prefere?",
     o: [["Um hotel mais caro na mesma região", { premium: 30 }], ["Uma pousada charmosa um pouco mais longe", { fora: 20 }], ["Um hotel simples e bem localizado", { premium: -20 }], ["Um apartamento para se sentir em casa", { explorar: -10, fora: 10 }]] },
 ];
 // as 3 situações desta viagem: fila e chuva valem para todas; a terceira é a que mais combina com o grupo
@@ -1732,7 +1778,7 @@ function telaOnboarding() {
     // o "Continuar" desta tela fica no rodapé, ao lado do botão do Marco (layout aprovado)
     c = `<h1 class="titulo-serifa">O que você quer nesta viagem?</h1><p class="sub" style="margin:0">Pense só nesta viagem${f.destino ? ` para ${esc(f.destino)}` : ""}, não nos seus gostos de sempre. Deslize os cartões: um toque é “curto”, dois é “amo”, três é “não é comigo”.</p>${blocoInteresses(o.pf, "onb")}`;
   } else if (o.step === 3) {
-    c = `<h1 class="titulo-serifa">Algumas situações</h1><p class="sub" style="margin:0">Em cada situação, deslizem as fotos e toquem na opção que mais combina com o grupo.</p>
+    c = `<h1 class="titulo-serifa">Algumas situações</h1><p class="sub" style="margin:0">Em cada situação, deslize as fotos e toque na opção que mais combina com você.</p>
       ${blocoSituacoes(o)}
       <div class="btns"><button class="btn sec" data-a="onbNext">Pular</button><button class="btn" data-a="onbNext">Continuar</button></div>`;
   } else {
@@ -2159,9 +2205,9 @@ function marcoCalar() { falaAtual++; if (audioMarco && !audioMarco.paused) audio
 // Pergunta de abertura de cada etapa da Nova viagem: cobre a tela inteira de uma vez, para a pessoa responder tudo junto
 const ETAPAS_SO_TOQUE = [2, 3];
 const PERGUNTA_ETAPA = {
-  1: "Agora me conta o jeito de vocês viajarem: dias mais tranquilos, equilibrados ou intensos? Que horas costumam acordar nas férias, quantas horas topam dirigir por dia, e tem alguma regra, restrição alimentar ou medo que eu deva respeitar? Pode falar tudo de uma vez.",
+  1: "Agora me conta como você gosta de viajar: dias mais tranquilos, equilibrados ou intensos? Que horas costuma acordar nas férias, quantas horas topa dirigir por dia, e tem alguma regra, restrição alimentar ou medo que eu deva respeitar? Pode falar tudo de uma vez.",
   2: "", // montada na hora, com o destino: ver perguntaEtapa()
-  3: "Agora umas situações rápidas, e aqui também a escolha é com vocês, tocando na tela. Em cada situação, deslize as fotos para o lado e toque na opção que mais combina com o grupo. Quando terminarem, é só tocar em Continuar.",
+  3: "Agora umas situações rápidas, e aqui também a escolha é sua, tocando na tela. Em cada situação, deslize as fotos para o lado e toque na opção que mais combina com você. Quando terminar, é só tocar em Continuar.",
   4: "Quase lá! Confere o resumo aqui na tela. Quer dar um nome para a viagem, ou ajustar alguma coisa? Se estiver tudo certo, me diga que eu crio a viagem.",
 };
 // Interesses são DESTA viagem, não gostos da vida (Wagner, 02/10/2026): quem ama trilha pode não querer trilha na Disney
@@ -2173,12 +2219,12 @@ function perguntaEtapa(o) {
 // Retomada (app reaberto com a Nova viagem pela metade): montada aqui com o que já está na ficha, sem chamar o Claude
 function resumoRetomada(o) {
   const f = o.f, nome = (f.nome || "").trim().split(" ")[0], tem = [], falta = [];
-  if (f.destino) tem.push(f.destino); else falta.push("pra onde vocês vão");
+  if (f.destino) tem.push(f.destino); else falta.push("pra onde você vai");
   if (f.inicio) tem.push(`a partir de ${fmtData(f.inicio, { day: "numeric", month: "long" })}`); else falta.push("quando começa");
   if (+f.dias > 0) tem.push(`${f.dias} dias`); else falta.push("quantos dias");
   if (f.outros) tem.push(`com ${f.outros.split(",").map((x) => x.trim()).filter(Boolean).join(" e ")}`); else falta.push("quem vai");
   const ini = `Voltamos${nome ? ", " + nome : ""}! `;
-  if (!tem.length) return ini + "Me conta: pra onde vocês querem ir, quando e quem vai?";
+  if (!tem.length) return ini + "Me conta: pra onde você quer ir, quando e quem vai?";
   return ini + `Até aqui eu anotei: ${tem.join(", ")}. ` + (falta.length ? `Falta só me dizer ${falta.slice(0, 2).join(" e ")}.` : "A ficha está completa. Quer ajustar alguma coisa, ou posso seguir?");
 }
 // Roteiro de boas-vindas (falado depois que a pessoa toca no botão do Marco; a abertura já explicou como funciona):
@@ -2187,7 +2233,7 @@ function boasVindasMarco() {
   const nome = ((S.onb && S.onb.f.nome) || "").trim().split(" ")[0];
   let veterano = false; try { veterano = localStorage.getItem(CHAVE_APRESENTADO) === "1"; } catch (e) {}
   if (veterano) return `Oi${nome ? ", " + nome : ""}! Viagem nova à vista? Me conta pra onde vai ser dessa vez, quando e quem vai.`;
-  return `Olá${nome ? ", " + nome : ""}! Que bom ter você no Clé. Eu sou o Marco, seu concierge de viagens, e vou cuidar do planejamento junto com você: do roteiro de cada dia às reservas, gastos e imprevistos. Me conta: pra onde vocês querem ir, quando e quem vai?`;
+  return `Olá${nome ? ", " + nome : ""}! Que bom ter você no Clé. Eu sou o Marco, seu concierge de viagens, e vou cuidar do planejamento junto com você: do roteiro de cada dia às reservas, gastos e imprevistos. Me conta: pra onde você quer ir, quando e quem vai?`;
 }
 // ---------- ditado: o botão do Marco escreve o que você fala (reconhecimento de fala do próprio aparelho) ----------
 // Ponte até a etapa de voz (ElevenLabs Scribe + voz do Eric): sem custo, em português, funciona no Chrome do Android e no iPhone.
@@ -2533,7 +2579,7 @@ const A = {
   ajustarLocal() { const p = paradasDo(diaObj(S.lugar.d))[S.lugar.i]; S.overlay = null; S.hist = []; S.tela = "conversa"; enviarTexto(`O ponto de "${nomeLimpo(p.n)}" no D${S.lugar.d} não está certo. Procure de novo, de preferência o ponto de chegada de carro, e proponha a correção.`); },
   aceitarGuia() { S.guiaAceito = true; registrar(`Guia liberado com ${aConfirmar()} local(is) a confirmar`, "guia", {}); render(); },
   imprimirGuia() { if (aConfirmar() && !S.guiaAceito) return; $("#print").innerHTML = htmlGuia(); setTimeout(() => window.print(), 60); },
-  convidar() { toast("Convites por link chegam com o servidor da viagem. Por enquanto, envie o arquivo da viagem: cada um abre no próprio celular e vocês juntam os arquivos."); ir("arquivo"); },
+  convidar() { toast("Convites por link chegam com o servidor da viagem. Por enquanto, envie o arquivo da viagem: cada um abre no próprio celular e depois é só juntar os arquivos."); ir("arquivo"); },
   buscaAbrir() { S.busca = { q: "", res: null }; S.overlay = "busca"; render(); setTimeout(() => { const e = $("#qBusca"); if (e) e.focus(); }, 50); },
   buscaAdd(ds) {
     const r = S.busca.res, x = +ds.i === 0 ? r.escolhido : r.alternativas[+ds.i - 1]; garantirListas();
@@ -2597,7 +2643,7 @@ const A = {
       if (!r.ok) throw new Error(j.erro || "O Marco não respondeu.");
       if (j.ficha) preencherFicha(j.ficha);
       o.falaEnviada = tamanhoEnviado;
-      o.marco = j.resposta || (j.ficha ? "Preenchi o que entendi na ficha aqui embaixo. Confere pra mim?" : "Ainda não peguei os detalhes da viagem. Me conta pra onde vocês querem ir, quando e quem vai?");
+      o.marco = j.resposta || (j.ficha ? "Preenchi o que entendi na ficha aqui embaixo. Confere pra mim?" : "Ainda não peguei os detalhes da viagem. Me conta pra onde você quer ir, quando e quem vai?");
       o.conversou = true;
       o.lendo = false; render();
       // Conversa contínua: quem diz que a tela terminou é o próprio Marco (avancar), nunca a pontuação da fala dele

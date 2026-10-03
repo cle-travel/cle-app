@@ -147,6 +147,13 @@ confere("Marco anota metas (registrar_metas) com inegociável/opcional", /regist
 confere("metas vão no contexto do Marco", /Metas da viagem \(entrevista A-E\)/.test(app), true);
 confere("planejador usa as metas (inegociáveis entram, opcionais saem primeiro)", /itens inegociáveis entram sempre/.test(nucleo), true);
 confere("as 28 fotos das situações estão em WebP", CEN.every((s) => s.o.every((_, k) => fs.existsSync(path.join(RAIZ, "prototipo", "imagens", "situacoes", `${s.id}-${k + 1}.webp`)))), true);
+// ---------- 15. singular e fase 2 (formato do item 6 do briefing v37), 02/10/2026 ----------
+confere("Marco trata no singular", /TRATAMENTO NO SINGULAR/.test(nucleo), true);
+confere("app não trata a pessoa por \"vocês\" (só ao falar de duas pessoas que se separam)", (app.match(/vocês/g) || []).length <= 1, true);
+confere("situações com opções no infinitivo", CEN.every((s) => s.o.every(([t]) => !/^(Encaramos|Pagamos|Trocamos|Voltamos|Vamos|Ficamos|Aproveitamos|Repetimos|Assistimos|Saímos|Fazemos|Sobrevoamos|Desviamos|Seguimos|Anotamos)\b/.test(t))), true);
+confere("parada do Marco traz rota, nota, onde reservar, alerta e motivo da sugestão", ["rota_ate_aqui", "nota", "reserva", "alerta", "sugestao_motivo"].every((c) => nucleo.includes(`  ${c}: { type: "string"`)), true);
+confere("dia do Marco traz avisos (ATENÇÃO/NOTA) e café de amanhã", /cafe_amanha: \{ type: "string"/.test(nucleo) && /notas: \{ type: "array"/.test(nucleo), true);
+confere("tela do dia no formato do briefing (trechos, endereço, GPS, café amanhã)", /function diaBriefing\(d\)/.test(app) && /\$\{diaBriefing\(d\)\}/.test(app) && /d\.trechos = j\.trechos/.test(app), true);
 confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }
