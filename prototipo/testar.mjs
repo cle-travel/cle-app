@@ -116,7 +116,8 @@ confere("conversa escrita só com o Marco mudo (CC)", /if \(S\.legendas\) return
 confere("histórico de conversas em Mais", /it\("conversas", "chat", "Histórico de conversas"/.test(app), true);
 confere("painel visual do planejamento na tela do Marco", /function painelPlanejamento\(\)/.test(app), true);
 confere("servidor interrompe passo longo antes do limite da nuvem", /codigo: "tempo"/.test(nucleo) && /prazoMs \+ 25000/.test(nucleo), true);
-confere("planejamento em lotes de até 3 dias", /no máximo 3 dias por resposta/.test(nucleo), true);
+confere("planejamento em lotes de até 2 dias (custos pesquisados cabem no limite da nuvem)", /no máximo 2 dias por resposta/.test(nucleo), true);
+confere("orçamento sem contagem dupla: o Marco recebe o que já está na Carteira", app.includes("Orçamento na Carteira (estimativas; não lançar de novo)") && nucleo.includes("NUNCA conte duas vezes"), true);
 confere("app refaz em partes quando o servidor avisa tarefa grande", /codigo === "tempo" && modo === "planejamento"/.test(app), true);
 confere("erro de conexão em português, não \"network error\"", /A conexão com o Marco caiu no meio da resposta/.test(app), true);
 confere("silêncio: pausa por tempo sem fala nem toque, não por tentativas", /const SILENCIO_MAX = 120000/.test(app) && !/\+\+silencios > 6/.test(app), true);
@@ -154,6 +155,13 @@ confere("situações com opções no infinitivo", CEN.every((s) => s.o.every(([t
 confere("parada do Marco traz rota, nota, onde reservar, alerta e motivo da sugestão", ["rota_ate_aqui", "nota", "reserva", "alerta", "sugestao_motivo"].every((c) => nucleo.includes(`  ${c}: { type: "string"`)), true);
 confere("dia do Marco traz avisos (ATENÇÃO/NOTA) e café de amanhã", /cafe_amanha: \{ type: "string"/.test(nucleo) && /notas: \{ type: "array"/.test(nucleo), true);
 confere("tela do dia no formato do briefing (trechos, endereço, GPS, café amanhã)", /function diaBriefing\(d\)/.test(app) && /\$\{diaBriefing\(d\)\}/.test(app) && /d\.trechos = j\.trechos/.test(app), true);
+// ---------- 16. fase 3: Carteira orçamentária (02/10/2026) ----------
+const carteira = fs.readFileSync(path.join(RAIZ, "prototipo", "carteira", "index.html"), "utf8");
+confere("parada e dia do Marco trazem custo estimado com fonte", /custo_estimado: \{ type: "number"/.test(nucleo) && /custo_fonte: \{ type: "string"/.test(nucleo) && /custos_dia: \{ type: "array"/.test(nucleo), true);
+confere("Marco estima custos pré-viagem (estimar_custos, dia 0)", /estimar_custos: \{/.test(nucleo) && /aplicarEstimativas\(k\)/.test(app), true);
+confere("dia aprovado lança estimativas na Carteira como \"estimado\", sem definir quem paga", /const nEst = estimativasDoDia\(d\)/.test(app) && /status: "estimado",\s*\n?\s*resp: c\.viajantes\(\)\.map\(\(v\) => v\.id\), fonte: null/.test(app), true);
+confere("excluir na Carteira reflete no roteiro, metas e desejos", /window\.parent\.cleEvento/.test(carteira) && /window\.cleEvento = \(ev\) =>/.test(app) && /Excluída por você na Carteira/.test(app), true);
+confere("Carteira avisa que os valores são estimativas", /Valores estimados/.test(carteira) && /podem mudar/.test(carteira), true);
 confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }

@@ -965,6 +965,7 @@ function telaPainel(){
       </div>
     </section>
 
+    ${window.CLE_APP && window.CLE.estimativasMarco() ? `<section class="card"><h3>Valores estimados <small>${window.CLE.estimativasMarco()} lançamento(s) do Marco</small></h3><div class="hint" style="margin-top:0">As estimativas do Marco são orçamentárias, com preços de referência na data do planejamento, e podem mudar (câmbio, reajustes das empresas, temporada). Ainda não definem quem paga nem de qual conta sai.</div></section>` : ''}
     ${p==='t' ? cardDinheiroTodos() : cardCarteira(p)}
 
     ${p==='t' && S.viagem.viajantes.length > 1 ? `<section class="card"><h3>Acerto entre vocês <small>despesas divididas</small></h3>
@@ -1315,6 +1316,9 @@ window.CLE = {
     save(); render(); return true;
   },
   abrir(tab){ irPara(tab || 'painel'); },
+  // Clé (fase 3): o app mostra no roteiro o valor atual de cada estimativa (o que for editado aqui aparece lá)
+  lancamento(id){ const l = S && S.lanc.find(x => x.id === id); return l ? { valor:l.valor, moeda:l.moeda, status:l.status, desc:l.desc } : null; },
+  estimativasMarco(){ return S ? S.lanc.filter(l => l.ref && l.status === 'estimado').length : 0; },
   // memória da viagem: o app guarda a Carteira dentro do arquivo da viagem
   tem(){ return !!(S && S.viagem); },
   carregar(d, dono){ const x = JSON.parse(JSON.stringify(d)); delete x.local; S = normalizar(x); S.aparelho = dono || null; UI.pessoa = 't'; UI.tab = 'painel'; save(); iniciar(); return true; },
@@ -1386,7 +1390,15 @@ document.addEventListener('click', e => {
   if (q('#fFoto')) { lerCamposForm(); return $('#cam').click(); }
   if (q('#fFotoX')) { lerCamposForm(); F.foto=null; return renderForm(); }
   if (q('#fSalvar')) return salvarForm();
-  if (q('#fExcluir')) { if (!confirm('Excluir este lançamento?')) return; S.lanc = S.lanc.filter(x=>x.id!==F.id); S.excluidos[F.id] = Date.now(); S.local.excLoc[F.id] = {loc: Date.now(), via: null}; save(); fecharSheet(); render(); return toast('Lançamento excluído'); }
+  if (q('#fExcluir')) {
+    const ref = (S.lanc.find(x=>x.id===F.id) || {}).ref; // Clé: lançamento ligado a uma atividade do roteiro?
+    if (!confirm(ref && ref.t === 'parada' ? 'Excluir este lançamento? A atividade também sai do roteiro (fica registrado que foi você).' : 'Excluir este lançamento?')) return;
+    const exc = S.lanc.find(x=>x.id===F.id);
+    S.lanc = S.lanc.filter(x=>x.id!==F.id); S.excluidos[F.id] = Date.now(); S.local.excLoc[F.id] = {loc: Date.now(), via: null}; save(); fecharSheet(); render();
+    // Clé: avisa o app, que reflete a exclusão no roteiro, nas metas, nos desejos e conta ao Marco
+    if (window.CLE_APP && exc) { try { window.parent.cleEvento && window.parent.cleEvento({ tipo:'excluido', lanc: JSON.parse(JSON.stringify(exc)) }); } catch(e) {} }
+    return toast('Lançamento excluído');
+  }
   // categorias
   if (q('[data-addsub]')) { const id = q('[data-addsub]').dataset.addsub; return sheetTexto('Nova subcategoria', 'Nome da subcategoria em '+esc(cat(id).nome), n => { cat(id).subs.push(n); save(); }); }
   if (q('[data-editcat]')) return editarCategoria(q('[data-editcat]').dataset.editcat);

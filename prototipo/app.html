@@ -512,8 +512,9 @@ function registrar(desc, tipo, dados) { const h = { id: novoId(), quando: new Da
 function desfazerHist(id) {
   const h = S.historico.find((x) => x.id === id); if (!h || h.desfeito) return false;
   const d = h.dados || {};
-  if (h.tipo === "parada") { const dia = diaObj(d.dia); if (dia) { dia.paradas = dia.paradas.filter((p) => p.id !== d.id); if (d.pernoiteAntes !== undefined) dia.pernoite = d.pernoiteAntes; recalcRota(dia); } }
-  else if (h.tipo === "dia") { const i = DIAS.findIndex((x) => x.dia === d.dia); if (i >= 0) DIAS[i] = d.antes; }
+  if (h.tipo === "excluida") { toast("Para trazer de volta, peça ao Marco ou inclua de novo a atividade."); return false; }
+  if (h.tipo === "parada") { const dia = diaObj(d.dia); if (dia) { const p = dia.paradas.find((x) => x.id === d.id), c = cle(); if (p && p.lancId && c) c.desfazer(p.lancId); dia.paradas = dia.paradas.filter((p) => p.id !== d.id); if (d.pernoiteAntes !== undefined) dia.pernoite = d.pernoiteAntes; recalcRota(dia); } }
+  else if (h.tipo === "dia") { const i = DIAS.findIndex((x) => x.dia === d.dia); if (i >= 0) { const c = cle(); if (c) for (const id of [...(DIAS[i].lancExtras || []), ...paradasDo(DIAS[i]).map((p) => p.lancId)].filter(Boolean)) c.desfazer(id); DIAS[i] = d.antes; estimativasDoDia(DIAS[i]); } }
   else if (h.tipo === "lanc") { const c = cle(); if (!c || !c.desfazer(d.lancId)) { toast("Abra a Carteira para desfazer este lançamento."); return false; } }
   else if (h.tipo === "tarefa") { S.listas.tarefas = S.listas.tarefas.filter((t) => t.id !== d.id); }
   else if (h.tipo === "concluir") { S.tarefas[d.id] = false; }
@@ -752,6 +753,10 @@ function contextoTexto(pedido) {
     nomes(2) && `amam: ${nomes(2)}`, nomes(1) && `curtem: ${nomes(1)}`, nomes(3) && `não curtem: ${nomes(3)}`, pf.sl && Object.keys(pf.sl).length && `personalidade (0-100): ${SLIDERS.map(([k, a, b]) => `${a}→${b} ${pf.sl[k] ?? 50}`).join(", ")}`,
     pf.ocasiao && `ocasião: ${pf.ocasiao}`, pf.orcamento && `orçamento: ${pf.orcamento}`, pf.reservado && `já reservado: ${pf.reservado}`].filter(Boolean);
   if (perfil.length) L.push("Perfil: " + perfil.join("; "));
+  // o que já está orçado na Carteira, para o Marco nunca contar duas vezes
+  { const c = cle(), orc = DIAS.filter((d) => paradasDo(d).some((p) => p.lancId) || (d.lancExtras || []).length).map((d) => "D" + d.dia), gerais = Object.entries(v.estimativas || {}).map(([k, id]) => { const l = c && c.lancamento(id); return l ? `${k}: ${l.desc} = ${l.valor} ${l.moeda}` : null; }).filter(Boolean);
+    if (orc.length || gerais.length) L.push(`Orçamento na Carteira (estimativas; não lançar de novo): ${orc.length ? `dias já orçados com atividades, hospedagem, refeições e custos do dia: ${orc.join(", ")}` : "nenhum dia orçado"}${gerais.length ? ` | estimativas gerais: ${gerais.join("; ")}` : ""}`); }
+  const exc = DIAS.flatMap((d) => (d.excluidas || []).map((x) => `${x.n} (D${d.dia})`)); if (exc.length) L.push("Excluídas por você na Carteira (não propor de novo sem pedido): " + exc.join("; "));
   const mt = metasTexto(); L.push(mt ? "Metas da viagem (entrevista A-E):\n" + mt : "Metas da viagem: entrevista A-E ainda não feita.");
   const info = Object.entries(v.info || {}); if (info.length) L.push("Apoio: " + info.map(([k, x]) => `${k}=${x}`).join("; "));
   // dias em foco: os citados no pedido e, na viagem, hoje e amanhã
@@ -788,6 +793,71 @@ async function lerSSE(resp, cada) {
 }
 let rT = null;
 const renderLogo = () => { if (rT) return; rT = setTimeout(() => { rT = null; render(); }, 80); };
+// ---------- Orçamento (fase 3, Wagner 02/10/2026): a Carteira como orçamento do que foi planejado ----------
+// Cada parada aprovada com custo vira um lançamento "estimado" na Carteira (todo o grupo divide; sem definir quem
+// paga), ligado à parada por ref. Custos do dia (combustível, pedágio...) idem. Excluir o lançamento na Carteira tira a
+// atividade do roteiro e marca "excluída por você" nas metas, nos desejos e no dia (cleEvento).
+function lancarEstimativa(dados, ref) {
+  const c = cle(); if (!c || !c.pronto()) return null;
+  const ml = c.moedaLocal(), moeda = dados.moeda === ml.cod ? ml.cod : dados.moeda === "BRL" ? "BRL" : null;
+  if (!moeda || !(+dados.valor > 0)) return null;
+  return c.lancar({ desc: dados.desc, cat: CATS[dados.cat] ? dados.cat : "out", valor: Math.round(+dados.valor * 100) / 100, moeda, dia: dados.dia, status: "estimado",
+    resp: c.viajantes().map((v) => v.id), fonte: null, obs: "Estimativa do Marco" + (dados.fonte ? " · fonte: " + dados.fonte : ""), ref });
+}
+function estimativasDoDia(d) { // tira as estimativas antigas do dia e lança as atuais
+  const c = cle(); if (!c) return 0;
+  for (const id of [...(d.lancExtras || []), ...paradasDo(d).map((p) => p.lancId)].filter(Boolean)) c.desfazer(id);
+  let n = 0; d.lancExtras = [];
+  for (const p of paradasDo(d)) {
+    p.lancId = null; if (!p.custo) continue;
+    p.lancId = lancarEstimativa({ desc: nomeLimpo(p.n), cat: p.custo.c, valor: p.custo.v, moeda: p.custo.m, dia: d.dia, fonte: p.custo.f }, { t: "parada", dia: d.dia, pid: p.id });
+    if (p.lancId) n++;
+  }
+  for (const x of d.custos || []) { const id = lancarEstimativa({ desc: x.descricao, cat: x.categoria, valor: x.valor, moeda: x.moeda, dia: d.dia, fonte: x.fonte }, { t: "dia", dia: d.dia }); if (id) { d.lancExtras.push(id); n++; } }
+  return n;
+}
+function aplicarEstimativas(k) { // estimar_custos: pré-viagem e custos gerais, por chave estável
+  const c = cle(), v = S.viagem; v.estimativas = v.estimativas || {};
+  if (!c || !c.pronto()) { k.estado = "erro"; k.resultado = "A Carteira ainda está carregando."; return; }
+  const feitos = [], fora = [];
+  for (const it of (k.input && k.input.itens) || []) {
+    if (v.estimativas[it.chave]) { c.desfazer(v.estimativas[it.chave]); delete v.estimativas[it.chave]; }
+    if (!(+it.valor > 0)) { feitos.push(`${it.descricao} (retirada)`); continue; } // valor 0: tira a estimativa
+    const id = lancarEstimativa({ desc: it.descricao, cat: it.categoria, valor: it.valor, moeda: it.moeda, dia: Math.max(0, Math.min(v.dias, +it.dia || 0)), fonte: it.fonte }, { t: "estimativa", chave: it.chave });
+    if (id) { v.estimativas[it.chave] = id; feitos.push(it.descricao); } else fora.push(`${it.descricao} (moeda ${it.moeda} não aceita: use ${c.moedaLocal().cod} ou BRL)`);
+  }
+  k.estado = "aprovado"; k.resultado = `Lançado na Carteira como estimativa: ${feitos.join(", ") || "nada"}.${fora.length ? " Ficou de fora: " + fora.join("; ") + "." : ""}`;
+}
+// a Carteira avisa quando a pessoa exclui um lançamento: reflete no resto do app
+window.cleEvento = (ev) => {
+  if (!ev || ev.tipo !== "excluido" || !ev.lanc || !S.viagem) return;
+  const l = ev.lanc, ref = l.ref || {};
+  if (ref.t === "parada") {
+    const d = diaObj(ref.dia), i = d ? d.paradas.findIndex((p) => p.id === ref.pid) : -1;
+    if (i < 0) return;
+    const p = d.paradas[i], nome = nomeLimpo(p.n);
+    d.paradas.splice(i, 1); d.excluidas = d.excluidas || [];
+    d.excluidas.push({ n: nome, h: p.h, quando: hojeISO() });
+    d.trechos = []; recalcRota(d);
+    // metas e desejos: nomes parecidos contam ("EPCOT – manhã" é da meta "EPCOT"); só vira "excluída" se nada dela
+    // sobrou no roteiro; se sobrou (ex.: EPCOT à noite), a meta só registra a parte que saiu
+    const casa = (a, b) => { const x = norm(a).replace(/[^a-z0-9 ]/g, " ").trim(), y = norm(b).replace(/[^a-z0-9 ]/g, " ").trim(); return !!x && !!y && (x.includes(y) || y.includes(x)); };
+    const aindaTem = (n) => DIAS.some((dd) => paradasDo(dd).some((q) => casa(q.n, n)));
+    const marcar = (it, campo) => { if (aindaTem(it.n)) it[campo] = `Parte excluída por você na Carteira: ${nome} (D${d.dia})`; else { it.p = "excluida"; it[campo] = "Excluída por você na Carteira"; } };
+    for (const t of ["atividades", "alimentacao", "compras", "hospedagem"]) for (const it of metasDe(t).itens.filter((x) => casa(x.n, nome))) marcar(it, "d");
+    for (const de of ((S.listas && S.listas.desejos) || []).filter((x) => casa(x.n, nome))) marcar(de, "s");
+    registrar(`Excluída por você na Carteira: ${nome} (D${d.dia})`, "excluida", { dia: d.dia, n: nome });
+    S.notas.push(`[O viajante excluiu na Carteira "${nome}" do D${d.dia}: a atividade saiu do roteiro. Não proponha de novo sem ele pedir; se ele quiser, sugira outra para o horário.]`);
+    toast(`${nome} saiu do roteiro do dia ${d.dia}. Você pode pôr outra atividade no lugar ou pedir ajuda ao Marco.`);
+  } else if (ref.t === "estimativa") {
+    if (S.viagem.estimativas) delete S.viagem.estimativas[ref.chave];
+    S.notas.push(`[O viajante excluiu da Carteira a estimativa "${l.desc}".]`);
+  } else if (ref.t === "dia") {
+    const d = diaObj(ref.dia); if (d) d.lancExtras = (d.lancExtras || []).filter((x) => x !== l.id);
+    S.notas.push(`[O viajante excluiu da Carteira o custo "${l.desc}" do D${ref.dia}.]`);
+  }
+  render();
+};
 // ---------- decisão de um cartão: pelo toque (Aprovar/Ajustar/Recusar) ou pela voz (decidir_cartoes) ----------
 function decidirCartao(m, k, v, ajuste = "", porMarco = false) {
   if (v === "aprovar" || v === "talvez") {
@@ -930,9 +1000,9 @@ function tratarEvento(ev, m, fio, modo) {
       m.toolUses = asst.filter((b) => b.type === "tool_use").map((b) => b.id);
       m.cards = asst.filter((b) => b.type === "tool_use" && !(b.id in m.servidor)).map((b) => ({ id: b.id, name: b.name, input: b.input || {}, estado: "aguardando" }));
       // decisão falada sobre cartões da tela: o app aplica na hora; se for só isso, o Marco continua sozinho
-      for (const k of m.cards) { if (k.name === "decidir_cartoes") aplicarDecisoesFaladas(k); else if (k.name === "registrar_metas") aplicarMetas(k); }
+      for (const k of m.cards) { if (k.name === "decidir_cartoes") aplicarDecisoesFaladas(k); else if (k.name === "registrar_metas") aplicarMetas(k); else if (k.name === "estimar_custos") aplicarEstimativas(k); }
       // só anotações e decisões: o Marco continua sozinho (decisão sempre; metas só se ele não deixou a próxima pergunta)
-      const AUTO = ["decidir_cartoes", "registrar_metas"];
+      const AUTO = ["decidir_cartoes", "registrar_metas", "estimar_custos"];
       if (m.cards.length && m.cards.every((k) => AUTO.includes(k.name)) && (m.cards.some((k) => k.name === "decidir_cartoes") || !m.txt.trim())) m.autoContinuar = true;
       for (const k of m.cards) if (k.name === "encaminhar_ao_planejador") { k.estado = "aprovado"; k.resultado = "Encaminhado ao planejador; o resultado aparece na conversa."; m.encaminhar = k.input.pedido; }
       if (!m.txt.trim() && m.cards.some((k) => k.estado === "aguardando")) {
@@ -961,6 +1031,7 @@ async function recomecarFio(modo) {
 
 // ---------- cartões de proposta (Aprovar / Ajustar / Recusar; desejos: Quero / Talvez / Não) ----------
 function cardMarco(k, mi, ci) {
+  if (k.name === "estimar_custos") return `<span class="pill ${k.estado === "erro" ? "bad" : "ok"}" style="align-self:flex-start;white-space:normal">${ic("wallet", 14)} ${esc(k.resultado || "Estimativas lançadas na Carteira")}</span><button class="btn sec" data-a="tab" data-t="carteira">${ic("wallet", 18)} Ver a Carteira</button>`;
   if (k.name === "registrar_metas") return `<span class="pill ok" style="align-self:flex-start;white-space:normal">${ic("check", 14, 2.5)} ${esc(k.resultado || "Anotado nas metas")}</span>`;
   if (k.name === "decidir_cartoes") return `<span class="pill ok" style="align-self:flex-start;white-space:normal">${ic("check", 14, 2.5)} Decidido pela sua voz</span>`;
   const i = k.input || {}, d = i.dia ? diaObj(i.dia) : null;
@@ -1012,7 +1083,8 @@ function paradaDeInput(i) {
   const est = i.chegada_lat != null && i.chegada_lng != null ? (() => { const km = kmEntre({ lat: i.chegada_lat, lng: i.chegada_lng }, { lat: i.lat, lng: i.lng }); return { n: i.chegada_nome || "Ponto de chegada", lat: i.chegada_lat, lng: i.chegada_lng, km: Math.round(km * 100) / 100, min: i.trecho_pe_min || Math.max(1, Math.round(km * 15)) }; })() : null;
   return { id: novoId(), n: i.nome, t: i.tipo || "passeio", h: i.horario || "", dur: i.duracao_min ? fmtDur(i.duracao_min) : "", lat: +i.lat, lng: +i.lng, end: i.endereco || "", tel: i.telefone || null, site: i.site || null, selo: i.selo || "vermelho", est, marco: true,
     // formato do briefing: rota do trecho até aqui, nota, onde reservar, alerta de risco real, motivo da sugestão
-    rota: i.rota_ate_aqui || "", nota: i.nota || "", reserva: i.reserva || "", alerta: i.alerta || "", sug: i.sugestao_motivo || "" };
+    rota: i.rota_ate_aqui || "", nota: i.nota || "", reserva: i.reserva || "", alerta: i.alerta || "", sug: i.sugestao_motivo || "",
+    custo: +i.custo_estimado > 0 ? { v: +i.custo_estimado, m: i.custo_moeda || "", c: i.custo_categoria || "pas", f: i.custo_fonte || "" } : null };
 }
 function aplicarProposta(k, v) {
   const i = k.input || {};
@@ -1021,15 +1093,18 @@ function aplicarProposta(k, v) {
     if (!Number.isFinite(+i.lat) || !Number.isFinite(+i.lng)) throw new Error("a parada veio sem coordenadas");
     const p = paradaDeInput(i), pernoiteAntes = p.t === "pernoite" ? d.pernoite || null : undefined;
     d.paradas.push(p); if (p.t === "pernoite") d.pernoite = p.n; recalcRota(d);
-    return { texto: `Aprovado e aplicado: ${p.n} no D${d.dia} às ${p.h}.`, hist: registrar(`D${d.dia}: ${p.n} incluído às ${p.h}`, "parada", { dia: d.dia, id: p.id, pernoiteAntes }) };
+    if (p.custo) p.lancId = lancarEstimativa({ desc: nomeLimpo(p.n), cat: p.custo.c, valor: p.custo.v, moeda: p.custo.m, dia: d.dia, fonte: p.custo.f }, { t: "parada", dia: d.dia, pid: p.id });
+    return { texto: `Aprovado e aplicado: ${p.n} no D${d.dia} às ${p.h}${p.lancId ? "; estimativa de custo lançada na Carteira" : ""}.`, hist: registrar(`D${d.dia}: ${p.n} incluído às ${p.h}`, "parada", { dia: d.dia, id: p.id, pernoiteAntes }) };
   }
   if (k.name === "propor_dia") {
     const idx = DIAS.findIndex((x) => x.dia === +i.dia); if (idx < 0) throw new Error(`a viagem não tem o dia ${i.dia}`);
     const antes = JSON.parse(JSON.stringify(DIAS[idx])), d = DIAS[idx];
     d.titulo = i.titulo; d.paradas = (i.paradas || []).filter((p) => Number.isFinite(+p.lat)).map(paradaDeInput);
     const pn = [...d.paradas].reverse().find((p) => p.t === "pernoite"); d.pernoite = pn ? pn.n : null; d.poly = []; d.trechos = []; // a pernoite é a ÚLTIMA (pausa no hotel durante o dia não conta)
-    d.notas = Array.isArray(i.notas) ? i.notas.filter(Boolean) : []; d.cafe = i.cafe_amanha || ""; recalcRota(d);
-    return { texto: `Aprovado e aplicado: D${d.dia} montado (${d.paradas.length} paradas).`, hist: registrar(`D${d.dia} montado: ${d.titulo}`, "dia", { dia: d.dia, antes }) };
+    d.notas = Array.isArray(i.notas) ? i.notas.filter(Boolean) : []; d.cafe = i.cafe_amanha || ""; d.custos = Array.isArray(i.custos_dia) ? i.custos_dia : []; d.excluidas = []; recalcRota(d);
+    d.lancExtras = antes.lancExtras || []; for (const p of antes.paradas || []) if (p.lancId) { const c = cle(); if (c) c.desfazer(p.lancId); } // estimativas antigas do dia saem
+    const nEst = estimativasDoDia(d);
+    return { texto: `Aprovado e aplicado: D${d.dia} montado (${d.paradas.length} paradas)${nEst ? `; ${nEst} estimativa(s) de custo lançada(s) na Carteira` : ""}.`, hist: registrar(`D${d.dia} montado: ${d.titulo}`, "dia", { dia: d.dia, antes }) };
   }
   if (k.name === "propor_lancamento") {
     const c = cle(); if (!c) throw new Error("a Carteira ainda está carregando");
@@ -1197,6 +1272,12 @@ function telaHoje() {
 // Dia no formato do briefing de viagem aprovado (item 6 do briefing v37, Wagner 02/10/2026): pernoite no topo; cada
 // atividade com HORÁRIO · nome [duração], nota, endereço e GPS; entre elas o trecho "→ rota [~tempo · km]"; avisos
 // ATENÇÃO/NOTA e o CAFÉ AMANHÃ no fim. Tocar numa atividade abre o lugar (mapa, navegar, conferir o ponto).
+// custo estimado da atividade, lido na hora da Carteira (editou lá, muda aqui)
+function custoParada(p) {
+  const c = cle(), l = p.lancId && c && c.lancamento && c.lancamento(p.lancId); if (!l) return "";
+  const ml = c.moedaLocal() || {}, simb = l.moeda === "BRL" ? "R$" : ml.cod === l.moeda ? ml.simb : l.moeda;
+  return `<span class="brief-res">${l.status === "estimado" ? "Custo estimado" : "Custo"}: ${esc(dinheiro(l.valor, simb))}</span>`;
+}
 function diaBriefing(d) {
   const ps = paradasDo(d), tr = d.trechos || [];
   let ip = -1; const noPts = ps.map((p) => (Number.isFinite(+p.lat) ? ++ip : null)); // índice de cada parada nos pontos da rota
@@ -1213,9 +1294,10 @@ function diaBriefing(d) {
       <b>${esc(nomeLimpo(p.n))}${p.dur ? ` <span class="brief-dur">[${esc(p.dur)}]</span>` : ""}</b>
       ${p.nota ? `<span>${esc(p.nota)}</span>` : ""}${p.sug ? `<span class="brief-sug">Sugestão do Marco: ${esc(p.sug)}</span>` : ""}
       ${p.end ? `<span class="brief-end">Endereço: ${esc(p.end)}</span>` : ""}${gps ? `<span class="brief-end mono">GPS: ${gps}</span>` : ""}
-      ${p.reserva ? `<span class="brief-res">Onde reservar: ${esc(p.reserva)}</span>` : ""}${p.alerta ? `<span class="brief-alerta">ATENÇÃO: ${esc(p.alerta)}</span>` : ""}
+      ${p.reserva ? `<span class="brief-res">Onde reservar: ${esc(p.reserva)}</span>` : ""}${custoParada(p)}${p.alerta ? `<span class="brief-alerta">ATENÇÃO: ${esc(p.alerta)}</span>` : ""}
       ${seloPill(p) && seloDe(p) !== "verde" ? `<span style="margin-top:2px">${seloPill(p)}</span>` : ""}</span></button>`;
   });
+  for (const x of d.excluidas || []) h += `<div class="brief-nota risco" style="display:flex;flex-direction:column;gap:8px"><span>Excluída por você na Carteira: <s>${esc(x.n)}</s>${x.h ? ` (era às ${esc(x.h)})` : ""}. Você pode incluir outra atividade à mão ou pedir ajuda ao Marco.</span><div class="btns"><button class="btn sec" data-a="buscaAbrir" data-d="${d.dia}" data-h="${esc(x.h || "")}">${ic("search", 16)} Incluir à mão</button><button class="btn sec" data-a="pedirMarco" data-q="${esc(`No D${d.dia}${x.h ? " às " + x.h : ""} ficou um horário livre: excluí ${x.n} na Carteira. Sugira uma alternativa.`)}">${ic("mic", 16)} Pedir ao Marco</button></div></div>`;
   for (const n of d.notas || []) h += `<div class="brief-nota${/^aten/i.test(n) ? " risco" : ""}">${esc(n)}</div>`;
   if (d.cafe) h += `<div class="brief-pern">${ic("sun", 16)}<span><b>Café amanhã (D${d.dia + 1}):</b> ${esc(d.cafe)}</span></div>`;
   return h + "</div>";
@@ -1239,7 +1321,7 @@ const TOPICOS = [
   { id: "alimentacao", letra: "D", nome: "Alimentação", curto: "Alimentação", ic: "fork", pergunta: "Gastronomia local, alta gastronomia, premiados, em alta nas redes, custo-benefício, saudável, exótica, mercado e cozinhar; restaurantes que já tem em mente." },
   { id: "compras", letra: "E", nome: "Compras", curto: "Compras", ic: "sacola", pergunta: "O que pretende comprar: roupas, eletrônicos, perfumes, lembranças, cosméticos, colecionáveis, artefatos." },
 ];
-const PRIORIDADES = { inegociavel: ["Inegociável", "acc"], opcional: ["Opcional", "neu"], a_definir: ["A definir", "warn"] };
+const PRIORIDADES = { inegociavel: ["Inegociável", "acc"], opcional: ["Opcional", "neu"], a_definir: ["A definir", "warn"], excluida: ["Excluída por você", "bad"] };
 function metasDe(t) { const v = S.viagem; v.metas = v.metas || {}; return (v.metas[t] = v.metas[t] || { resumo: "", itens: [], concluido: false }); }
 const topicoFeito = (t) => { const m = S.viagem && S.viagem.metas && S.viagem.metas[t]; return !!(m && (m.concluido || m.resumo || m.itens.length)); };
 // o Marco anotou metas pelo que a pessoa contou: aplica na hora (sem cartão) e espelha atividades na lista de desejos
@@ -1298,13 +1380,20 @@ function telaRoteiro() {
   const chamada = faltam.length ? `<div class="card" style="gap:10px"><div style="font-size:17px;font-weight:600">${faltam.length === TOPICOS.length ? "Antes de montar os dias, conte ao Marco suas metas" : `Faltam ${faltam.length} de 5 tópicos das suas metas`}</div><span class="small">Como um agente de viagens faria: atividades, hospedagem, transporte, alimentação e compras. Ele marca o que é inegociável e o que pode sair, e monta os dias a partir disso.</span><button class="btn" data-a="entrevista" data-t="${faltam[0].id}">${ic("mic", 18)} ${faltam.length === TOPICOS.length ? "Começar a entrevista" : `Continuar: ${faltam[0].letra} · ${faltam[0].curto}`}</button></div>` : "";
   return telaDias(chamada);
 }
+// orçamento da viagem (fase 3): estimativas na Carteira e pedido dos custos pré-viagem
+function cardOrcamento() {
+  const c = cle(), n = c && c.estimativasMarco ? c.estimativasMarco() : 0, pre = Object.keys((S.viagem && S.viagem.estimativas) || {}).length;
+  return `<div class="card" style="gap:10px"><div style="font-size:17px;font-weight:600">Orçamento da viagem</div>
+    <span class="small">${n ? `${n} estimativa(s) do Marco na Carteira, somadas na Projeção do custo total.` : "Ao aprovar cada dia, o Marco lança na Carteira o custo estimado das atividades."} ${pre ? "Custos pré-viagem já estimados." : "Faltam os custos pré-viagem (passagens, seguro, documentos, locação...)."} Valores estimados na data de hoje: podem mudar.</span>
+    <div class="btns"><button class="btn sec" data-a="tab" data-t="carteira">${ic("wallet", 18)} Ver na Carteira</button><button class="btn sec" data-a="pedirMarco" data-q="Estime os custos pré-viagem e os custos gerais que faltam no orçamento, com as fontes, e lance na Carteira.">${ic("mic", 18)} ${pre ? "Revisar o orçamento" : "Orçar pré-viagem"}</button></div></div>`;
+}
 function telaDias(chamada = "") {
   const kmTot = DIAS.reduce((s, d) => s + d.km, 0), minTot = DIAS.reduce((s, d) => s + d.min, 0);
   const datas = S.viagem ? `${fmtData(S.viagem.inicio, { day: "numeric", month: "long" })} – ${fmtData(fimViagem(), { day: "numeric", month: "long" })}` : "";
   const montado = DIAS.some((d) => d.paradas.length);
   return `${header({ titulo: "Roteiro", sub: nomeViagem() })}${menuRoteiro()}<main id="main"><div class="pad">
     <div class="hero"><span class="kick">${esc(datas)}</span><h1>Roteiro</h1></div>
-    ${chamada}
+    ${chamada}${montado ? cardOrcamento() : ""}
     ${montado ? `<div class="stats"><div class="stat"><b>${DIAS.length}</b><span>dias</span></div><div class="stat"><b>${kmTot.toLocaleString("pt-BR")}</b><span>km de estrada</span></div><div class="stat"><b>${Math.round(minTot / 60)} h</b><span>dirigindo</span></div></div>`
       : chamada ? "" : vazio("O Marco ainda não montou o roteiro", "Conte a ele o que você quer fazer. Cada dia abaixo se preenche com as rotas reais, os horários e os locais conferidos no mapa.")}
     <div class="list">${DIAS.map((d) => {
@@ -2575,9 +2664,18 @@ const A = {
   aceitarGuia() { S.guiaAceito = true; registrar(`Guia liberado com ${aConfirmar()} local(is) a confirmar`, "guia", {}); render(); },
   imprimirGuia() { if (aConfirmar() && !S.guiaAceito) return; $("#print").innerHTML = htmlGuia(); setTimeout(() => window.print(), 60); },
   convidar() { toast("Convites por link chegam com o servidor da viagem. Por enquanto, envie o arquivo da viagem: cada um abre no próprio celular e depois é só juntar os arquivos."); ir("arquivo"); },
-  buscaAbrir() { S.busca = { q: "", res: null }; S.overlay = "busca"; render(); setTimeout(() => { const e = $("#qBusca"); if (e) e.focus(); }, 50); },
+  buscaAbrir(ds) { S.busca = { q: "", res: null, dia: ds && ds.d ? +ds.d : null, hora: (ds && ds.h) || "" }; S.overlay = "busca"; render(); setTimeout(() => { const e = $("#qBusca"); if (e) e.focus(); }, 50); },
   buscaAdd(ds) {
     const r = S.busca.res, x = +ds.i === 0 ? r.escolhido : r.alternativas[+ds.i - 1]; garantirListas();
+    // aberta a partir de um horário livre do dia (atividade excluída): a atividade entra direto no dia, feita por você
+    const dia = S.busca.dia && diaObj(S.busca.dia);
+    if (dia) {
+      const p = { id: novoId(), n: x.nome, t: "passeio", h: S.busca.hora || "", dur: "", lat: +x.lat, lng: +x.lng, end: x.endereco || "", selo: +ds.i === 0 ? r.selo : "amarelo", nota: "Incluída por você" };
+      dia.paradas.push(p); dia.paradas.sort((a, b) => (a.t === "pernoite") - (b.t === "pernoite") || String(a.h).localeCompare(String(b.h), "pt", { numeric: true })); recalcRota(dia);
+      registrar(`D${dia.dia}: ${x.nome} incluído por você${p.h ? " às " + p.h : ""}`, "parada", { dia: dia.dia, id: p.id });
+      S.notas.push(`[O viajante incluiu à mão "${x.nome}" no D${dia.dia}${p.h ? " às " + p.h : ""}.]`);
+      S.overlay = null; render(); toast(`${x.nome} entrou no dia ${dia.dia}.`); render(); return;
+    }
     const id = novoId(); S.listas.desejos.push({ id, n: x.nome, s: x.endereco || "", st: "Desejo", lat: x.lat, lng: x.lng, selo: +ds.i === 0 ? r.selo : "amarelo" });
     registrar(`Desejo: ${x.nome}`, "desejo", { id }); S.overlay = null; render(); toast(`${x.nome} entrou na lista de desejos.`); render();
   },
