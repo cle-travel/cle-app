@@ -141,6 +141,12 @@ confere("cartão renomeado para Natureza e ar livre (com foto)", app.includes('"
 confere("interesses e situações só por toque: o Marco explica e não abre o microfone", /const ETAPAS_SO_TOQUE = \[2, 3\];/.test(app) && /S\.vozAtiva = !soToque/.test(app), true);
 confere("situações em cartões com foto", /function blocoSituacoes\(o\)/.test(app) && /__FOTOS_SITUACOES__/.test(app), true);
 confere("toda opção de situação tem nome de foto na lista do LEIA-ME", (() => { const l = fs.readFileSync(path.join(RAIZ, "prototipo", "imagens", "situacoes", "LEIA-ME.md"), "utf8"); return CEN.every((s) => s.o.every((_, k) => l.includes(`${s.id}-${k + 1}.webp`))); })(), true);
+// ---------- 14. fase 1 do planejamento humano: menu do Roteiro e entrevista A-E (02/10/2026) ----------
+confere("menu do Roteiro com Dias e tópicos A a E", /function menuRoteiro\(\)/.test(app) && ["atividades", "hospedagem", "transporte", "alimentacao", "compras"].every((t) => app.includes(`id: "${t}", letra:`)), true);
+confere("Marco anota metas (registrar_metas) com inegociável/opcional", /registrar_metas: \{/.test(nucleo) && /enum: \["inegociavel", "opcional", "a_definir"\]/.test(nucleo) && /aplicarMetas\(k\)/.test(app), true);
+confere("metas vão no contexto do Marco", /Metas da viagem \(entrevista A-E\)/.test(app), true);
+confere("planejador usa as metas (inegociáveis entram, opcionais saem primeiro)", /itens inegociáveis entram sempre/.test(nucleo), true);
+confere("as 28 fotos das situações estão em WebP", CEN.every((s) => s.o.every((_, k) => fs.existsSync(path.join(RAIZ, "prototipo", "imagens", "situacoes", `${s.id}-${k + 1}.webp`)))), true);
 confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }

@@ -291,6 +291,10 @@ body.legendas .com-doca{padding-bottom:210px!important}
 .sit-p{font-weight:600;font-size:17px;line-height:1.35}
 .cartao-sit{flex-basis:clamp(124px,34vw,180px);height:clamp(190px,30dvh,270px)}
 .cartao-sit b{font-family:var(--font);font-weight:600;font-size:15px;line-height:1.25;letter-spacing:-.1px}
+.menu-rot{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 10px;scrollbar-width:none;max-width:var(--col);width:100%;margin-inline:auto}
+.menu-rot::-webkit-scrollbar{display:none}
+.menu-rot .chip{flex-shrink:0;display:inline-flex;align-items:center;gap:4px}
+.menu-rot .chip.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .doca-cont{justify-self:stretch;height:52px;border-radius:26px;max-width:240px;margin-left:auto}
 .int{background:var(--card);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left;border:1.5px solid transparent;min-height:78px}
 .int b{font-size:15px;font-weight:600}
@@ -406,7 +410,7 @@ const I = {
   star: '<path d="M12 4l2.5 5 5.5.8-4 3.9.9 5.5L12 16.6 7.1 19.2 8 13.7 4 9.8 9.5 9z"/>', people: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5a5 5 0 0 1 5 5"/>',
   printer: '<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><rect x="7" y="14" width="10" height="7"/>', globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
   phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/>',
-  upload: '<path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>', importar: '<path d="M12 4v12M7 11l5 5 5-5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>', recarregar: '<path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/>', plus: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>', importar: '<path d="M12 4v12M7 11l5 5 5-5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>', sacola: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>', carro: '<path d="M5 15v-4l2-5h10l2 5v4"/><path d="M3 15h18v4H3z"/><path d="M7 19v1M17 19v1"/>', recarregar: '<path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/>', plus: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
   heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   compass: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>', translate: '<path d="M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M11 5c0 3-3 7-7 8M13 21l4-9 4 9M14.5 18h5"/>',
   send: '<path d="M5 12l14-7-5 15-3-6z"/>', history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
@@ -559,7 +563,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.10.1"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.11.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -736,6 +740,7 @@ function contextoTexto(pedido) {
     nomes(2) && `amam: ${nomes(2)}`, nomes(1) && `curtem: ${nomes(1)}`, nomes(3) && `não curtem: ${nomes(3)}`, pf.sl && Object.keys(pf.sl).length && `personalidade (0-100): ${SLIDERS.map(([k, a, b]) => `${a}→${b} ${pf.sl[k] ?? 50}`).join(", ")}`,
     pf.ocasiao && `ocasião: ${pf.ocasiao}`, pf.orcamento && `orçamento: ${pf.orcamento}`, pf.reservado && `já reservado: ${pf.reservado}`].filter(Boolean);
   if (perfil.length) L.push("Perfil: " + perfil.join("; "));
+  const mt = metasTexto(); L.push(mt ? "Metas da viagem (entrevista A-E):\n" + mt : "Metas da viagem: entrevista A-E ainda não feita.");
   const info = Object.entries(v.info || {}); if (info.length) L.push("Apoio: " + info.map(([k, x]) => `${k}=${x}`).join("; "));
   // dias em foco: os citados no pedido e, na viagem, hoje e amanhã
   const foco = new Set([...String(pedido || "").matchAll(/\b(?:d|dia)\s?(\d{1,3})\b/gi)].map((x) => +x[1]).slice(0, 3));
@@ -913,8 +918,10 @@ function tratarEvento(ev, m, fio, modo) {
       m.toolUses = asst.filter((b) => b.type === "tool_use").map((b) => b.id);
       m.cards = asst.filter((b) => b.type === "tool_use" && !(b.id in m.servidor)).map((b) => ({ id: b.id, name: b.name, input: b.input || {}, estado: "aguardando" }));
       // decisão falada sobre cartões da tela: o app aplica na hora; se for só isso, o Marco continua sozinho
-      for (const k of m.cards) if (k.name === "decidir_cartoes") aplicarDecisoesFaladas(k);
-      if (m.cards.length && m.cards.every((k) => k.name === "decidir_cartoes")) m.autoContinuar = true;
+      for (const k of m.cards) { if (k.name === "decidir_cartoes") aplicarDecisoesFaladas(k); else if (k.name === "registrar_metas") aplicarMetas(k); }
+      // só anotações e decisões: o Marco continua sozinho (decisão sempre; metas só se ele não deixou a próxima pergunta)
+      const AUTO = ["decidir_cartoes", "registrar_metas"];
+      if (m.cards.length && m.cards.every((k) => AUTO.includes(k.name)) && (m.cards.some((k) => k.name === "decidir_cartoes") || !m.txt.trim())) m.autoContinuar = true;
       for (const k of m.cards) if (k.name === "encaminhar_ao_planejador") { k.estado = "aprovado"; k.resultado = "Encaminhado ao planejador; o resultado aparece na conversa."; m.encaminhar = k.input.pedido; }
       if (!m.txt.trim() && m.cards.some((k) => k.estado === "aguardando")) {
         // fala padrão quando o Marco não escreveu nada: diz o que preparou (a voz não pode ficar vaga)
@@ -942,6 +949,7 @@ async function recomecarFio(modo) {
 
 // ---------- cartões de proposta (Aprovar / Ajustar / Recusar; desejos: Quero / Talvez / Não) ----------
 function cardMarco(k, mi, ci) {
+  if (k.name === "registrar_metas") return `<span class="pill ok" style="align-self:flex-start;white-space:normal">${ic("check", 14, 2.5)} ${esc(k.resultado || "Anotado nas metas")}</span>`;
   if (k.name === "decidir_cartoes") return `<span class="pill ok" style="align-self:flex-start;white-space:normal">${ic("check", 14, 2.5)} Decidido pela sua voz</span>`;
   const i = k.input || {}, d = i.dia ? diaObj(i.dia) : null;
   const bt = (v, l, cls = "sec") => `<button class="btn ${cls}" data-a="decidir" data-m="${mi}" data-c="${ci}" data-v="${v}">${l}</button>`;
@@ -1180,14 +1188,84 @@ function timeline(d) {
   }).join("")}</div>`;
 }
 
+// ---------- Metas da viagem: entrevista A-E (Wagner, 02/10/2026) ----------
+// Antes de montar os dias, o Marco entrevista como um agente humano: o que a pessoa quer em cada tópico, o que é
+// inegociável e o que pode sair (opcional). Fica em viagem.metas[tópico] = { resumo, itens[], concluido }.
+const TOPICOS = [
+  { id: "atividades", letra: "A", nome: "Atividades e passeios", curto: "Atividades", ic: "star", pergunta: "Museus, shows, monumentos, parques e lugares que você já pesquisou e quer conhecer." },
+  { id: "hospedagem", letra: "B", nome: "Hospedagem", curto: "Hospedagem", ic: "bed", pergunta: "O perfil de hospedagem: sofisticado, bem avaliado, custo-benefício, Airbnb; hotel de que não abre mão; diária máxima." },
+  { id: "transporte", letra: "C", nome: "Transporte", curto: "Transporte", ic: "carro", pergunta: "Como vai se locomover: transporte público, aplicativos, carro alugado, motorhome, trens, balsas, voos internos, bicicleta. Cada trecho com data e horário." },
+  { id: "alimentacao", letra: "D", nome: "Alimentação", curto: "Alimentação", ic: "fork", pergunta: "Gastronomia local, alta gastronomia, premiados, em alta nas redes, custo-benefício, saudável, exótica, mercado e cozinhar; restaurantes que já tem em mente." },
+  { id: "compras", letra: "E", nome: "Compras", curto: "Compras", ic: "sacola", pergunta: "O que pretende comprar: roupas, eletrônicos, perfumes, lembranças, cosméticos, colecionáveis, artefatos." },
+];
+const PRIORIDADES = { inegociavel: ["Inegociável", "acc"], opcional: ["Opcional", "neu"], a_definir: ["A definir", "warn"] };
+function metasDe(t) { const v = S.viagem; v.metas = v.metas || {}; return (v.metas[t] = v.metas[t] || { resumo: "", itens: [], concluido: false }); }
+const topicoFeito = (t) => { const m = S.viagem && S.viagem.metas && S.viagem.metas[t]; return !!(m && (m.concluido || m.resumo || m.itens.length)); };
+// o Marco anotou metas pelo que a pessoa contou: aplica na hora (sem cartão) e espelha atividades na lista de desejos
+function aplicarMetas(k) {
+  const i = k.input || {}, tp = TOPICOS.find((x) => x.id === i.topico);
+  if (!tp || !S.viagem) { k.estado = "erro"; k.resultado = "Tópico desconhecido."; return; }
+  const m = metasDe(tp.id), feitos = [];
+  if (i.resumo) m.resumo = String(i.resumo).trim();
+  for (const it of i.itens || []) {
+    const nome = String(it.nome || "").trim(); if (!nome) continue;
+    const j = m.itens.findIndex((x) => norm(x.n) === norm(nome));
+    if (it.remover) { if (j >= 0) m.itens.splice(j, 1); feitos.push(`removido ${nome}`); continue; }
+    const novo = { ...(j >= 0 ? m.itens[j] : { id: novoId() }), n: nome };
+    for (const [c, d] of [["detalhe", "d"], ["data", "data"], ["hora", "hora"], ["de", "de"], ["para", "para"]]) if (it[c]) novo[d] = String(it[c]).trim();
+    if (it.prioridade) novo.p = it.prioridade; else novo.p = novo.p || "a_definir";
+    if (j >= 0) m.itens[j] = novo; else m.itens.push(novo);
+    feitos.push(nome);
+    if (tp.id === "atividades") { // a atividade desejada também entra na lista de desejos, com a prioridade
+      garantirListas(); const d = S.listas.desejos.find((x) => norm(x.n) === norm(nome));
+      if (d) d.p = novo.p; else S.listas.desejos.push({ id: novoId(), n: nome, s: novo.d || "", st: "Desejo", p: novo.p });
+    }
+  }
+  if (i.concluido) m.concluido = true;
+  m.atualizado = hojeISO();
+  k.estado = "aprovado"; k.resultado = `Anotado em ${tp.nome}${feitos.length ? ": " + feitos.join(", ") : ""}.`;
+}
+function metasTexto() { // para o contexto do Marco
+  const v = S.viagem; if (!v || !v.metas) return "";
+  return TOPICOS.filter((t) => topicoFeito(t.id)).map((t) => {
+    const m = v.metas[t.id];
+    return `${t.letra} ${t.id}${m.concluido ? " (concluído)" : ""}: ${m.resumo || "-"}${m.itens.length ? " | itens: " + m.itens.map((x) => `${x.n} [${x.p}]${x.data ? " " + x.data : ""}${x.hora ? " " + x.hora : ""}${x.de || x.para ? ` ${x.de || "?"}→${x.para || "?"}` : ""}${x.d ? " (" + x.d + ")" : ""}`).join("; ") : ""}`;
+  }).join("\n");
+}
+// menu próprio do Roteiro (como o da Carteira): Dias + tópicos A a E
+function menuRoteiro() {
+  const aba = S.roteiroAba || "dias";
+  const b = (id, rot, extra = "") => `<button class="chip${aba === id ? " on" : ""}" data-a="rotAba" data-t="${id}" aria-pressed="${aba === id}">${rot}${extra}</button>`;
+  return `<div class="menu-rot" role="tablist">${b("dias", "Dias")}${TOPICOS.map((t) => b(t.id, `${t.letra} · ${t.curto}`, topicoFeito(t.id) ? ` ${ic("check", 12, 3)}` : "")).join("")}</div>`;
+}
+function telaTopico(tp) {
+  const m = metasDe(tp.id);
+  const item = (x) => `<div class="row"><span class="ico">${ic(tp.ic, 17)}</span><div class="main"><b>${esc(x.n)}</b><span>${esc([x.data && fmtData(x.data), x.hora, (x.de || x.para) && `${x.de || "?"} → ${x.para || "?"}`, x.d].filter(Boolean).join(" · "))}</span></div>
+    <button class="pill ${PRIORIDADES[x.p || "a_definir"][1]}" data-a="metaPrioridade" data-t="${tp.id}" data-id="${x.id}" aria-label="Prioridade: ${PRIORIDADES[x.p || "a_definir"][0]}. Toque para trocar">${PRIORIDADES[x.p || "a_definir"][0]}</button>
+    <button class="iconbtn" data-a="metaRemover" data-t="${tp.id}" data-id="${x.id}" aria-label="Remover ${esc(x.n)}">${ic("x", 16)}</button></div>`;
+  return `<div class="hero"><span class="kick">${tp.letra} · Metas da viagem</span><h1>${esc(tp.nome)}</h1></div>
+    <p class="sub" style="margin:0">${esc(tp.pergunta)}</p>
+    <div class="card" style="gap:8px"><span class="small">O que você contou ao Marco</span><div style="font-size:16px;line-height:1.45">${m.resumo ? esc(m.resumo) : '<span class="small">Ainda nada. Converse com o Marco sobre este tópico.</span>'}</div>${m.concluido ? '<span class="pill ok" style="align-self:flex-start">Tópico concluído</span>' : ""}</div>
+    ${m.itens.length ? `<p class="eyebrow">Itens · toque na etiqueta para mudar a prioridade</p><div class="list">${m.itens.map(item).join("")}</div>` : ""}
+    <button class="btn" data-a="entrevista" data-t="${tp.id}">${ic("mic", 18)} ${m.resumo || m.itens.length ? "Continuar com o Marco" : "Conversar com o Marco"} sobre ${esc(tp.curto.toLowerCase())}</button>
+    <p class="small" style="margin:0">O app não faz reservas: o Marco indica onde reservar (site oficial, Booking, Hertz, Localiza...).</p>`;
+}
 function telaRoteiro() {
+  const aba = S.roteiroAba || "dias", tp = TOPICOS.find((t) => t.id === aba);
+  if (tp) return `${header({ titulo: "Roteiro", sub: nomeViagem() })}${menuRoteiro()}<main id="main"><div class="pad">${telaTopico(tp)}</div></main>`;
+  const faltam = TOPICOS.filter((t) => !topicoFeito(t.id));
+  const chamada = faltam.length ? `<div class="card" style="gap:10px"><div style="font-size:17px;font-weight:600">${faltam.length === TOPICOS.length ? "Antes de montar os dias, conte ao Marco suas metas" : `Faltam ${faltam.length} de 5 tópicos das suas metas`}</div><span class="small">Como um agente de viagens faria: atividades, hospedagem, transporte, alimentação e compras. Ele marca o que é inegociável e o que pode sair, e monta os dias a partir disso.</span><button class="btn" data-a="entrevista" data-t="${faltam[0].id}">${ic("mic", 18)} ${faltam.length === TOPICOS.length ? "Começar a entrevista" : `Continuar: ${faltam[0].letra} · ${faltam[0].curto}`}</button></div>` : "";
+  return telaDias(chamada);
+}
+function telaDias(chamada = "") {
   const kmTot = DIAS.reduce((s, d) => s + d.km, 0), minTot = DIAS.reduce((s, d) => s + d.min, 0);
   const datas = S.viagem ? `${fmtData(S.viagem.inicio, { day: "numeric", month: "long" })} – ${fmtData(fimViagem(), { day: "numeric", month: "long" })}` : "";
   const montado = DIAS.some((d) => d.paradas.length);
-  return `${header({ titulo: "Roteiro", sub: nomeViagem() })}<main id="main"><div class="pad">
+  return `${header({ titulo: "Roteiro", sub: nomeViagem() })}${menuRoteiro()}<main id="main"><div class="pad">
     <div class="hero"><span class="kick">${esc(datas)}</span><h1>Roteiro</h1></div>
+    ${chamada}
     ${montado ? `<div class="stats"><div class="stat"><b>${DIAS.length}</b><span>dias</span></div><div class="stat"><b>${kmTot.toLocaleString("pt-BR")}</b><span>km de estrada</span></div><div class="stat"><b>${Math.round(minTot / 60)} h</b><span>dirigindo</span></div></div>`
-      : vazio("O Marco ainda não montou o roteiro", "Conte a ele o que vocês querem fazer. Cada dia abaixo se preenche com as rotas reais, os horários e os locais conferidos no mapa.")}
+      : chamada ? "" : vazio("O Marco ainda não montou o roteiro", "Conte a ele o que vocês querem fazer. Cada dia abaixo se preenche com as rotas reais, os horários e os locais conferidos no mapa.")}
     <div class="list">${DIAS.map((d) => {
       const n = paradasDo(d).filter((p) => seloDe(p) !== "verde").length, tv = travasDia(d);
       return `<button class="row" data-a="dia" data-d="${d.dia}"><span class="datebox"><small>${esc(fmtData(d.data, { weekday: "short" }))}</small><b>${new Date(d.data + "T12:00:00").getDate()}</b></span>
@@ -1350,7 +1428,7 @@ function telaDesejos() {
   const L = (S.listas && S.listas.desejos) || [];
   return `${header({ titulo: "Desejos", sub: nomeViagem(), voltar: true })}<main id="main"><div class="pad"><h1>Desejos</h1>
     <p class="sub">Tudo começa como ideia e segue até realizado: ideia, desejo, no roteiro, reservado, pago, realizado.</p>
-    ${L.length ? `<div class="list">${L.map((x) => { const st = estadoDesejo(x); return `<div class="row"><span class="ico">${ic("star", 17)}</span><div class="main"><b>${esc(x.n)}</b><span>${esc(x.s || "")}</span>${x.selo && x.selo !== "verde" ? `<span style="margin-top:4px">${seloPill(x.selo)}</span>` : ""}</div><span class="pill ${COR_ESTADO[st] || "neu"}">${esc(st)}</span></div>`; }).join("")}</div>`
+    ${L.length ? `<div class="list">${L.map((x) => { const st = estadoDesejo(x); return `<div class="row"><span class="ico">${ic("star", 17)}</span><div class="main"><b>${esc(x.n)}</b><span>${esc(x.s || "")}</span>${x.p && PRIORIDADES[x.p] ? `<span class="pill ${PRIORIDADES[x.p][1]}" style="align-self:flex-start;margin-top:4px">${PRIORIDADES[x.p][0]}</span>` : ""}${x.selo && x.selo !== "verde" ? `<span style="margin-top:4px">${seloPill(x.selo)}</span>` : ""}</div><span class="pill ${COR_ESTADO[st] || "neu"}">${esc(st)}</span></div>`; }).join("")}</div>`
       : `<div class="card"><div style="font-weight:600">Nenhum desejo ainda</div><span class="small">Fale com o Marco ("quero conhecer…", "quero jantar em…") ou busque um lugar.</span></div>`}
     <button class="btn sec" data-a="buscaAbrir">${ic("search", 18)} Buscar lugar e adicionar</button></div></main>`;
 }
@@ -1561,7 +1639,7 @@ function blocoSliders(pf, alvo) {
 // Fotos: prototipo/imagens/interesses/<slug>.webp|jpg (ver LEIA-ME.md lá); sem foto, um degradê sóbrio no lugar.
 const FOTOS_INTERESSES = {"aventura-radical":"imagens/interesses/aventura-radical.webp?v=252b5dec","bem-estar":"imagens/interesses/bem-estar.webp?v=6b68497b","carros-e-estradas-cenicas":"imagens/interesses/carros-e-estradas-cenicas.webp?v=502a7fbc","cidades":"imagens/interesses/cidades.webp?v=a5c28a61","compras":"imagens/interesses/compras.webp?v=613104d8","cultura-local":"imagens/interesses/cultura-local.webp?v=fe4a02d5","esportes":"imagens/interesses/esportes.webp?v=21ae379d","fotografia":"imagens/interesses/fotografia.webp?v=70f63544","gastronomia":"imagens/interesses/gastronomia.webp?v=26ea4b54","museus-e-historia":"imagens/interesses/museus-e-historia.webp?v=78e46128","natureza-e-ar-livre":"imagens/interesses/natureza-e-ar-livre.webp?v=9373725f","parques-tematicos":"imagens/interesses/parques-tematicos.webp?v=0cf31327","praia":"imagens/interesses/praia.webp?v=28101939","shows-e-musica":"imagens/interesses/shows-e-musica.webp?v=68e7758f","trilhas":"imagens/interesses/trilhas.webp?v=4595374a","vida-noturna":"imagens/interesses/vida-noturna.webp?v=8bcee2a3"}, FOCO_INTERESSES = {"aventura-radical":"12% 50%","bem-estar":"50% 50%","carros-e-estradas-cenicas":"50% 50%","cidades":"50% 50%","compras":"50% 50%","cultura-local":"50% 50%","esportes":"25% 50%","fotografia":"23% 50%","gastronomia":"28% 50%","museus-e-historia":"50% 50%","natureza-e-ar-livre":"0% 50%","parques-tematicos":"23% 50%","praia":"50% 50%","shows-e-musica":"50% 50%","trilhas":"12% 50%","vida-noturna":"45% 50%"};
 // fotos das opções das situações: prototipo/imagens/situacoes/<id>-<1 a 4>.webp (ver LEIA-ME.md lá)
-const FOTOS_SITUACOES = {}, FOCO_SITUACOES = {};
+const FOTOS_SITUACOES = {"chuva-1":"imagens/situacoes/chuva-1.webp?v=7552c682","chuva-2":"imagens/situacoes/chuva-2.webp?v=3aacd200","chuva-3":"imagens/situacoes/chuva-3.webp?v=2bd9ff5f","chuva-4":"imagens/situacoes/chuva-4.webp?v=fae77221","estrada-1":"imagens/situacoes/estrada-1.webp?v=d3d8e830","estrada-2":"imagens/situacoes/estrada-2.webp?v=06783924","estrada-3":"imagens/situacoes/estrada-3.webp?v=7a75e557","estrada-4":"imagens/situacoes/estrada-4.webp?v=09a4c0dd","fila-1":"imagens/situacoes/fila-1.webp?v=cb7f74b6","fila-2":"imagens/situacoes/fila-2.webp?v=6395d005","fila-3":"imagens/situacoes/fila-3.webp?v=51a5ab9f","fila-4":"imagens/situacoes/fila-4.webp?v=6b0ad1fd","hotel-1":"imagens/situacoes/hotel-1.webp?v=f02527ff","hotel-2":"imagens/situacoes/hotel-2.webp?v=3b10385e","hotel-3":"imagens/situacoes/hotel-3.webp?v=2caf0005","hotel-4":"imagens/situacoes/hotel-4.webp?v=e87669d8","jantar-1":"imagens/situacoes/jantar-1.webp?v=93e1542a","jantar-2":"imagens/situacoes/jantar-2.webp?v=165054a4","jantar-3":"imagens/situacoes/jantar-3.webp?v=4232e5cc","jantar-4":"imagens/situacoes/jantar-4.webp?v=321d1ed4","mirante-1":"imagens/situacoes/mirante-1.webp?v=4fa47734","mirante-2":"imagens/situacoes/mirante-2.webp?v=106fd93d","mirante-3":"imagens/situacoes/mirante-3.webp?v=f5cf36fb","mirante-4":"imagens/situacoes/mirante-4.webp?v=1244e356","parque-1":"imagens/situacoes/parque-1.webp?v=f9036fd3","parque-2":"imagens/situacoes/parque-2.webp?v=ccecb5dd","parque-3":"imagens/situacoes/parque-3.webp?v=7ce0d85d","parque-4":"imagens/situacoes/parque-4.webp?v=ec0752ef"}, FOCO_SITUACOES = {};
 // Situações em cartões com foto, escolha por toque (Wagner, 02/10/2026): uma linha de cartões por situação
 function blocoSituacoes(o) {
   return cenariosDaViagem(o).map((s, si) => `<div class="grupo-sit"><div class="sit-p">${esc(s.p)}</div><div class="carrossel" data-id="sit-${s.id}">${s.o.map(([t], oi) => {
@@ -2332,6 +2410,27 @@ const A = {
   },
   async consumoAtualizar() { if (!API) return; try { S.consumo = await (await apiFetch("/consumo")).json(); } catch (e) { S.consumo = { erro: true }; } render(); },
   // conversa: o que você fala vira a mensagem e vai para o Marco ao terminar
+  // menu do Roteiro e entrevista de metas A-E
+  rotAba(ds) { S.roteiroAba = ds.t; render(); const m = $("#main"); if (m) m.scrollTop = 0; },
+  entrevista(ds) {
+    const tp = TOPICOS.find((t) => t.id === ds.t);
+    S.hist = []; S.tela = "conversa"; S.rolarFim = true;
+    if (!S.legendas && marcoDisponivel()) { S.vozAtiva = true; atualizarTravaTela(); } // conversa por voz: depois de responder, o Marco já ouve
+    render();
+    enviarTexto(tp ? `Vamos conversar sobre ${tp.nome.toLowerCase()} (metas ${tp.letra}).` : "Vamos fazer a entrevista das metas da viagem, de A a E.", { modo: "conversa" });
+  },
+  metaPrioridade(ds) {
+    const it = metasDe(ds.t).itens.find((x) => x.id === ds.id); if (!it) return;
+    const ordem = ["a_definir", "inegociavel", "opcional"]; it.p = ordem[(ordem.indexOf(it.p || "a_definir") + 1) % 3];
+    if (ds.t === "atividades") { const d = ((S.listas && S.listas.desejos) || []).find((x) => norm(x.n) === norm(it.n)); if (d) d.p = it.p; }
+    S.notas.push(`[O viajante mudou a prioridade de "${it.n}" (${ds.t}) para ${PRIORIDADES[it.p][0]}.]`); render();
+  },
+  metaRemover(ds) {
+    const m = metasDe(ds.t), it = m.itens.find((x) => x.id === ds.id); if (!it) return;
+    m.itens = m.itens.filter((x) => x.id !== ds.id);
+    if (ds.t === "atividades" && S.listas) S.listas.desejos = S.listas.desejos.filter((x) => norm(x.n) !== norm(it.n));
+    S.notas.push(`[O viajante tirou "${it.n}" das metas (${ds.t}).]`); toast(`${it.n} saiu das metas.`); render();
+  },
   marcoFlutua() { S.hist = []; S.tela = "conversa"; S.rolarFim = true; render(); if (marcoDisponivel()) A.falar(); },
   // conversa por voz na tela do Marco: o que você fala vai para ele ao terminar; silêncio reabre a escuta;
   // tocar no botão sem ter falado (ou 2 min sem fala nem toque) pausa a conversa
