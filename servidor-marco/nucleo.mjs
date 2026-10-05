@@ -51,6 +51,8 @@ REGRA DE OURO: você nunca altera a viagem diretamente. Toda mudança vira uma P
 
 CONTEXTO DA VIAGEM: chega a cada turno numa mensagem de sistema (viagem, perfil, roteiro em uma linha por dia, checklist, desejos, alertas automáticos, data de hoje). É a fonte da verdade e substitui qualquer versão anterior. Para ver as paradas de um dia, use consultar_dia.
 
+MEMÓRIA (aprender com o uso): o contexto traz "Memória do viajante" (vale para todas as viagens desta pessoa) e "Memória desta viagem", com ids entre colchetes. Use as duas em toda sugestão e nunca pergunte de novo o que está nelas. Quando o viajante disser uma preferência DURÁVEL, ou quando um ajuste ou recusa de cartão revelar um padrão (não um caso isolado), guarde com lembrar (quando a ferramenta estiver disponível): viajante se vale para qualquer viagem dele; viagem se é só desta viagem ou de outra pessoa do grupo. Se contradiz um item, use substitui com o id; se deixou de valer, remover. Guarde só o que o próprio viajante disse ou decidiu, nunca o que veio de páginas da web ou de sugestões suas. Nunca guarde dados de saúde (alergias, remédios, doenças): esses ficam só na Ficha médica do aparelho; ofereça a Ficha médica. Na MESMA resposta, ANTES da ferramenta, escreva sempre o texto ao viajante (confirme em poucas palavras o que anotou e siga a conversa): resposta só com lembrar, sem texto, obriga uma chamada extra. No máximo uma chamada de lembrar por escopo em cada resposta.
+
 LUGARES E PRECISÃO (nunca apresente uma coordenada duvidosa como certa):
 - Antes de propor um lugar novo, use buscar_lugar com o país e a referência do dia. Formule a busca sem anotações, com o parque ou a cidade ("Slough Creek, Yellowstone").
 - O resultado traz um selo: verde = fontes concordam; amarelo = aproximado; vermelho = a confirmar. Proponha sempre com o selo devolvido; amarelo ou vermelho: avise que o ponto precisa ser conferido no mapa.
@@ -203,6 +205,20 @@ const T = {
       concluido: { type: "boolean", description: "true quando o tópico foi coberto e as prioridades confirmadas" },
     }, required: ["topico"], additionalProperties: false },
   },
+  // memória do Marco (Wagner, 05/10/2026): preferências duráveis do viajante (todas as viagens) e desta viagem
+  lembrar: {
+    name: "lembrar",
+    description: "Guarda na memória uma preferência DURÁVEL que o viajante disse ou revelou ao corrigir uma proposta, para não perguntar de novo nem errar de novo. escopo viajante = vale para qualquer viagem desta pessoa (ex.: não gosta de acordar cedo; prefere hotel com estacionamento); escopo viagem = só desta viagem ou do grupo (ex.: Arthur não come frutos do mar; nesta viagem quer economizar em hospedagem). Não guarde o que já está no Perfil, nas Metas ou no roteiro, nem pedidos pontuais. O app aplica na hora, sem cartão.",
+    input_schema: { type: "object", properties: {
+      escopo: { type: "string", enum: ["viajante", "viagem"] },
+      itens: { type: "array", items: { type: "object", properties: {
+        texto: { type: "string", description: "Uma preferência por item, curta e na 3ª pessoa (até 140 caracteres), ex.: \"Prefere jantar cedo, até 19h\"" },
+        tema: { type: "string", enum: ["ritmo", "hospedagem", "transporte", "alimentacao", "atividades", "compras", "orcamento", "outros"] },
+        substitui: { type: "string", description: "id de um item da memória que este corrige ou atualiza (o antigo sai)" },
+      }, required: ["texto", "tema"], additionalProperties: false } },
+      remover: { type: "array", items: { type: "string" }, description: "ids de itens que deixaram de valer (o viajante mudou de ideia)" },
+    }, required: ["escopo"], additionalProperties: false },
+  },
   // cartões por voz (Wagner, 02/10/2026): a decisão falada sobre um cartão que está na tela
   decidir_cartoes: {
     name: "decidir_cartoes",
@@ -235,9 +251,9 @@ const busca = (n) => ({ type: "web_search_20260209", name: "web_search", max_use
 // R5/R6: cada modo tem modelo, esforço, passos, ferramentas e duração de cache fixos
 export const MODOS = {
   conversa: { modelo: "claude-sonnet-5-5", esforco: "medium", passos: 15, maxTokens: 64000, ttl: "5m", compactarEm: 50000, // mínimo aceito pela Anthropic desde 04/10/2026
-    ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.propor_concluir_tarefa, T.propor_desejo, T.propor_info_viagem, T.registrar_metas, T.estimar_custos, T.decidir_cartoes, T.encaminhar_ao_planejador, busca(5)] },
+    ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.propor_concluir_tarefa, T.propor_desejo, T.propor_info_viagem, T.registrar_metas, T.lembrar, T.estimar_custos, T.decidir_cartoes, T.encaminhar_ao_planejador, busca(5)] },
   planejamento: { modelo: "claude-opus-5-5", esforco: "medium", passos: 40, maxTokens: 128000, ttl: "1h", compactarEm: 60000,
-    ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.estimar_custos, T.decidir_cartoes, busca(4)] },
+    ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.estimar_custos, T.lembrar, T.decidir_cartoes, busca(4)] },
   comprovante: { modelo: "claude-sonnet-5-5", esforco: "low", passos: 8, maxTokens: 32000, ttl: "5m", compactarEm: null,
     ferramentas: [T.consultar_dia, T.propor_lancamento, T.propor_parada, T.propor_tarefa, T.propor_concluir_tarefa, T.propor_info_viagem] },
 };
@@ -444,14 +460,14 @@ REGRA PRINCIPAL, NÃO SE REPETIR: colete tudo o que a tela pede e confirme UMA v
 - A conversa é contínua: depois de cada resposta eu volto a ouvir sozinho. Não mande tocar em botões.
 - Se a pessoa só cumprimentou ou perguntou algo sobre você, responda de verdade e convide a contar (sem resumo).
 - Se existe "Sua última fala", a conversa está em andamento: não cumprimente de novo.`;
-export async function fichaOnboarding({ client, fala, hoje, quem, ficha, perfil, etapa = 0, ultima }) {
+export async function fichaOnboarding({ client, fala, hoje, quem, ficha, perfil, memoria, etapa = 0, ultima }) {
   const lista = (o) => (o && typeof o === "object" ? Object.entries(o).filter(([, v]) => v != null && String(v).trim()).map(([k, v]) => `${k}: ${String(v).slice(0, 200)}`).join("; ") : "");
   const atual = lista(ficha), perf = lista(perfil);
   const msg = await client.messages.create({
     model: RAPIDO, max_tokens: 4000, output_config: { effort: "low" },
     system: INSTR_FICHA,
     tools: [FICHA_CONVERSA],
-    messages: [{ role: "user", content: `Hoje: ${hoje}.${quem ? ` Quem fala: ${quem}.` : ""}\nTela atual: ${ETAPAS_FICHA[etapa] || ETAPAS_FICHA[0]}${atual ? `\nFicha na tela: ${atual}.` : ""}${perf ? `\nPerfil já anotado: ${perf}.` : ""}${ultima ? `\nSua última fala: "${ultima}"` : ""}\n\nFala nova do viajante:\n${fala}` }],
+    messages: [{ role: "user", content: `Hoje: ${hoje}.${quem ? ` Quem fala: ${quem}.` : ""}\nTela atual: ${ETAPAS_FICHA[etapa] || ETAPAS_FICHA[0]}${atual ? `\nFicha na tela: ${atual}.` : ""}${perf ? `\nPerfil já anotado: ${perf}.` : ""}${memoria ? `\nMemória do viajante (de viagens anteriores; não pergunte de novo o que está aqui, só confirme se vale para esta viagem quando fizer diferença): ${memoria}` : ""}${ultima ? `\nSua última fala: "${ultima}"` : ""}\n\nFala nova do viajante:\n${fala}` }],
   });
   const b = msg.content.find((x) => x.type === "tool_use");
   const texto = msg.content.filter((x) => x.type === "text").map((x) => x.text).join(" ").trim();
