@@ -234,7 +234,7 @@ const busca = (n) => ({ type: "web_search_20260209", name: "web_search", max_use
 
 // R5/R6: cada modo tem modelo, esforço, passos, ferramentas e duração de cache fixos
 export const MODOS = {
-  conversa: { modelo: "claude-sonnet-5-5", esforco: "medium", passos: 15, maxTokens: 64000, ttl: "5m", compactarEm: 40000,
+  conversa: { modelo: "claude-sonnet-5-5", esforco: "medium", passos: 15, maxTokens: 64000, ttl: "5m", compactarEm: 50000, // mínimo aceito pela Anthropic desde 04/10/2026
     ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.propor_concluir_tarefa, T.propor_desejo, T.propor_info_viagem, T.registrar_metas, T.estimar_custos, T.decidir_cartoes, T.encaminhar_ao_planejador, busca(5)] },
   planejamento: { modelo: "claude-opus-5-5", esforco: "medium", passos: 40, maxTokens: 128000, ttl: "1h", compactarEm: 60000,
     ferramentas: [T.buscar_lugar, T.calcular_rota, T.consultar_dia, T.propor_dia, T.propor_parada, T.propor_lancamento, T.propor_tarefa, T.estimar_custos, T.decidir_cartoes, busca(4)] },
@@ -334,7 +334,11 @@ export async function* turnoMarco({ client, modo, historico, novas, contexto, da
           if (RECURSOS.compactacao && /compact|context_management/i.test(texto)) { RECURSOS.compactacao = false; tentativa++; console.warn("compactação indisponível"); continue inicio; }
         }
         if (/credit balance|billing|insufficient/i.test(texto)) { yield { tipo: "erro", consumo, mensagem: CREDITOS_ACABARAM }; return; }
+        console.error(`marco ${modo} passo ${passo}: ${status} ${texto.slice(0, 500)}`); // só o motivo da recusa, sem a conversa
         if (status === 400 && /different conversation|signature/i.test(texto)) { yield { tipo: "erro", codigo: "historico_invalido", mensagem: "A conversa precisou recomeçar.", consumo }; return; }
+        // qualquer outra recusa de formato com conversa salva (bug de 04/10/2026: o Marco travava na mesma conversa e
+        // "Tentar de novo" reenviava igual): o app recomeça a conversa com resumo e tenta uma vez
+        if (status === 400 && historico.length) { yield { tipo: "erro", codigo: "historico_invalido", mensagem: "A conversa precisou recomeçar.", consumo }; return; }
         yield { tipo: "erro", consumo, mensagem: status === 401 ? "A chave da Anthropic é inválida ou venceu. Crie outra em console.anthropic.com e troque no arquivo servidor-marco/.env." : status === 429 ? "Muitas mensagens em pouco tempo. Tente de novo em instantes." : status === 400 ? "O pedido ao Marco foi recusado (formato)." : "O Marco não conseguiu responder agora. Tente de novo." };
         return;
       }

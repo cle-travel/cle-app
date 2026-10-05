@@ -118,6 +118,11 @@ confere("painel visual do planejamento na tela do Marco", /function painelPlanej
 confere("servidor interrompe passo longo antes do limite da nuvem", /codigo: "tempo"/.test(nucleo) && /prazoMs \+ 25000/.test(nucleo), true);
 confere("planejamento em lotes de até 2 dias (custos pesquisados cabem no limite da nuvem)", /no máximo 2 dias por resposta/.test(nucleo), true);
 confere("orçamento sem contagem dupla: o Marco recebe o que já está na Carteira", app.includes("Orçamento na Carteira (estimativas; não lançar de novo)") && nucleo.includes("NUNCA conte duas vezes"), true);
+// ---------- 11. bug de 04/10/2026: "pedido recusado (formato)" travava a conversa ----------
+const MIN_GATILHO_ANTHROPIC = 50000;
+confere("gatilho de compactação de todos os modos >= mínimo da Anthropic (50.000)", [...nucleo.matchAll(/compactarEm: (\d+)/g)].every((x) => +x[1] >= MIN_GATILHO_ANTHROPIC), true);
+confere("recusa de formato com conversa salva recomeça com resumo (não trava)", /status === 400 && historico\.length\) \{ yield \{ tipo: "erro", codigo: "historico_invalido"/.test(nucleo), true);
+confere("servidor registra o motivo da recusa da Anthropic", /console\.error\(`marco \$\{modo\}/.test(nucleo), true);
 confere("app refaz em partes quando o servidor avisa tarefa grande", /codigo === "tempo" && modo === "planejamento"/.test(app), true);
 confere("erro de conexão em português, não \"network error\"", /A conexão com o Marco caiu no meio da resposta/.test(app), true);
 confere("silêncio: pausa por tempo sem fala nem toque, não por tentativas", /const SILENCIO_MAX = 120000/.test(app) && !/\+\+silencios > 6/.test(app), true);
