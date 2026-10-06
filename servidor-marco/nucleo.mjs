@@ -465,7 +465,9 @@ export async function fichaOnboarding({ client, fala, hoje, quem, ficha, perfil,
   const atual = lista(ficha), perf = lista(perfil);
   const msg = await client.messages.create({
     model: RAPIDO, max_tokens: 4000, output_config: { effort: "low" },
-    system: INSTR_FICHA,
+    // cache de 5 min nas instruções + ferramenta (fixas, ~2 mil tokens): as falas do onboarding chegam a menos de 5 min
+    // uma da outra em 86% dos casos (análise de 06/10/2026, ~38% a menos no custo da ficha)
+    system: [{ type: "text", text: INSTR_FICHA, cache_control: { type: "ephemeral" } }],
     tools: [FICHA_CONVERSA],
     messages: [{ role: "user", content: `Hoje: ${hoje}.${quem ? ` Quem fala: ${quem}.` : ""}\nTela atual: ${ETAPAS_FICHA[etapa] || ETAPAS_FICHA[0]}${atual ? `\nFicha na tela: ${atual}.` : ""}${perf ? `\nPerfil já anotado: ${perf}.` : ""}${memoria ? `\nMemória do viajante (de viagens anteriores; não pergunte de novo o que está aqui, só confirme se vale para esta viagem quando fizer diferença): ${memoria}` : ""}${ultima ? `\nSua última fala: "${ultima}"` : ""}\n\nFala nova do viajante:\n${fala}` }],
   });

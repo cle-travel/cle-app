@@ -581,7 +581,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.14.0"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.14.1"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -921,7 +921,9 @@ async function enviarTexto(txt, opc = {}) {
   if (S.pensando) { toast("Espere o Marco terminar de responder."); render(); return false; }
   if (!S.chat) S.chat = chatInicial();
   S.rascunho = ""; garantirFios();
-  const modo = opc.modo || rotaModo(txt);
+  // sem viagem aberta não há o que planejar: o pedido vai para a conversa (Sonnet, cache quente, ~US$ 0,005) em vez de
+  // abrir o planejador (Opus grava 16 mil tokens de abertura, ~US$ 0,12; caso de 05/10/2026, análise de 06/10)
+  const modo = (opc.modo || rotaModo(txt)) === "planejamento" && !S.viagem ? "conversa" : opc.modo || rotaModo(txt);
   if (!opc.semBalao) S.chat.push({ de: "u", txt, anexo: opc.anexo && opc.anexo.nome });
   if (!marcoDisponivel()) { S.chat.push({ de: "m", txt: msgMarcoOff() }); S.rolarFim = true; render(); return false; }
   const novas = [];

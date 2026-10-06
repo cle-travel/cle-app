@@ -210,6 +210,12 @@ confere("dia aprovado lança estimativas na Carteira como \"estimado\", sem defi
 confere("excluir na Carteira reflete no roteiro, metas e desejos", /window\.parent\.cleEvento/.test(carteira) && /window\.cleEvento = \(ev\) =>/.test(app) && /Excluída por você na Carteira/.test(app), true);
 confere("Carteira avisa que os valores são estimativas", /Valores estimados/.test(carteira) && /podem mudar/.test(carteira), true);
 confere("viagem criada apaga o rascunho", /rascunhoApagar\(\); S\.vozAtiva = false; \/\/ viagem criada/.test(app), true);
+// ---------- 17. desperdício de tokens (análise de consumo de 06/10/2026) ----------
+confere("ficha do onboarding usa cache nas instruções", /system: \[\{ type: "text", text: INSTR_FICHA, cache_control: \{ type: "ephemeral" \} \}\]/.test(nucleo), true);
+confere("sem viagem aberta o pedido não abre o planejador (Opus)", /=== "planejamento" && !S\.viagem \? "conversa"/.test(app), true);
+const relatorio = fs.readFileSync(path.join(RAIZ, "prototipo", "relatorio-consumo.mjs"), "utf8");
+confere("relatório alerta Opus aberto para resposta curta e regravação real de cache", /aberto do zero para resposta curta/.test(relatorio) && /x\.cacheEscrito > x\.cacheLido/.test(relatorio) && !/mais de 8 vezes/.test(relatorio), true);
+confere("regerar o relatório de um dia preserva a Análise já escrita", /const analiseAntiga = /.test(relatorio) && /"\\n\\n## Análise" \+ analiseAntiga/.test(relatorio), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }
 console.log(`testes: ${total} de ${total} passaram.`);

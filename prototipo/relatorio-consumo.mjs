@@ -54,8 +54,13 @@ for (const g of grupo(doDia, "modo")) {
 }
 const caros = [...doDia].sort((a, b) => b.usd - a.usd).slice(0, 5);
 for (const x of caros) if (x.usd > 0.5) alertas.push(`Pedido caro: ${usd(x.usd)} em "${x.modo}" às ${brt(x.quando)} (${x.chamadas} chamadas, ${x.entrada + x.cacheLido + x.cacheEscrito} tokens de entrada).`);
-const plan = doDia.filter((x) => x.modo === "planejamento"), conv = doDia.filter((x) => x.modo === "conversa");
-if (plan.length && conv.length && soma(plan).usd / plan.length > 8 * (soma(conv).usd / conv.length)) alertas.push("O planejamento (Opus) está custando mais de 8 vezes a conversa (Sonnet) por pedido; conferir se pedidos simples estão indo para o planejamento.");
+// (06/10/2026) o alerta antigo "planejamento custa 8 vezes a conversa" disparava sempre: o Opus custa o dobro e escreve
+// respostas longas por natureza. Os dois sinais abaixo apontam desperdício de verdade.
+// 1) Opus aberto do zero para uma resposta curta: pagou a abertura (~16 mil tokens gravados) sem planejar nada
+for (const x of doDia) if (x.modo === "planejamento" && x.saida < 300 && x.cacheLido === 0 && x.cacheEscrito > 5000) alertas.push(`Planejamento (Opus) aberto do zero para resposta curta às ${brt(x.quando)}: ${x.saida} tokens de saída, ${x.cacheEscrito} gravados no cache, ${usd(x.usd)}. Conferir por que esse pedido foi ao planejador.`);
+// 2) cache regravado dentro de um mesmo pedido: com várias chamadas, o normal é ler muito e gravar só o que é novo.
+//    Gravar mais do que leu indica que o começo do contexto mudou entre as chamadas (só então falar em "regravação").
+for (const x of doDia) if (["conversa", "planejamento"].includes(x.modo) && x.chamadas >= 2 && x.cacheEscrito > x.cacheLido) alertas.push(`Possível regravação de cache em "${x.modo}" às ${brt(x.quando)}: ${x.chamadas} chamadas gravaram ${x.cacheEscrito} tokens e leram só ${x.cacheLido}. Investigar o que muda no começo do contexto entre as chamadas.`);
 
 // ---------- voz do Marco (ElevenLabs): saldo da conta + caracteres falados pelo app ----------
 // A chave fica em servidor-marco/.env (nunca impressa) e precisa da permissão "Usuário". Uma foto do saldo por dia
@@ -109,6 +114,8 @@ md += `## Alertas\n\n${alertas.length ? alertas.map((a) => "- " + a).join("\n") 
 const dirR = path.join(RAIZ, "relatorios");
 fs.mkdirSync(dirR, { recursive: true });
 const arq = path.join(dirR, `consumo-${dia}.md`);
-fs.writeFileSync(arq, md);
+// regerar um dia nunca apaga a "## Análise" já escrita (bug de 06/10/2026: a análise de 05/10 foi sobrescrita)
+const analiseAntiga = fs.existsSync(arq) ? (fs.readFileSync(arq, "utf8").split(/^## Análise/m)[1] ?? null) : null;
+fs.writeFileSync(arq, analiseAntiga == null ? md : md.trimEnd() + "\n\n## Análise" + analiseAntiga);
 console.log(md);
 console.log(`\n(gravado em ${arq})`);
