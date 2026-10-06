@@ -8,7 +8,6 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath, pathToFileURL } from "node:url";
-
 const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 let falhas = 0, total = 0;
 const confere = (nome, obtido, esperado) => {
@@ -215,6 +214,26 @@ confere("ficha do onboarding usa cache nas instruções", /system: \[\{ type: "t
 confere("sem viagem aberta o pedido não abre o planejador (Opus)", /=== "planejamento" && !S\.viagem \? "conversa"/.test(app), true);
 const relatorio = fs.readFileSync(path.join(RAIZ, "prototipo", "relatorio-consumo.mjs"), "utf8");
 confere("relatório alerta Opus aberto para resposta curta e regravação real de cache", /aberto do zero para resposta curta/.test(relatorio) && /x\.cacheEscrito > x\.cacheLido/.test(relatorio) && !/mais de 8 vezes/.test(relatorio), true);
+// ---------- 18. correções da revisão NEO da v1.14.1 (06/10/2026) ----------
+confere("sem viagem aberta o Marco não encaminha ao planejador (sem ciclo conversa → conversa)", /if \(S\.viagem\) \{ k\.resultado = "Encaminhado ao planejador/.test(app) && /m\.encaminhar && S\.viagem\) await enviarTexto\(m\.encaminhar/.test(app) && /SEM_VIAGEM_PLANEJAR/.test(app), true);
+// comportamento de verdade: tratarEvento do app rodado num contexto isolado, sem viagem e com viagem (revisão NEO da v1.14.2)
+{
+  const ini = app.indexOf("function tratarEvento("), fim = app.indexOf("\n}\n", ini) + 2;
+  const linhaSem = app.slice(app.indexOf("const SEM_VIAGEM_PLANEJAR"), app.indexOf("\n", app.indexOf("const SEM_VIAGEM_PLANEJAR")));
+  const ev = { tipo: "propostas", anexadas: [{ role: "assistant", content: [{ type: "tool_use", id: "t1", name: "encaminhar_ao_planejador", input: { pedido: "monte 5 dias" } }] }], resultadosServidor: {} };
+  const rodar = (viagem) => { const ctx = { S: { viagem }, m: { txt: "Vou passar ao planejador." }, ev: JSON.parse(JSON.stringify(ev)) }; vm.runInNewContext(linhaSem + "\n" + app.slice(ini, fim) + "\ntratarEvento(ev, m, { msgs: [] }, 'conversa');", ctx); return ctx.m; };
+  const sem = rodar(null), com = rodar({ nome: "teste" });
+  confere("comportamento: sem viagem não encaminha e orienta criar a viagem", !sem.encaminhar && /Criar viagem com o Marco/.test(sem.txt), true);
+  confere("comportamento: com viagem encaminha ao planejador", com.encaminhar, "monte 5 dias");
+}
+// a data vira nome de arquivo: tem de ser validada ANTES de ler credenciais ou acessar a rede (teste só de leitura do
+// código, para nunca rodar o script de verdade e tocar a nuvem)
+confere("relatório valida a data AAAA-MM-DD antes de ler credenciais e acessar a rede", (() => {
+  const v = relatorio.indexOf("if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dia))"), s = relatorio.indexOf('"seguranca"'), f = relatorio.indexOf("await fetch(");
+  return v > 0 && v < s && v < f && /Data inválida; use AAAA-MM-DD\."\); process\.exit\(1\)/.test(relatorio);
+})(), true);
+confere("preservação da Análise corta a partir do primeiro título (subtítulo não perde texto)", /antigo\.search\(\/\^## Análise\/m\)/.test(relatorio) && !/split\(\/\^## Análise\/m\)/.test(relatorio), true);
+confere("rota da ficha limita tamanho de hoje, quem e dos campos de ficha/perfil", /hoje: String\(b\.hoje \|\| ""\)\.slice\(0, 20\), quem: String\(b\.quem \|\| ""\)\.slice\(0, 60\)/.test(http) && /\.slice\(0, 30\)\.map\(\(\[k, v\]\) => `\$\{String\(k\)\.slice\(0, 40\)\}/.test(nucleo), true);
 confere("regerar o relatório de um dia preserva a Análise já escrita", /const analiseAntiga = /.test(relatorio) && /"\\n\\n## Análise" \+ analiseAntiga/.test(relatorio), true);
 
 if (falhas) { console.error(`TESTES: ${falhas} de ${total} falharam. Publicação bloqueada.`); process.exit(1); }

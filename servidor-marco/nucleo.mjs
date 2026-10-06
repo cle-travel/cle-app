@@ -461,7 +461,8 @@ REGRA PRINCIPAL, NÃO SE REPETIR: colete tudo o que a tela pede e confirme UMA v
 - Se a pessoa só cumprimentou ou perguntou algo sobre você, responda de verdade e convide a contar (sem resumo).
 - Se existe "Sua última fala", a conversa está em andamento: não cumprimente de novo.`;
 export async function fichaOnboarding({ client, fala, hoje, quem, ficha, perfil, memoria, etapa = 0, ultima }) {
-  const lista = (o) => (o && typeof o === "object" ? Object.entries(o).filter(([, v]) => v != null && String(v).trim()).map(([k, v]) => `${k}: ${String(v).slice(0, 200)}`).join("; ") : "");
+  // limites (achado do NEO na v1.14.1): no máximo 30 campos, nome com 40 e valor com 200 caracteres
+  const lista = (o) => (o && typeof o === "object" ? Object.entries(o).filter(([, v]) => v != null && String(v).trim()).slice(0, 30).map(([k, v]) => `${String(k).slice(0, 40)}: ${String(v).slice(0, 200)}`).join("; ") : "");
   const atual = lista(ficha), perf = lista(perfil);
   const msg = await client.messages.create({
     model: RAPIDO, max_tokens: 4000, output_config: { effort: "low" },

@@ -581,7 +581,7 @@ function garantirListas() {
 // Regra de contexto e custo (ESPECIFICACAO.md, seção 27): o app guarda cada conversa exatamente como foi enviada
 // e só acrescenta no fim (nunca edita); há uma conversa por modelo (conversa = Sonnet, planejamento = Opus);
 // o resumo da viagem vai a cada turno, enxuto; os resultados dos cartões seguem junto com a próxima mensagem.
-const VERSAO_APP = "1.14.1"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
+const VERSAO_APP = "1.14.2"; // padrão da Carteira (1.0.0); vem de prototipo/versao.json na montagem
 const NUVEM = {"url":"https://aephlilxfvnjjcpvsiwa.supabase.co/functions/v1/api","supabase":"https://aephlilxfvnjjcpvsiwa.supabase.co","anon":"sb_publishable_DERXfaccKLLLVJxNS5clZQ_qCmoUuUo","google":true,"apple":false}; // { url } da Edge Function, gravado por prototipo/publicar-nuvem.mjs
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API = LOCAL ? "/api" : (NUVEM && NUVEM.url) || null;
@@ -916,6 +916,7 @@ async function reduzirImagem(file) {
   } catch (e) { return file; }
 }
 
+const SEM_VIAGEM_PLANEJAR = "Para eu montar o roteiro, primeiro preciso da viagem criada. Toque em Criar viagem com o Marco, na tela inicial, e a gente começa por lá.";
 async function enviarTexto(txt, opc = {}) {
   txt = (txt || "").trim(); if (!txt && !opc.anexo) return false;
   if (S.pensando) { toast("Espere o Marco terminar de responder."); render(); return false; }
@@ -923,7 +924,8 @@ async function enviarTexto(txt, opc = {}) {
   S.rascunho = ""; garantirFios();
   // sem viagem aberta não há o que planejar: o pedido vai para a conversa (Sonnet, cache quente, ~US$ 0,005) em vez de
   // abrir o planejador (Opus grava 16 mil tokens de abertura, ~US$ 0,12; caso de 05/10/2026, análise de 06/10)
-  const modo = (opc.modo || rotaModo(txt)) === "planejamento" && !S.viagem ? "conversa" : opc.modo || rotaModo(txt);
+  const pedido = opc.modo || rotaModo(txt);
+  const modo = pedido === "planejamento" && !S.viagem ? "conversa" : pedido;
   if (!opc.semBalao) S.chat.push({ de: "u", txt, anexo: opc.anexo && opc.anexo.nome });
   if (!marcoDisponivel()) { S.chat.push({ de: "m", txt: msgMarcoOff() }); S.rolarFim = true; render(); return false; }
   const novas = [];
@@ -988,7 +990,8 @@ async function rodarTurno(modo, novas, ctrl = {}) {
   // tela do Marco por voz: ele fala a resposta (ou legenda, com CC) e volta a ouvir; com erro, a conversa pausa
   if (ok && m.autoContinuar && !ctrl.autoContinuou) { m.respondido = true; render(); return rodarTurno(modo, resultadosDe(m), { autoContinuou: true }); }
   if (ok) falarRespostaMarco(m); else if (S.vozAtiva && S.tela === "conversa") { encerrarVoz(); render(); }
-  if (ok && m.encaminhar) await enviarTexto(m.encaminhar, { modo: "planejamento", semBalao: true });
+  if (ok && m.encaminhar && S.viagem) await enviarTexto(m.encaminhar, { modo: "planejamento", semBalao: true });
+  else if (ok && m.encaminhar) { m.txt += "\n\n" + SEM_VIAGEM_PLANEJAR; render(); } // a viagem foi fechada durante o turno
   return ok;
 }
 // devolve true quando o turno terminou bem (fim ou propostas)
@@ -1012,7 +1015,13 @@ function tratarEvento(ev, m, fio, modo) {
       // só anotações e decisões: o Marco continua sozinho (decisão sempre; metas só se ele não deixou a próxima pergunta)
       const AUTO = ["decidir_cartoes", "registrar_metas", "estimar_custos", "lembrar"]; // lembrar com texto não gera chamada extra: o resultado segue com a próxima mensagem
       if (m.cards.length && m.cards.every((k) => AUTO.includes(k.name)) && (m.cards.some((k) => k.name === "decidir_cartoes") || !m.txt.trim())) m.autoContinuar = true;
-      for (const k of m.cards) if (k.name === "encaminhar_ao_planejador") { k.estado = "aprovado"; k.resultado = "Encaminhado ao planejador; o resultado aparece na conversa."; m.encaminhar = k.input.pedido; }
+      // sem viagem aberta não há o que planejar: não encaminha (senão o pedido voltava para a conversa e podia
+      // encaminhar de novo em ciclo, achado do NEO na v1.14.1); o Marco orienta a criar a viagem
+      for (const k of m.cards) if (k.name === "encaminhar_ao_planejador") {
+        k.estado = "aprovado";
+        if (S.viagem) { k.resultado = "Encaminhado ao planejador; o resultado aparece na conversa."; m.encaminhar = k.input.pedido; }
+        else { k.resultado = "Não encaminhado: ainda não existe viagem aberta. O app pediu ao viajante para criar a viagem primeiro."; m.txt += (m.txt.trim() ? "\n\n" : "") + SEM_VIAGEM_PLANEJAR; }
+      }
       if (!m.txt.trim() && m.cards.some((k) => k.estado === "aguardando")) {
         // fala padrão quando o Marco não escreveu nada: diz o que preparou (a voz não pode ficar vaga)
         const dias = m.cards.filter((k) => k.name === "propor_dia").map((k) => +k.input.dia).filter(Boolean).sort((a, b) => a - b);

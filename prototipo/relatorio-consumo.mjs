@@ -14,6 +14,8 @@ const INICIO = "2026-10-01";
 // gastos reais que não passaram pelo registro (testes direto no núcleo), para o saldo bater com o console
 const FORA_DO_REGISTRO = [{ dia: "2026-10-01", usd: 0.0889, nota: "2 turnos de teste do Marco direto no núcleo (terminal)" }];
 const dia = process.argv[2] || new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10); // dia de Brasília
+// a data vira nome de arquivo: só AAAA-MM-DD (achado do NEO na v1.14.1: "../../README" gravaria fora de relatorios/)
+if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) { console.error("Data inválida; use AAAA-MM-DD."); process.exit(1); }
 const usd = (v) => "US$ " + (+v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 const pct = (a, b) => (b ? Math.round((100 * a) / b) + "%" : "–");
 const brt = (iso) => new Date(new Date(iso).getTime() - 3 * 3600e3).toISOString().slice(11, 16);
@@ -115,7 +117,10 @@ const dirR = path.join(RAIZ, "relatorios");
 fs.mkdirSync(dirR, { recursive: true });
 const arq = path.join(dirR, `consumo-${dia}.md`);
 // regerar um dia nunca apaga a "## Análise" já escrita (bug de 06/10/2026: a análise de 05/10 foi sobrescrita)
-const analiseAntiga = fs.existsSync(arq) ? (fs.readFileSync(arq, "utf8").split(/^## Análise/m)[1] ?? null) : null;
+// tudo a partir do PRIMEIRO "## Análise" (um subtítulo "## Análise de ..." não pode cortar o resto)
+const antigo = fs.existsSync(arq) ? fs.readFileSync(arq, "utf8") : "";
+const iAnalise = antigo.search(/^## Análise/m);
+const analiseAntiga = iAnalise >= 0 ? antigo.slice(iAnalise + "## Análise".length) : null;
 fs.writeFileSync(arq, analiseAntiga == null ? md : md.trimEnd() + "\n\n## Análise" + analiseAntiga);
 console.log(md);
 console.log(`\n(gravado em ${arq})`);
