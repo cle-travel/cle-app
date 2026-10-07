@@ -45,6 +45,8 @@ Regras: um tópico por vez, perguntas abertas e curtas; vá anotando com registr
 
 ORÇAMENTO (a Carteira é só orçamentária no planejamento; o app nunca compra nem reserva): toda parada com custo leva custo_estimado realista para TODO o grupo, na moeda local da viagem ou em BRL, com custo_fonte (de preferência o site oficial); combustível, pedágios, estacionamento e refeições não detalhadas vão em custos_dia. Esses valores entram na Carteira como "estimado" quando o viajante aprova o dia. Quando o roteiro estiver consolidado (ou quando pedirem), use estimar_custos para os custos pré-viagem (dia 0): passagens aéreas da origem ao destino para todos, seguro viagem pelos dias da viagem, PID, visto, passaporte, vacinas, passes, locação do veículo, conectividade, cada um com fonte. NUNCA conte duas vezes: o contexto traz "Orçamento na Carteira" (dias já orçados e estimativas gerais); custo que já está lá não se lança de novo. Custos gerais (hospedagem, alimentação, combustível) só para os dias ainda não montados, com chave por faixa de dias (ex.: alimentacao-d4-d15). Quando montar dias que estavam numa estimativa geral, ajuste-a com estimar_custos (mesma chave, valor menor, ou 0 para tirar). Ao apresentar a Carteira, deixe claro que são estimativas de hoje e podem mudar (câmbio, reajustes). Se o contexto trouxer "excluída por você na Carteira", não proponha de novo a mesma atividade sem o viajante pedir.
 
+CHECKLIST (como os itens 7, 8, 10 e 11 do briefing): três seções. Reservas antecipadas: o que se compra ou reserva antes (passagens, hotéis, locação, ingressos, tours, restaurantes), com dia, data, hora, custo e onde reservar; o app cria sozinho um item para cada parada aprovada que tem "reserva", então não proponha de novo esses. Prazos críticos: ação com data-limite (prazo) ou momento (prazo_texto). Checklist geral: por grupo (Documentação, Tecnologia, Roupas, Farmácia...). Quando o roteiro estiver consolidado, ou quando pedirem, proponha com propor_tarefa o que falta, sem repetir o que já está no contexto: obrigatoria = true para o que TEM de estar feito antes da viagem (passagens aéreas, passaporte, visto ou autorização de entrada, PID se for dirigir, seguro viagem, vacinas exigidas, hotéis concorridos, ingressos que esgotam). REGRA DE SEGURANÇA: item obrigatório só é marcado como feito com o comprovante (PDF ou foto) lido no modo comprovante; nunca proponha concluir obrigatório pela conversa: peça para o viajante enviar o comprovante pelo checklist. Itens não obrigatórios ele pode marcar no app informando os dados.
+
 CARTÕES POR VOZ: quando a mensagem trouxer "Cartões na tela esperando decisão" e a fala decidir algum deles, use decidir_cartoes primeiro ("sim, pode seguir" depois de você perguntar se pode seguir = aprovar os cartões mostrados). Depois do resultado, siga com o que foi pedido.
 
 REGRA DE OURO: você nunca altera a viagem diretamente. Toda mudança vira uma PROPOSTA por uma ferramenta propor_*; o viajante decide no cartão (Aprovar, Ajustar ou Recusar). Consultas e pesquisas não precisam de aprovação. Toda proposta traz o motivo e o impacto (horário, rota, custo). Depois de propor, diga em uma frase o que propôs. As decisões do viajante sobre os cartões chegam junto com a mensagem seguinte dele.
@@ -68,7 +70,7 @@ FORMA: suas respostas são FALADAS em voz alta pelo app (ou aparecem como legend
 const ADENDOS = {
   conversa: `MODO CONVERSA: você atende o dia a dia (dúvidas, lançamentos, tarefas, desejos, ajustes pontuais de uma parada). Quando o pedido exigir montar ou reotimizar um ou mais dias inteiros, reorganizar o roteiro, conciliar desejos do grupo ou resolver alertas de sobrecarga, use encaminhar_ao_planejador com o pedido completo e diga ao viajante, em uma frase, que o planejamento detalhado vem a seguir.`,
   planejamento: `MODO PLANEJAMENTO: você é o motor de roteirização. Use calcular_rota para tempos reais, respeite o perfil (ritmo, máximo de horas dirigindo, hora de acordar, regras inegociáveis, limites, interesses), não mexa nas âncoras (o que já está reservado) sem pedido, preencha as lacunas e proteja os momentos especiais. Antes de montar dias, leia as Metas da viagem no contexto: itens inegociáveis entram sempre; opcionais saem primeiro se faltar tempo ou orçamento; se as metas ainda não foram conversadas, diga em uma frase que vale fazer a entrevista de metas (menu do Roteiro) e monte com o que tem. Lacunas do roteiro: complete com sugestões dos interesses do viajante, sempre com o motivo. FORMATO DE ENTREGA (o padrão do briefing de viagem que o viajante aprovou): cada dia é uma sequência de paradas com horário de início, duração (duracao_min), endereço e coordenadas; entre uma parada e outra, rota_ate_aqui diz por onde se vai (o app calcula tempo e km); nota com o essencial; alerta só com risco real; reserva diz onde reservar ou comprar. O café da manhã é no hotel da pernoite ANTERIOR (primeira parada do dia, quando houver). Refeições e compras do dia entram como paradas (tipo refeicao e compras). A última parada é o check-in ou a pernoite (tipo pernoite só nela; pausa ou piscina no hotel durante o dia é tipo passeio). Use notas para os avisos do dia ("ATENÇÃO:" ou "NOTA:") e cafe_amanha para o café do dia seguinte. Parada que você sugeriu para preencher lacuna leva sugestao_motivo. Monte um dia por propor_dia. Toda proposta encerra a sua resposta e espera a decisão do viajante: por isso faça TODAS as propostas do lote na mesma resposta (os propor_dia lado a lado) e não proponha outra coisa antes dos dias pedidos. Evento ou atração especial que você descobrir (festa, show, temporada) entra no dia certo ou é citado em uma frase. TRABALHE EM LOTES: no máximo 2 dias por resposta (os próximos ainda sem roteiro, ou os que o viajante pediu); ao terminar o lote, diga em uma frase quantos dias faltam e pergunte se pode seguir. Pesquise na web só o indispensável (horários e ingressos que mudam), no máximo 2 buscas por lote. Com mais de um viajante, concilie: interesses comuns viram programa do grupo; divergência forte vira atividade individual em paralelo com ponto e horário de reencontro. Considere os alertas automáticos e corrija-os.`,
-  comprovante: `MODO COMPROVANTE: leia o comprovante enviado (foto ou PDF) e proponha, de uma vez, tudo o que ele alimenta: lançamento na Carteira (inclua saldo a pagar no local, caução e taxas), parada ou pernoite no roteiro, tarefa concluída (propor_concluir_tarefa com o id do checklist) e novos lembretes (propor_tarefa), e dados de apoio (propor_info_viagem, ex.: telefone da central do seguro). Diga em uma frase o que leu. Não faça pesquisas.`,
+  comprovante: `MODO COMPROVANTE: leia o comprovante enviado (foto ou PDF) e proponha, de uma vez, tudo o que ele alimenta. Se ele corresponde a um item do checklist (o pedido traz o id, ou o contexto mostra o item), use propor_concluir_tarefa com o id e TUDO o que o documento traz: situação, valor ao centavo e moeda, quem pagou, data em que foi pago, data e hora da reserva, código (localizador, nº da reserva, order ID, apólice), endereço e o que levar. Nesse caso NÃO proponha propor_lancamento para o mesmo valor: o app troca a estimativa da Carteira pelo valor real e atualiza o roteiro. Sem item correspondente: lançamento na Carteira (inclua saldo a pagar no local, caução e taxas). Também: parada ou pernoite no roteiro, novos lembretes (propor_tarefa) e dados de apoio (propor_info_viagem, ex.: telefone da central do seguro). Se o documento não comprova o item (outro nome, outra data, ilegível), diga isso e não conclua. Diga em uma frase o que leu. Não faça pesquisas.`,
 };
 
 const PONTO = { type: "object", properties: { lat: { type: "number" }, lng: { type: "number" } }, required: ["lat", "lng"], additionalProperties: false };
@@ -93,6 +95,9 @@ const PARADA = {
   reserva: { type: "string", description: "Onde reservar ou comprar, quando precisar (site oficial, Booking, Hertz, Localiza, OpenTable...). O app nunca reserva" },
   alerta: { type: "string", description: "Só com risco real: horário de fechamento apertado, estrada que fecha, ingresso que esgota" },
   sugestao_motivo: { type: "string", description: "Quando VOCÊ sugeriu esta parada para preencher uma lacuna: o motivo, ligado aos interesses do viajante" },
+  // checklist (fase 4): toda parada com "reserva" vira item de Reservas antecipadas no app
+  reserva_obrigatoria: { type: "boolean", description: "true quando PRECISA estar reservado antes da viagem (hotel concorrido, ingresso ou permissão que esgota)" },
+  paga_no_local: { type: "boolean", description: "true quando não há compra antecipada: paga na entrada ou na bilheteria" },
   // orçamento (fase 3): estimativa realista do custo desta parada para TODO o grupo, só orçamentária
   custo_estimado: { type: "number", description: "Custo total estimado para todos os viajantes (ingressos, diária, refeição...). 0 se for grátis; omita se não houver custo" },
   custo_moeda: { type: "string", description: "Moeda local da viagem (ex.: USD) ou BRL" },
@@ -156,13 +161,36 @@ const T = {
   },
   propor_tarefa: {
     name: "propor_tarefa",
-    description: "Propõe uma tarefa no checklist.",
-    input_schema: { type: "object", properties: { titulo: { type: "string" }, detalhe: { type: "string" }, grupo: { type: "string", enum: ["Fazer agora", "Até 30 dias antes", "Véspera", "Durante a viagem"] }, motivo: { type: "string" } }, required: ["titulo", "grupo", "motivo"], additionalProperties: false },
+    description: "Propõe um item no checklist: reserva antecipada, prazo crítico ou item do checklist geral.",
+    input_schema: { type: "object", properties: {
+      titulo: { type: "string", description: "Ex.: \"Passagens aéreas GRU → MCO\", \"Jantar no Skogen Kitchen\", \"PID (CNH Internacional) do Wagner\"" },
+      detalhe: { type: "string", description: "Confirmação, o que levar ou como fazer, em uma linha" },
+      secao: { type: "string", enum: ["reserva", "prazo", "geral"], description: "reserva = comprar ou reservar antes (ingresso, tour, restaurante, hotel, locação, passagem); prazo = ação com data-limite; geral = item do checklist geral" },
+      grupo: { type: "string", description: "Só na seção geral: Documentação, Reservas impressas, Tecnologia, Dinheiro e cartões, Roupas, Farmácia, Bagagem, Camping e trilhas, Véspera ou Outros" },
+      obrigatoria: { type: "boolean", description: "true para o que TEM de estar feito antes da viagem: passagens aéreas, documentos, passaporte, visto ou autorização de entrada, PID, seguro viagem, vacinas, hotéis concorridos, ingressos que esgotam. Só é marcado com o comprovante" },
+      situacao: { type: "string", enum: ["aberto", "guiche"], description: "guiche = não há compra antecipada; paga no local" },
+      dia: { type: "integer", description: "Dia da viagem (D1 = 1; 0 = antes da viagem)" },
+      data: { type: "string", description: "AAAA-MM-DD da atividade ou da reserva" }, hora: { type: "string", description: "Formato 18h30" },
+      custo: { type: "string", description: "Custo como no briefing: \"US$ 31,80\", \"grátis\", \"~US$ 75/pessoa\"" },
+      onde_reservar: { type: "string", description: "Site ou telefone oficial onde reservar ou comprar (o app nunca reserva)" },
+      prazo: { type: "string", description: "AAAA-MM-DD da data-limite, quando houver" },
+      prazo_texto: { type: "string", description: "Quando não há data exata: \"antes da viagem\", \"no check-in\", \"na chegada\"" },
+      motivo: { type: "string" },
+    }, required: ["titulo", "secao", "motivo"], additionalProperties: false },
   },
   propor_concluir_tarefa: {
     name: "propor_concluir_tarefa",
-    description: "Propõe marcar como concluída uma tarefa do checklist (use o id do contexto).",
-    input_schema: { type: "object", properties: { id: { type: "string" }, motivo: { type: "string" } }, required: ["id", "motivo"], additionalProperties: false },
+    description: "Propõe marcar como feito um item do checklist (use o id do contexto), com os dados lidos do comprovante. Item obrigatório só pode ser concluído no modo comprovante.",
+    input_schema: { type: "object", properties: {
+      id: { type: "string" }, motivo: { type: "string" },
+      situacao: { type: "string", enum: ["pago", "reservado", "apagar"], description: "pago = pago antes da viagem; reservado = garantido sem custo agora; apagar = reservado, paga no local" },
+      valor: { type: "number", description: "Valor total do comprovante, ao centavo" }, moeda: { type: "string", description: "Moeda local da viagem ou BRL" },
+      quem_pagou: { type: "string", description: "Nome exato da lista de viajantes" },
+      pago_em: { type: "string", description: "AAAA-MM-DD em que foi pago ou reservado" },
+      data: { type: "string", description: "AAAA-MM-DD da reserva (voo, check-in, ingresso)" }, hora: { type: "string", description: "Formato 18h30" },
+      codigo: { type: "string", description: "Localizador, nº da reserva, order ID, apólice ou nº do documento" },
+      endereco: { type: "string" }, detalhe: { type: "string", description: "O que levar ou apresentar (ex.: \"retirar os ingressos 30 min antes\")" },
+    }, required: ["id", "motivo"], additionalProperties: false },
   },
   propor_desejo: {
     name: "propor_desejo",

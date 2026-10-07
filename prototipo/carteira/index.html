@@ -147,7 +147,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .st.realizado{background:var(--brand-soft);color:var(--brand-2)}
 .who{font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 6px;color:#fff}
 .who.grp{background:var(--ink-3)}
-.seg{overflow-x:auto;scrollbar-width:none}.seg button{min-width:76px;white-space:nowrap}
+.seg{overflow-x:auto;scrollbar-width:none}.seg button{min-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pchips{display:flex;flex-wrap:wrap;gap:6px}
 .pchip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px 5px 5px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:13.5px}
 .pchip .av{width:24px;height:24px;font-size:11px}
@@ -629,6 +629,14 @@ function nomeDia(d){ return d ? `D${d} · ${dataDia(d)}` : 'Pré-viagem'; }
 const simbVer = () => UI.moedaVer === 'nativa' ? S.viagem.nativa.simb : S.viagem.local.simb;
 const STN = {estimado:'Estimado', apagar:'A pagar', pago:'Pré-pago', realizado:'Pago na viagem'};
 function nomeP(p){ return p==='t' ? 'Total da viagem' : (trav(p)||{nome:'—'}).nome; }
+// Clé: aba de pessoa mostra só o primeiro nome (nomes longos se sobrepunham, 03/10/2026); se dois viajantes
+// tiverem o mesmo primeiro nome, acrescenta a inicial do sobrenome. O nome completo fica no title do botão.
+function nomeAba(p){
+  const partes = n => String(n||'').trim().split(/\s+/);
+  const [pri, ...resto] = partes(nomeP(p));
+  const repetido = S.viagem.viajantes.filter(v => partes(v.nome)[0].toLowerCase() === (pri||'').toLowerCase()).length > 1;
+  return repetido && resto.length ? `${pri} ${resto[resto.length-1][0]}.` : (pri || '—');
+}
 function toast(t){ const e=$('#toast'); e.textContent=t; e.classList.add('on'); clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('on'),1800); }
 const ic = (nome, cor, soft=true) => `<span class="ic" style="background:${cor}1f;color:${cor}"><svg class="i"><use href="#i-${nome}"/></svg></span>`;
 
@@ -922,7 +930,7 @@ function topo(){
       <div class="dir"><div class="daypill">${pill}${v.hojeManual ? ' · teste' : ''}</div><!-- Clé: sincronizar virou função do app (Mais → Arquivo da viagem e sincronização) --></div>
     </div>
     <div class="seg" id="segP">
-      ${['t',...S.viagem.viajantes.map(v=>v.id)].map(p=>`<button data-p="${p}" class="${UI.pessoa===p?'on':''}">${p==='t'?'Total':esc(nomeP(p))}</button>`).join('')}
+      ${['t',...S.viagem.viajantes.map(v=>v.id)].map(p=>`<button data-p="${p}" class="${UI.pessoa===p?'on':''}" title="${esc(nomeP(p))}">${p==='t'?'Total':esc(nomeAba(p))}</button>`).join('')}
     </div>
   </header>`;
 }
@@ -1317,7 +1325,16 @@ window.CLE = {
   },
   abrir(tab){ irPara(tab || 'painel'); },
   // Clé (fase 3): o app mostra no roteiro o valor atual de cada estimativa (o que for editado aqui aparece lá)
-  lancamento(id){ const l = S && S.lanc.find(x => x.id === id); return l ? { valor:l.valor, moeda:l.moeda, status:l.status, desc:l.desc } : null; },
+  lancamento(id){ const l = S && S.lanc.find(x => x.id === id); return l ? { valor:l.valor, moeda:l.moeda, status:l.status, desc:l.desc, cat:l.cat, dia:l.dia } : null; },
+  // Clé (fase 4): comprovante ou dados informados trocam a estimativa pelo valor real NO MESMO lançamento
+  // (nada de contagem dupla); quem pagou define a fonte padrão, como em lancar
+  atualizar(id, campos){
+    const l = S && S.lanc.find(x => x.id === id); if (!l) return false;
+    const c = { ...campos };
+    if (c.por && !('fonte' in c)) c.fonte = fontePadrao(c.por);
+    Object.assign(l, c); l.upd = Date.now(); l.loc = l.upd; l.via = null;
+    save(); render(); return true;
+  },
   estimativasMarco(){ return S ? S.lanc.filter(l => l.ref && l.status === 'estimado').length : 0; },
   // memória da viagem: o app guarda a Carteira dentro do arquivo da viagem
   tem(){ return !!(S && S.viagem); },

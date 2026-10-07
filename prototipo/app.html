@@ -97,11 +97,24 @@ a.row{color:inherit;text-decoration:none}
 .pill.bad{color:var(--bad);background:var(--bad-bg)}
 .pill.acc{color:var(--accent);background:var(--accent-soft)}
 .pill.neu{color:var(--fg2);background:var(--fill)}
+/* checklist (fase 4): status do briefing, resumo e medida de segurança */
+.chk-st{display:inline-block;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:6px;margin-bottom:2px;color:var(--fg2);background:var(--fill)}
+.chk-st.ok{color:var(--ok);background:var(--ok-bg)}.chk-st.warn{color:var(--warn);background:var(--warn-bg)}.chk-st.bad{color:var(--bad);background:var(--bad-bg)}
+.chk-res{width:100%;text-align:left;align-items:flex-start}
+.chk-res .main span:last-child{white-space:normal}
+.chk-resumo{flex-direction:row;justify-content:space-between;gap:8px}
+.chk-resumo>div{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;text-align:center}
+.chk-resumo b{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}.chk-resumo span{font-size:12px;color:var(--fg2)}
+.bad-tx{color:var(--bad)}.ok-tx{color:var(--ok)}
+.aviso-seg{position:absolute;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));z-index:60;display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:16px;background:var(--fg);color:var(--bg);box-shadow:0 8px 28px rgba(0,0,0,.28);font-size:14px;line-height:1.4}
+.aviso-seg b{display:block;font-size:15px;margin-bottom:2px}
+.aviso-seg-box{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:12px;background:var(--bad-bg);color:var(--fg);font-size:14px;line-height:1.45}
+.aviso-seg-box svg{color:var(--bad);flex-shrink:0;margin-top:1px}
 .kv{display:flex;justify-content:space-between;gap:12px;font-size:15px;padding:9px 0;border-top:.5px solid var(--sep)}
 .kv:first-child{border-top:0}
 .kv span:first-child{color:var(--fg2)}
 .kv span:last-child{text-align:right;font-variant-numeric:tabular-nums}
-.tabbar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px max(6px,calc((100% - 560px) / 2)) calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+.tabbar{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);padding:6px max(6px,calc((100% - 560px) / 2)) calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
 .tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:500;color:var(--fg3);padding:4px 0}
 .tab.on{color:var(--accent)}
 .tab .badge{position:absolute;margin-left:18px;margin-top:-2px;background:var(--bad);color:#fff;font-size:10px;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
@@ -218,6 +231,7 @@ body.legendas .com-doca{padding-bottom:210px!important}
 .bar .l span:last-child{color:var(--fg2)}
 .check{width:24px;height:24px;border-radius:12px;border:1.5px solid var(--fg3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:transparent}
 .check.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.check.obrig{border-color:var(--bad);color:var(--bad);background:var(--bad-bg)}
 .feito b{color:var(--fg3);text-decoration:line-through}
 /* sobreposições */
 .toast{position:absolute;left:16px;right:16px;max-width:600px;margin-inline:auto;bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:14px;padding:12px 14px;font-size:15px;display:flex;gap:10px;align-items:center;z-index:30;box-shadow:0 8px 30px rgba(0,0,0,.25)}
@@ -517,7 +531,9 @@ function desfazerHist(id) {
   else if (h.tipo === "dia") { const i = DIAS.findIndex((x) => x.dia === d.dia); if (i >= 0) { const c = cle(); if (c) for (const id of [...(DIAS[i].lancExtras || []), ...paradasDo(DIAS[i]).map((p) => p.lancId)].filter(Boolean)) c.desfazer(id); DIAS[i] = d.antes; estimativasDoDia(DIAS[i]); } }
   else if (h.tipo === "lanc") { const c = cle(); if (!c || !c.desfazer(d.lancId)) { toast("Abra a Carteira para desfazer este lançamento."); return false; } }
   else if (h.tipo === "tarefa") { S.listas.tarefas = S.listas.tarefas.filter((t) => t.id !== d.id); }
-  else if (h.tipo === "concluir") { S.tarefas[d.id] = false; }
+  else if (h.tipo === "concluir") { S.tarefas[d.id] = false; const t = tarefasLista().find((x) => x.id === d.id); if (t) t.prova = null; }
+  else if (h.tipo === "desmarcar") { toast("Para marcar de novo, use o checklist."); return false; }
+  else if (h.tipo === "removerItem") { garantirListas(); if (d.item && !S.listas.tarefas.some((x) => x.id === d.item.id)) S.listas.tarefas.push(d.item); }
   else if (h.tipo === "desejo") { S.listas.desejos = S.listas.desejos.filter((x) => x.id !== d.id); }
   else if (h.tipo === "info") { S.viagem.info = S.viagem.info || {}; if (d.antes == null) delete S.viagem.info[d.campo]; else S.viagem.info[d.campo] = d.antes; }
   else if (h.tipo === "confirmar") { delete S.confirmados[d.n]; }
@@ -553,22 +569,112 @@ const textoTarefa = (t) => (t.id === "conf" ? `Conferir ${aConfirmar()} locais n
 // "conferir locais" se conclui sozinha quando não há mais nada a conferir
 const feitaTarefa = (t) => !!S.tarefas[t.id] || (t.id === "conf" && aConfirmar() === 0);
 function pendentes() { return tarefasLista().filter((t) => !feitaTarefa(t)).length; }
+const obrigAbertas = () => tarefasLista().filter((t) => obrigDe(t) && !feitaTarefa(t)).length;
 
 // ---------- tarefas padrão (prazos da seção 8; o Marco acrescenta as que o plano gerar) ----------
+// Checklist (fase 4, Wagner 03/10/2026), no formato dos itens 7, 8, 10 e 11 do briefing v37: três seções.
+//   reserva = reservas antecipadas (✅ pago/reservado · 🟡 no guichê · 🔴 em aberto); prazo = prazos críticos;
+//   geral = checklist geral por grupo. Item: { id, sec, g, t, s, obrig, dia, data, hora, custo, onde, prazo, prazoTxt,
+//   st ("aberto" | "guiche"), conf (código), cat (categoria da Carteira), pid (parada ligada), lanc (lançamento), prova }.
 const TAREFAS_PADRAO = [
-  { id: "conf", g: "Fazer agora", t: "Conferir locais no mapa", s: "Pontos aproximados ou a confirmar: bloqueiam o guia impresso", ir: "confirmar" },
-  { id: "seg", g: "Fazer agora", t: "Anexar comprovante do seguro viagem", s: "O Marco lê o documento e preenche Carteira, Cofre e Emergência", comp: "Seguro viagem" },
-  { id: "docs", g: "Até 30 dias antes", t: "Conferir passaportes, vistos e validade", s: "Todos os viajantes" },
-  { id: "off", g: "Véspera", t: "Baixar mapas para usar sem sinal", s: "Do roteiro inteiro" },
-  { id: "checkin", g: "Véspera", t: "Check-in online do voo de ida", s: "Abre 24 h antes do embarque" },
-  { id: "guia", g: "Véspera", t: "Imprimir o guia em duas vias", s: "PDF gerado a partir do roteiro", ir: "guia" },
+  { id: "conf", sec: "geral", g: "Roteiro", t: "Conferir locais no mapa", s: "Pontos aproximados ou a confirmar: bloqueiam o guia impresso", ir: "confirmar" },
+  { id: "passagens", sec: "reserva", obrig: true, dia: 0, cat: "pass", t: "Passagens aéreas emitidas", s: "Ida e volta de todos os viajantes" },
+  { id: "seg", sec: "reserva", obrig: true, dia: 0, cat: "seg", t: "Seguro viagem contratado", s: "O Marco lê a apólice e preenche Carteira, Cofre e Emergência", comp: "Seguro viagem" },
+  { id: "docs", sec: "geral", g: "Documentação", obrig: true, cat: "seg", t: "Passaportes válidos para toda a viagem", s: "De todos os viajantes: envie a foto da página de dados", comp: "Passaportes e vistos", fora: true },
+  { id: "off", sec: "geral", g: "Tecnologia", t: "Baixar mapas para usar sem sinal", s: "Do roteiro inteiro" },
+  { id: "checkin", sec: "geral", g: "Véspera", t: "Check-in online do voo de ida", s: "Abre 24 h antes do embarque" },
+  { id: "guia", sec: "geral", g: "Véspera", t: "Imprimir o guia em duas vias", s: "PDF gerado a partir do roteiro", ir: "guia" },
 ];
-const ORDEM_GRUPOS = ["Fazer agora", "Até 30 dias antes", "Até a viagem", "Véspera", "Durante a viagem"];
+const ORDEM_GRUPOS = ["Documentação", "Reservas impressas", "Roteiro", "Tecnologia", "Dinheiro e cartões", "Roupas", "Farmácia", "Bagagem", "Camping e trilhas", "Véspera", "Outros"];
 const COFRE_CATS = ["Passaportes e vistos", "Voos", "Hospedagens", "Seguro viagem", "Locação do carro", "Passeios e ingressos", "Outros"];
 function garantirListas() {
   S.listas = S.listas || {};
-  if (!S.listas.tarefas) S.listas.tarefas = TAREFAS_PADRAO.map((x) => ({ ...x }));
+  // passaporte só em viagem para fora do Brasil
+  const padrao = () => TAREFAS_PADRAO.filter((x) => !x.fora || (S.viagem && S.viagem.pais && S.viagem.pais !== "BR")).map(({ fora, ...x }) => ({ ...x }));
+  if (!S.listas.tarefas) { S.listas.tarefas = padrao(); S.listas.v = 2; }
+  // viagens criadas antes da fase 4: os itens padrão antigos ganham a nova forma (mantendo o que já foi marcado) e
+  // entram os obrigatórios que faltavam (passagens, passaporte)
+  if (S.listas.v !== 2) {
+    const novos = padrao(), L = S.listas.tarefas;
+    for (const n of novos) { const i = L.findIndex((x) => x.id === n.id); if (i >= 0) L[i] = { ...n, prova: L[i].prova }; else L.push(n); }
+    for (const t of L) if (!t.sec) { t.sec = "geral"; if (["Fazer agora", "Até 30 dias antes", "Até a viagem", "Durante a viagem"].includes(t.g)) t.g = "Outros"; }
+    S.listas.v = 2;
+  }
   if (!S.listas.desejos) S.listas.desejos = [];
+}
+// REGRA DE SEGURANÇA (Wagner, 03/10/2026): reserva obrigatória antes da viagem só é marcada com o comprovante lido
+// pelo app. A trava não depende só do Marco: o título também decide (passagem, passaporte, visto, PID, seguro, vacina...).
+const OBRIG_RE = /passage|bilhete a[eé]reo|\bvoos?\b|\ba[eé]re[oa]s?\b|passaporte|\bvistos?\b|\bESTA\b|\beTA\b|\bPID\b|habilita[cç][aã]o internacional|CNH internacional|permiss[aã]o internacional|seguro|vacina|febre amarela|\bCIVP\b|autoriza[cç][aã]o (de viagem|de entrada|judicial|para menor)/i;
+const NAO_OBRIG_RE = /check-?in|imprimi|impress|baixar|levar|conferir|separar|salvar|backup|offline|no celular/i;
+const obrigDe = (t) => !!t && t.id !== "conf" && (t.obrig === true || (OBRIG_RE.test(t.t || "") && !NAO_OBRIG_RE.test(t.t || "")));
+const secaoDe = (t) => (["reserva", "prazo", "geral"].includes(t.sec) ? t.sec : "geral");
+// pede dados (data, hora, valor) ao marcar sem comprovante: tudo o que é reserva ou tem custo; o resto é só um toque
+const precisaDados = (t) => secaoDe(t) === "reserva" || !!t.custo || !!t.onde || !!t.pid;
+const catDe = (t) => t.cat || (/passage|\bvoos?\b|a[eé]re/i.test(t.t) ? "pass" : /seguro|\bPID\b|visto|passaporte|vacina|CNH/i.test(t.t) ? "seg" : /hotel|hosped|pousada|resort|airbnb|motel|lodge/i.test(t.t) ? "hosp" : /loca[cç][aã]o|carro|motorhome/i.test(t.t) ? "loc" : /jantar|almo[cç]o|restaurante|caf[eé]/i.test(t.t) ? "ali" : /ingresso|tour|passeio|show|parque|museu/i.test(t.t) ? "pas" : "out");
+const COFRE_DA_CAT = { pass: "Voos", hosp: "Hospedagens", loc: "Locação do carro", pas: "Passeios e ingressos", ali: "Passeios e ingressos" };
+const cofreDe = (t) => t.comp || (catDe(t) === "seg" ? (/seguro/i.test(t.t) ? "Seguro viagem" : "Passaportes e vistos") : COFRE_DA_CAT[catDe(t)] || "Outros");
+const horaBR = (s) => (s ? String(s).replace(/^(\d{1,2}):(\d{2}).*$/, "$1h$2") : "");
+const parecido = (a, b) => { const x = norm(a).replace(/[^a-z0-9 ]/g, " ").trim(), y = norm(b).replace(/[^a-z0-9 ]/g, " ").trim(); return !!x && !!y && (x.includes(y) || y.includes(x)); };
+const paradaPorId = (pid) => { for (const d of DIAS) { const p = paradasDo(d).find((x) => x.id === pid); if (p) return { d, p }; } return null; };
+function custoTexto(c) {
+  if (!c) return "";
+  if (+c.v === 0) return "grátis";
+  const m = (S.viagem && S.viagem.moeda) || {};
+  return dinheiro(c.v, c.m === "BRL" ? "R$" : c.m === m.cod ? m.simb || c.m : c.m || "");
+}
+// toda parada aprovada com "onde reservar" vira item de Reservas antecipadas, sem chamada ao Marco; item já feito
+// (pago ou reservado) fica como o comprovante registrou, mesmo se a parada sair do roteiro
+function sincronizarReservas() {
+  if (!S.viagem) return;
+  garantirListas(); const L = S.listas.tarefas, vivos = new Set();
+  for (const d of DIAS) for (const p of paradasDo(d)) {
+    if (!p.reserva && !p.resObrig) continue;
+    const id = "r-" + p.id; vivos.add(id);
+    const dados = { sec: "reserva", auto: true, t: nomeLimpo(p.n), dia: d.dia, data: d.data, hora: p.h || "", onde: p.reserva || "", custo: custoTexto(p.custo), pid: p.id, cat: (p.custo && p.custo.c) || undefined, st: p.noLocal ? "guiche" : "aberto", obrig: !!p.resObrig, s: p.nota || "" };
+    const t = L.find((x) => x.id === id);
+    if (!t) L.push({ id, ...dados }); else if (!S.tarefas[id]) Object.assign(t, dados);
+  }
+  S.listas.tarefas = L.filter((t) => !t.auto || vivos.has(t.id) || S.tarefas[t.id]);
+}
+// lançamento a trocar pelo valor real: o do próprio item, a estimativa da parada ligada ou a estimativa pré-viagem
+// da mesma categoria (pelo nome; ou a única dessa categoria). Nunca cria um segundo lançamento para o mesmo custo.
+function lancDoItem(t, c) {
+  if (t.lanc && c.lancamento(t.lanc)) return t.lanc;
+  const pp = t.pid && paradaPorId(t.pid);
+  if (pp && pp.p.lancId && c.lancamento(pp.p.lancId)) return pp.p.lancId;
+  const est = Object.values((S.viagem && S.viagem.estimativas) || {}).map((id) => ({ id, ...(c.lancamento(id) || {}) })).filter((l) => l.status === "estimado" && l.cat === catDe(t));
+  const porNome = est.filter((l) => parecido(l.desc, t.t));
+  return porNome.length === 1 ? porNome[0].id : est.length === 1 ? est[0].id : null;
+}
+// conclui um item com os dados do comprovante (via "comprovante") ou informados pelo viajante (via "informado"):
+// Carteira (valor real no lugar da estimativa), roteiro (hora, endereço, código) e o próprio item
+function concluirItem(t, d, via) {
+  const c = cle(), extras = [];
+  const valor = Math.round(((typeof d.valor === "number" ? d.valor : numBR(d.valor)) || 0) * 100) / 100; // número do Marco ou "1.234,56" digitado
+  if (valor > 0) {
+    if (!c) throw new Error("a Carteira ainda está carregando");
+    const ml = c.moedaLocal(), moeda = d.moeda === "BRL" ? "BRL" : !d.moeda || d.moeda === ml.cod ? ml.cod : null;
+    if (!moeda) throw new Error(`a moeda ${d.moeda} não é a da viagem (${ml.cod}) nem BRL`);
+    const vs = c.viajantes(), quem = vs.find((v) => norm(v.nome) === norm(d.quem_pagou)) || vs.find((v) => norm(v.nome) === norm(S.viagem.dono)) || vs[0];
+    const status = d.situacao === "apagar" ? "apagar" : d.pago_em && S.viagem.inicio && d.pago_em >= S.viagem.inicio ? "realizado" : "pago";
+    const obs = (via === "comprovante" ? "Comprovante lido pelo app" : "Informado pelo viajante (responsabilidade dele)") + (d.codigo ? ` · ${d.codigo}` : "") + (d.pago_em ? ` · pago em ${d.pago_em.split("-").reverse().join("/")}` : "");
+    const campos = { valor, moeda, status, por: quem.id, obs };
+    const alvo = lancDoItem(t, c);
+    t.custo = dinheiro(valor, moeda === "BRL" ? "R$" : ml.simb || moeda); // a linha do checklist mostra o valor real, não a estimativa
+    if (alvo && c.atualizar(alvo, campos)) { t.lanc = alvo; extras.push("estimativa da Carteira trocada pelo valor real"); }
+    else { t.lanc = c.lancar({ desc: t.t, cat: catDe(t), dia: t.dia ?? 0, resp: vs.map((v) => v.id), ...campos }); if (!t.lanc) throw new Error("a Carteira recusou o lançamento"); extras.push("lançado na Carteira"); }
+  }
+  const pp = t.pid && paradaPorId(t.pid);
+  if (pp) {
+    if (d.hora) pp.p.h = horaBR(d.hora);
+    if (d.endereco) pp.p.end = d.endereco;
+    pp.p.reserva = (d.situacao === "apagar" ? "Reservado, paga no local" : "Reservado") + (d.codigo ? ` · ${d.codigo}` : "");
+    extras.push(`roteiro do D${pp.d.dia} atualizado`);
+  }
+  const prova = { via, quando: new Date().toISOString(), situacao: d.situacao || (valor > 0 ? "pago" : "reservado"), valor: valor || null, moeda: valor > 0 ? d.moeda || (S.viagem.moeda || {}).cod : null, quem: d.quem_pagou || null, pagoEm: d.pago_em || null, codigo: d.codigo || null, arquivo: d.arquivo || null, obs: d.obs || null };
+  Object.assign(t, { data: d.data || t.data, hora: d.hora ? horaBR(d.hora) : t.hora, conf: d.codigo || t.conf, s: d.detalhe || t.s, prova });
+  S.tarefas[t.id] = true;
+  return extras;
 }
 
 // ---------- o Marco de verdade (servidor com o Claude) ----------
@@ -775,8 +881,11 @@ function contextoTexto(pedido) {
     if (foco.has(d.dia)) for (const p of ps) L.push(`  ${p.h || "--"} ${nomeLimpo(p.n)} (${p.t}${p.dur ? ", " + p.dur : ""}, selo ${seloDe(p)}) ${(+p.lat).toFixed(5)},${(+p.lng).toFixed(5)}`);
   }
   fechaVazios();
-  const abertas = tarefasLista().filter((t) => !feitaTarefa(t));
-  if (abertas.length) L.push("Checklist aberto: " + abertas.slice(0, 15).map((t) => `[${t.id}] ${textoTarefa(t)} (${t.g})`).join("; ") + (abertas.length > 15 ? ` …e mais ${abertas.length - 15}` : ""));
+  sincronizarReservas();
+  const abertas = tarefasLista().filter((t) => !feitaTarefa(t)), feitas = tarefasLista().filter((t) => feitaTarefa(t) && t.id !== "conf");
+  const rotChk = (t) => [secaoDe(t) === "geral" ? t.g || "geral" : secaoDe(t), obrigDe(t) ? "OBRIGATÓRIO, só com comprovante" : "", t.dia != null ? (t.dia === 0 ? "antes da viagem" : "D" + t.dia) : "", t.st === "guiche" ? "no guichê" : "", t.prazo ? "prazo " + t.prazo.split("-").reverse().join("/") : t.prazoTxt || ""].filter(Boolean).join("; ");
+  if (abertas.length) L.push("Checklist aberto: " + abertas.slice(0, 25).map((t) => `[${t.id}] ${textoTarefa(t)} (${rotChk(t)})`).join("; ") + (abertas.length > 25 ? ` …e mais ${abertas.length - 25}` : ""));
+  if (feitas.length) L.push("Checklist feito: " + feitas.slice(0, 25).map((t) => `${textoTarefa(t)}${t.prova && t.prova.via === "comprovante" ? " (comprovante)" : t.prova && t.prova.via === "informado" ? " (informado pelo viajante)" : ""}${t.conf ? " · " + t.conf : ""}`).join("; "));
   const des = (S.listas && S.listas.desejos) || [];
   if (des.length) L.push("Desejos: " + des.slice(0, 20).map((x) => `${x.n} (${estadoDesejo(x)})`).join("; ") + (des.length > 20 ? ` …e mais ${des.length - 20}` : ""));
   L.push(`Locais a conferir no mapa: ${aConfirmar()}`);
@@ -862,7 +971,7 @@ window.cleEvento = (ev) => {
 // ---------- decisão de um cartão: pelo toque (Aprovar/Ajustar/Recusar) ou pela voz (decidir_cartoes) ----------
 function decidirCartao(m, k, v, ajuste = "", porMarco = false) {
   if (v === "aprovar" || v === "talvez") {
-    try { const r = aplicarProposta(k, v); k.estado = v === "talvez" ? "talvez" : "aprovado"; k.resultado = r.texto; k.hist = r.hist; }
+    try { const r = aplicarProposta(k, v, m); k.estado = v === "talvez" ? "talvez" : "aprovado"; k.resultado = r.texto; k.hist = r.hist; }
     catch (e) { k.estado = "erro"; k.resultado = "Não foi possível aplicar: " + e.message + "."; }
   } else if (v === "recusar") { k.estado = "recusado"; k.resultado = k.name === "propor_desejo" ? "O viajante respondeu Não: não quer este item." : "Recusado pelo viajante."; }
   else { k.estado = "ajustar"; k.resultado = ajuste ? `O viajante quer ajustar antes de aprovar: ${ajuste}` : "O viajante quer ajustar esta proposta antes de aprovar. Pergunte o que mudar."; }
@@ -1075,11 +1184,16 @@ function cardMarco(k, mi, ci) {
     corpo = `<div style="font-size:28px;font-weight:700;letter-spacing:-.4px" class="mono">${esc(dinheiro(i.valor, simb))}</div>
       <div>${kv("Descrição", i.descricao)}${kv("Categoria", CATS[i.categoria] || i.categoria)}${kv("Quem pagou", i.quem_pagou)}${kv("Divisão", n > 1 ? `${(i.dividir_com || []).join(", ")} · ${dinheiro(Math.round((i.valor / n) * 100) / 100, simb)} cada` : (i.dividir_com || [])[0])}${i.dia != null ? kv("Dia", i.dia === 0 ? "Antes da viagem" : `D${i.dia}`) : ""}</div>`;
   } else if (k.name === "propor_tarefa") {
-    topo = "Nova tarefa no checklist"; pill = `<span class="pill neu">${esc(i.grupo)}</span>`;
-    corpo = `<div style="font-size:18px;font-weight:600">${esc(i.titulo)}</div>${i.detalhe ? `<div class="small" style="font-size:15px">${esc(i.detalhe)}</div>` : ""}`;
+    const sec = { reserva: "Reserva antecipada", prazo: "Prazo crítico", geral: i.grupo || "Checklist geral" }[i.secao] || i.grupo || "Checklist";
+    topo = "Novo item no checklist"; pill = obrigDe({ t: i.titulo, obrig: i.obrigatoria }) ? `<span class="pill bad">${ic("lock", 11, 2.4)} Obrigatório</span>` : `<span class="pill neu">${esc(sec)}</span>`;
+    corpo = `<div style="font-size:18px;font-weight:600">${esc(i.titulo)}</div>${i.detalhe ? `<div class="small" style="font-size:15px">${esc(i.detalhe)}</div>` : ""}
+      <div>${i.dia != null ? kv("Quando", `${i.dia === 0 ? "Antes da viagem" : "D" + i.dia}${i.hora ? " · " + i.hora : ""}`) : ""}${i.custo ? kv("Custo", i.custo) : ""}${i.onde_reservar ? kv("Onde reservar", i.onde_reservar) : ""}${i.prazo || i.prazo_texto ? kv("Prazo", i.prazo ? i.prazo.split("-").reverse().join("/") : i.prazo_texto) : ""}</div>`;
   } else if (k.name === "propor_concluir_tarefa") {
-    const t = tarefasLista().find((x) => x.id === i.id);
-    topo = "Concluir tarefa"; corpo = `<div style="font-size:18px;font-weight:600">${esc(t ? textoTarefa(t) : i.id)}</div>`;
+    const t = tarefasLista().find((x) => x.id === i.id), sim = { pago: "Pago", reservado: "Reservado", apagar: "Reservado, paga no local" };
+    topo = "Marcar como feito"; pill = i.situacao ? `<span class="pill ok">${esc(sim[i.situacao] || i.situacao)}</span>` : "";
+    corpo = `<div style="font-size:18px;font-weight:600">${esc(t ? textoTarefa(t) : i.id)}</div>
+      <div>${+i.valor > 0 ? kv("Valor", `${i.moeda || ""} ${(+i.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`) : ""}${i.quem_pagou ? kv("Quem pagou", i.quem_pagou) : ""}${i.pago_em ? kv("Pago em", i.pago_em.split("-").reverse().join("/")) : ""}${i.data ? kv("Data", i.data.split("-").reverse().join("/") + (i.hora ? " · " + i.hora : "")) : ""}${i.codigo ? kv("Código", i.codigo) : ""}${i.endereco ? kv("Endereço", i.endereco) : ""}</div>
+      ${+i.valor > 0 ? '<div class="small">O valor real entra na Carteira no lugar da estimativa.</div>' : ""}`;
   } else if (k.name === "propor_desejo") {
     topo = "Para a lista de desejos";
     const f = fotoLugar(i.nome, i.cidade || ondeViagem());
@@ -1097,9 +1211,10 @@ function paradaDeInput(i) {
   return { id: novoId(), n: i.nome, t: i.tipo || "passeio", h: i.horario || "", dur: i.duracao_min ? fmtDur(i.duracao_min) : "", lat: +i.lat, lng: +i.lng, end: i.endereco || "", tel: i.telefone || null, site: i.site || null, selo: i.selo || "vermelho", est, marco: true,
     // formato do briefing: rota do trecho até aqui, nota, onde reservar, alerta de risco real, motivo da sugestão
     rota: i.rota_ate_aqui || "", nota: i.nota || "", reserva: i.reserva || "", alerta: i.alerta || "", sug: i.sugestao_motivo || "",
+    resObrig: !!i.reserva_obrigatoria, noLocal: !!i.paga_no_local, // checklist (fase 4): vira item de Reservas antecipadas
     custo: +i.custo_estimado > 0 ? { v: +i.custo_estimado, m: i.custo_moeda || "", c: i.custo_categoria || "pas", f: i.custo_fonte || "" } : null };
 }
-function aplicarProposta(k, v) {
+function aplicarProposta(k, v, m) {
   const i = k.input || {};
   if (k.name === "propor_parada") {
     const d = diaObj(i.dia); if (!d) throw new Error(`a viagem não tem o dia ${i.dia}`);
@@ -1132,14 +1247,19 @@ function aplicarProposta(k, v) {
     return { texto: `Lançado na Carteira: ${i.descricao}, ${moeda} ${dados.valor.toFixed(2)}.`, hist: registrar(`Carteira: ${i.descricao} (${dinheiro(dados.valor, moeda === "BRL" ? "R$" : ml.simb)})`, "lanc", { lancId: id }) };
   }
   if (k.name === "propor_tarefa") {
-    garantirListas(); const id = novoId();
-    S.listas.tarefas.push({ id, g: i.grupo || "Fazer agora", t: i.titulo, s: i.detalhe || "" });
-    return { texto: `Tarefa criada (id ${id}).`, hist: registrar(`Checklist: ${i.titulo}`, "tarefa", { id }) };
+    garantirListas(); const id = novoId(), sec = ["reserva", "prazo", "geral"].includes(i.secao) ? i.secao : "geral";
+    const t = { id, sec, g: sec === "geral" ? i.grupo || "Outros" : undefined, t: i.titulo, s: i.detalhe || "", obrig: !!i.obrigatoria, st: i.situacao === "guiche" ? "guiche" : "aberto",
+      dia: Number.isInteger(i.dia) ? i.dia : undefined, data: i.data || undefined, hora: i.hora || "", custo: i.custo || "", onde: i.onde_reservar || "", prazo: /^\d{4}-\d{2}-\d{2}$/.test(i.prazo || "") ? i.prazo : undefined, prazoTxt: i.prazo_texto || "" };
+    S.listas.tarefas.push(t);
+    return { texto: `Item criado no checklist (id ${id}${obrigDe(t) ? ", obrigatório: só é marcado com o comprovante" : ""}).`, hist: registrar(`Checklist: ${i.titulo}`, "tarefa", { id }) };
   }
   if (k.name === "propor_concluir_tarefa") {
-    if (!tarefasLista().some((t) => t.id === i.id)) throw new Error("tarefa não encontrada");
-    S.tarefas[i.id] = true;
-    return { texto: "Tarefa marcada como concluída.", hist: registrar(`Checklist: concluída "${textoTarefa(tarefasLista().find((t) => t.id === i.id))}"`, "concluir", { id: i.id }) };
+    const t = tarefasLista().find((x) => x.id === i.id); if (!t) throw new Error("item do checklist não encontrado");
+    const doComprovante = !!m && m.fio === "comprovante";
+    // trava: obrigatório só com comprovante (conversa do comprovante, aberta só pelo envio de um arquivo)
+    if (obrigDe(t) && !doComprovante) throw new Error("item obrigatório só é marcado com o comprovante; peça ao viajante para enviar o arquivo pelo checklist");
+    const extras = concluirItem(t, { ...i, arquivo: doComprovante && S.comp && S.comp.nome ? S.comp.nome : null }, doComprovante ? "comprovante" : "conversa");
+    return { texto: `Item marcado como feito${extras.length ? "; " + extras.join("; ") : ""}.`, hist: registrar(`Checklist: feito "${textoTarefa(t)}"${doComprovante ? " (comprovante)" : ""}`, "concluir", { id: i.id }) };
   }
   if (k.name === "propor_desejo") {
     garantirListas(); const id = novoId(), st = v === "talvez" ? "Ideia" : "Desejo";
@@ -1590,17 +1710,83 @@ function telaMais() {
   </div></main>`;
 }
 
-function telaChecklist() {
-  const L = tarefasLista(), grupos = [...new Set(L.map((t) => t.g))].sort((a, b) => (ORDEM_GRUPOS.indexOf(a) + 99) % 99 - (ORDEM_GRUPOS.indexOf(b) + 99) % 99);
-  return `${header({ titulo: "Checklist", sub: `${pendentes()} de ${L.length} abertas`, voltar: true })}<main id="main"><div class="pad"><h1>Checklist</h1>
-    ${grupos.map((g) => `<p class="eyebrow">${esc(g)}</p><div class="list">${L.filter((t) => t.g === g).map((t) => {
-      const on = feitaTarefa(t), auto = t.id === "conf";
-      return `<div class="row ${on ? "feito" : ""}"><button class="check ${on ? "on" : ""}" data-a="tarefa" data-id="${esc(t.id)}" aria-label="Concluir"${auto ? " disabled" : ""}>${ic("check", 14, 3)}</button>
-        <div class="main"><b>${esc(textoTarefa(t))}</b><span>${esc(t.s || "")}${auto ? " · conclui sozinha quando tudo estiver conferido" : ""}</span></div>
-        ${!on && t.comp ? `<button class="pill acc" data-a="comprovante" data-id="${esc(t.id)}" data-cat="${esc(t.comp)}">${ic("upload", 12, 2.2)} Anexar</button>` : ""}${!on && t.ir ? `<button class="pill acc" data-a="irTarefa" data-t="${esc(t.ir)}">Abrir</button>` : ""}</div>`;
-    }).join("")}</div>`).join("")}
-    <p class="small" style="margin:0">Ao concluir uma reserva, anexe o comprovante: o Marco lê e atualiza roteiro, Carteira, Cofre e Emergência de uma vez.</p></div></main>`;
+// status no padrão do briefing (item 8): ✅ pago ou reservado · 🟡 no guichê · 🔴 em aberto
+function statusItem(t) {
+  if (feitaTarefa(t)) { const s = t.prova && t.prova.situacao; return { k: "ok", tx: s === "apagar" ? "✅ RESERV." : s === "reservado" ? "✅ RESERV." : "✅ PAGO" }; }
+  if (t.st === "guiche") return { k: "warn", tx: "🟡 NO GUICHÊ" };
+  return { k: "bad", tx: "🔴 EM ABERTO" };
 }
+const quandoItem = (t) => [t.dia === 0 ? "Antes da viagem" : t.dia ? "D" + t.dia : "", t.data ? t.data.slice(8) + "/" + t.data.slice(5, 7) : "", t.hora || ""].filter(Boolean).join(" · ");
+function prazoItem(t) {
+  if (!t.prazo) return { tx: t.prazoTxt || "", k: "neu" };
+  const dias = Math.round((new Date(t.prazo + "T12:00:00") - new Date(hojeISO() + "T12:00:00")) / 864e5), dm = t.prazo.slice(8) + "/" + t.prazo.slice(5, 7);
+  return dias < 0 ? { tx: `VENCIDO em ${dm}`, k: "bad" } : dias === 0 ? { tx: "ATÉ HOJE", k: "bad" } : { tx: `ATÉ ${dm} · ${dias === 1 ? "amanhã" : `em ${dias} dias`}`, k: dias <= 7 ? "warn" : "neu" };
+}
+function telaChecklist() {
+  sincronizarReservas();
+  const L = tarefasLista(), aba = S.chkAba || "reserva";
+  const res = L.filter((t) => secaoDe(t) === "reserva").sort((a, b) => (a.dia ?? 99) - (b.dia ?? 99) || String(a.hora).localeCompare(String(b.hora)));
+  const pra = L.filter((t) => secaoDe(t) === "prazo" || ((t.prazo || t.prazoTxt) && secaoDe(t) !== "prazo")).sort((a, b) => feitaTarefa(a) - feitaTarefa(b) || String(a.prazo || "9999").localeCompare(String(b.prazo || "9999")));
+  const ger = L.filter((t) => secaoDe(t) === "geral");
+  const obrigAbertas = L.filter((t) => obrigDe(t) && !feitaTarefa(t)).length, resAbertas = res.filter((t) => !feitaTarefa(t) && t.st !== "guiche").length;
+  const prox = pra.find((t) => !feitaTarefa(t) && t.prazo);
+  const cadeado = (t) => (obrigDe(t) && !feitaTarefa(t) ? `<span class="pill bad" title="Só com comprovante">${ic("lock", 11, 2.4)}</span>` : "");
+  const linhaRes = (t) => { const s = statusItem(t); return `<button class="row chk-res" data-a="tarefa" data-id="${esc(t.id)}"><div class="main"><span class="chk-st ${s.k}">${s.tx}</span><b>${esc([quandoItem(t), textoTarefa(t)].filter(Boolean).join(" — "))}</b>
+      <span>${esc([t.custo, feitaTarefa(t) && t.conf ? t.conf : t.onde, t.s].filter(Boolean).join(" · "))}</span></div>${cadeado(t)}</button>`; };
+  const linhaPrazo = (t) => { const p = prazoItem(t), on = feitaTarefa(t); return `<button class="row ${on ? "feito" : ""}" data-a="tarefa" data-id="${esc(t.id)}"><div class="main"><span class="chk-st ${on ? "ok" : p.k}">${on ? "✅ FEITO" : esc(p.tx || "SEM DATA")}</span><b>${esc(textoTarefa(t))}</b><span>${esc(t.s || "")}</span></div>${cadeado(t)}</button>`; };
+  const linhaGeral = (t) => { const on = feitaTarefa(t), auto = t.id === "conf"; return `<div class="row ${on ? "feito" : ""}"><button class="check ${on ? "on" : obrigDe(t) ? "obrig" : ""}" data-a="tarefa" data-id="${esc(t.id)}" aria-label="${on ? "Feito" : obrigDe(t) ? "Obrigatório: só com comprovante" : "Marcar"}"${auto ? " disabled" : ""}>${ic(obrigDe(t) && !on ? "lock" : "check", 14, 3)}</button>
+      <div class="main"><b>${esc(textoTarefa(t))}</b><span>${esc(t.s || "")}${auto ? " · conclui sozinha quando tudo estiver conferido" : ""}</span></div>${!on && t.ir ? `<button class="pill acc" data-a="irTarefa" data-t="${esc(t.ir)}">Abrir</button>` : ""}</div>`; };
+  const grupos = [...new Set(ger.map((t) => t.g || "Outros"))].sort((a, b) => (ORDEM_GRUPOS.indexOf(a) + 99) % 99 - (ORDEM_GRUPOS.indexOf(b) + 99) % 99);
+  const vazio = (tx) => `<div class="card"><span class="small">${tx}</span></div>`;
+  const corpo = aba === "reserva" ? (res.length ? `<div class="list">${res.map(linhaRes).join("")}</div>` : vazio("As reservas aparecem aqui quando o roteiro tiver atividades com onde reservar, ou quando o Marco propuser."))
+    : aba === "prazo" ? (pra.length ? `<div class="list">${pra.map(linhaPrazo).join("")}</div>` : vazio("Nenhum prazo crítico ainda. O Marco avisa quando algo tiver data-limite."))
+    : grupos.map((g) => `<p class="eyebrow">${esc(g)}</p><div class="list">${ger.filter((t) => (t.g || "Outros") === g).map(linhaGeral).join("")}</div>`).join("") || vazio("Nada no checklist geral ainda.");
+  return `${header({ titulo: "Checklist", sub: `${pendentes()} de ${L.length} em aberto`, voltar: S.hist.length > 0 })}<main id="main"><div class="pad"><h1>Checklist</h1>
+    <div class="card chk-resumo"><div><b class="${obrigAbertas ? "bad-tx" : "ok-tx"}">${obrigAbertas}</b><span>obrigatória${obrigAbertas === 1 ? "" : "s"} em aberto</span></div><div><b>${resAbertas}</b><span>reserva${resAbertas === 1 ? "" : "s"} a fazer</span></div><div><b>${prox ? esc(prox.prazo.slice(8) + "/" + prox.prazo.slice(5, 7)) : "–"}</b><span>próximo prazo</span></div></div>
+    <div class="seg">${[["reserva", "Reservas"], ["prazo", "Prazos"], ["geral", "Geral"]].map(([k, l]) => `<button class="${aba === k ? "on" : ""}" data-a="chkAba" data-v="${k}">${l}</button>`).join("")}</div>
+    ${corpo}
+    <p class="small" style="margin:0">${ic("lock", 12, 2.4)} Itens com cadeado são obrigatórios antes da viagem e só são marcados com o comprovante (PDF ou foto): o app lê e atualiza Carteira e roteiro. Os demais você marca enviando o comprovante ou informando os dados.</p></div></main>`;
+}
+// detalhe de um item: comprovante (obrigatório e demais), formulário de dados (demais) ou o que foi registrado
+function sheetItem() {
+  const t = tarefasLista().find((x) => x.id === (S.chk && S.chk.id)); if (!t) return "";
+  const on = feitaTarefa(t), ob = obrigDe(t), s = statusItem(t), pr = t.prova || {};
+  const topo = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="chk-st ${s.k}">${s.tx}</span>${ob ? `<span class="pill bad">${ic("lock", 11, 2.4)} Obrigatório</span>` : ""}</div>
+    <div style="font-size:20px;font-weight:600">${esc(textoTarefa(t))}</div>${[quandoItem(t), t.custo, t.onde].filter(Boolean).length ? `<div class="small">${esc([quandoItem(t), t.custo, t.onde].filter(Boolean).join(" · "))}</div>` : ""}`;
+  const enviar = `<button class="btn" data-a="comprovante" data-id="${esc(t.id)}" data-cat="${esc(cofreDe(t))}">${ic("upload", 18)} Enviar comprovante</button>`;
+  let corpo;
+  if (on) {
+    const via = { comprovante: "Comprovante lido pelo app", informado: "Informado por você (sob sua responsabilidade)", conversa: "Confirmado na conversa com o Marco", toque: "Marcado por você" }[pr.via] || "Feito";
+    corpo = `<div class="card" style="gap:4px"><span class="small">${esc(via)}${pr.quando ? " · " + esc(fmtData(pr.quando.slice(0, 10), { day: "numeric", month: "short" })) : ""}${pr.arquivo ? " · " + esc(pr.arquivo) : ""}</span>
+      ${pr.valor ? `<div class="kv"><span>Valor</span><span>${esc(pr.moeda || "")} ${esc((+pr.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</span></div>` : ""}${pr.quem ? `<div class="kv"><span>Quem pagou</span><span>${esc(pr.quem)}</span></div>` : ""}${pr.pagoEm ? `<div class="kv"><span>Pago ou reservado em</span><span>${esc(pr.pagoEm.split("-").reverse().join("/"))}</span></div>` : ""}${t.conf ? `<div class="kv"><span>Código</span><span>${esc(t.conf)}</span></div>` : ""}</div>
+      <button class="btn ghost" data-a="chkDesmarcar">Desmarcar</button>`;
+  } else if (S.chk.modo === "dados" && !ob) { // obrigatório nunca mostra o formulário (e o envio também é barrado)
+    const ml = (S.viagem.moeda || {}).cod || "USD", d0 = t.data || (t.dia && diaObj(t.dia) ? diaObj(t.dia).data : "");
+    corpo = `<form class="grupo-op" data-f="chkDados">
+      <div class="dois"><div class="campo"><label for="kPago">Reservado ou pago em</label><input id="kPago" type="date" value="${hojeISO()}" required></div>
+      <div class="campo"><label for="kSit">Situação</label><select id="kSit"><option value="pago">Pago</option><option value="reservado">Reservado, sem custo agora</option><option value="apagar">Reservado, paga no local</option></select></div></div>
+      <div class="dois"><div class="campo"><label for="kData">Data da reserva</label><input id="kData" type="date" value="${esc(d0)}"></div>
+      <div class="campo"><label for="kHora">Horário</label><input id="kHora" type="time" value="${esc(String(t.hora || "").replace("h", ":"))}"></div></div>
+      <div class="dois"><div class="campo"><label for="kValor">Valor pago</label><input id="kValor" inputmode="decimal" placeholder="0,00"></div>
+      <div class="campo"><label for="kMoeda">Moeda</label><select id="kMoeda"><option>${esc(ml)}</option>${ml !== "BRL" ? "<option>BRL</option>" : ""}</select></div></div>
+      <div class="dois"><div class="campo"><label for="kQuem">Quem pagou</label><select id="kQuem">${S.viagem.viajantes.map((n) => `<option${n === S.viagem.dono ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
+      <div class="campo"><label for="kCod">Código ou nº da reserva</label><input id="kCod" autocomplete="off"></div></div>
+      <label class="small" style="display:flex;gap:10px;align-items:flex-start"><input id="kResp" type="checkbox" required style="width:20px;height:20px;flex-shrink:0;accent-color:var(--accent)"> Confirmo que estas informações são verdadeiras. A responsabilidade por elas é minha; o app usa estes dados na Carteira e no roteiro.</label>
+      <button class="btn" type="submit">${ic("check", 18)} Salvar e marcar como feito</button></form>
+      <button class="btn ghost" data-a="chkVer">Voltar</button>`;
+  } else if (ob) {
+    corpo = `<div class="aviso-seg-box">${ic("lock", 18, 2.2)}<span><b>Medida de segurança.</b> Reservas obrigatórias antes da viagem (passagens, documentos, passaporte, PID, seguro, vacinas, autorizações, hotéis concorridos) só são marcadas com o comprovante. O app lê o arquivo e registra valores, datas, horários e códigos em toda a viagem.</span></div>
+      ${enviar}${marcoDisponivel() ? "" : '<div class="small">A leitura do comprovante precisa do Marco ligado. Sem ele, o arquivo fica guardado no Cofre.</div>'}`;
+  } else {
+    corpo = `<div class="small">Envie o comprovante e o app marca sozinho, com valores, datas e códigos. Sem comprovante, informe os dados da reserva.</div>
+      ${enviar}<button class="btn sec" data-a="chkDados">Informar os dados</button>`;
+  }
+  const remover = !on && t.id !== "conf" && !t.auto ? `<button class="btn ghost" data-a="chkRemover" style="color:var(--bad)">Não se aplica a esta viagem</button>` : "";
+  return `<div class="sheet" data-a="fecharFundo"><div class="in fade"><div class="grab"></div>${topo}${corpo}${remover}<button class="btn ghost" data-a="fechar">Fechar</button></div></div>`;
+}
+// popup temporário da medida de segurança (some sozinho)
+let avisoSegT = null;
+function avisoSeguranca() { S.avisoSeg = true; clearTimeout(avisoSegT); avisoSegT = setTimeout(() => { S.avisoSeg = false; render(); }, 7000); }
 
 // estado de um desejo: o que já entrou no roteiro ou foi reservado avança sozinho
 const COR_ESTADO = { Ideia: "neu", Desejo: "neu", "No roteiro": "acc", Reservado: "ok", Pago: "ok", Realizado: "ok" };
@@ -1977,8 +2163,8 @@ async function buscarCambio() {
 }
 
 // ---------- montagem ----------
-const TABS = () => [[S.fase === "viagem" ? "hoje" : "conversa", S.fase === "viagem" ? "sun" : "chat", S.fase === "viagem" ? "Hoje" : "Marco"], ["roteiro", "list", "Roteiro"], ["mapa", "map", "Mapa"], ["carteira", "wallet", "Carteira"], ["mais", "more", "Mais"]];
-const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "roteiro", mapa: "mapa", carteira: "carteira", mais: "mais", checklist: "mais", desejos: "mais", cofre: "mais", grupo: "mais", guia: "mais", emergencia: "mais", ficha: "mais", arquivo: "mais", historico: "mais", perfil: "mais", memoria: "mais", consumo: "mais", acesso: "mais", conversas: "mais", lugar: null, viagens: null };
+const TABS = () => [[S.fase === "viagem" ? "hoje" : "conversa", S.fase === "viagem" ? "sun" : "chat", S.fase === "viagem" ? "Hoje" : "Marco"], ["roteiro", "list", "Roteiro"], ["mapa", "map", "Mapa"], ["carteira", "wallet", "Carteira"], ["checklist", "check", "Checklist"], ["mais", "more", "Mais"]]; // Checklist no menu principal (fase 4)
+const RAIZ = { conversa: "conversa", hoje: "hoje", roteiro: "roteiro", dia: "roteiro", mapa: "mapa", carteira: "carteira", mais: "mais", checklist: "checklist", desejos: "mais", cofre: "mais", grupo: "mais", guia: "mais", emergencia: "mais", ficha: "mais", arquivo: "mais", historico: "mais", perfil: "mais", memoria: "mais", consumo: "mais", acesso: "mais", conversas: "mais", lugar: null, viagens: null };
 let ultimaTela = null;
 function render() {
   const T = { conversa: telaConversa, conversas: () => telaConversaEscrita(true), hoje: telaHoje, roteiro: telaRoteiro, dia: telaDia, mapa: telaMapa, lugar: telaLugar, carteira: telaCarteira, mais: telaMais, checklist: telaChecklist, desejos: telaDesejos, cofre: telaCofre, grupo: telaGrupo, guia: telaGuia, emergencia: telaEmergencia, ficha: telaFicha, viagens: telaViagens, onboarding: telaOnboarding, boasvindas: telaBoasVindas, arquivo: telaArquivo, historico: telaHistorico, perfil: telaPerfil, memoria: telaMemoria, consumo: telaConsumo, acesso: telaAcesso, entrar: telaEntrar, cadastro: telaCadastro, recuperar: telaRecuperar, novasenha: telaNovaSenha }[S.tela] || telaBoasVindas;
@@ -1991,7 +2177,7 @@ function render() {
   const ativo = document.activeElement, focoId = ativo && ativo.id && /^(INPUT|TEXTAREA)$/.test(ativo.tagName) && ativo.type !== "range" ? ativo.id : null;
   let selIni = null; try { selIni = focoId ? ativo.selectionStart : null; } catch (e) {}
   const raiz = RAIZ[S.tela] ?? S.hist.map((h) => RAIZ[h.tela]).filter(Boolean).pop();
-  const tabbar = ["onboarding", "boasvindas", "entrar", "cadastro", "recuperar", "novasenha"].includes(S.tela) || !S.viagem ? "" : `<nav class="tabbar">${TABS().map(([t, i, l]) => `<button class="tab ${raiz === t ? "on" : ""}" data-a="tab" data-t="${t}"><span>${ic(i, 24)}${t === "mais" && pendentes() ? `<i class="badge">${pendentes()}</i>` : ""}</span>${l}</button>`).join("")}</nav>`;
+  const tabbar = ["onboarding", "boasvindas", "entrar", "cadastro", "recuperar", "novasenha"].includes(S.tela) || !S.viagem ? "" : `<nav class="tabbar">${TABS().map(([t, i, l]) => `<button class="tab ${raiz === t ? "on" : ""}" data-a="tab" data-t="${t}"><span>${ic(i, 24)}${t === "checklist" && obrigAbertas() ? `<i class="badge">${obrigAbertas()}</i>` : ""}</span>${l}</button>`).join("")}</nav>`; // selo: obrigatórias em aberto
   let over = "";
   if (S.overlay === "alerta") over = `<div class="alerta" role="alertdialog" aria-label="Alerta urgente"><div style="font-size:13px;color:#A1A1A6">Agora · Marco, seu agente de viagem · exemplo de teste</div><div class="ic">${ic("sos", 30, 2)}</div>
     <div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:600;color:#FF6961">Alerta urgente</div><h2>Estrada fechada no seu trajeto</h2><p>A estrada principal do trajeto de hoje está interditada. Há um desvio que mantém o horário da próxima reserva.</p></div>
@@ -1999,6 +2185,8 @@ function render() {
     <button class="b1" data-a="fechar" data-m="Exemplo: no app, a rota alternativa é aplicada ao dia e registrada no histórico.">Usar rota alternativa</button><button class="b2" data-a="fecharIr" data-t="conversa">Falar com o Marco</button><button class="b3" data-a="fechar">Ciente</button></div>`;
   if (S.overlay === "notif") over = `<button class="notif fade" data-a="fecharIr" data-t="conversa"><span class="app-ic">${ic("compass", 22)}</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:15px">Marco</b><span class="small">agora · exemplo</span></span><b style="font-size:15px">Chuva prevista amanhã cedo</b><span style="font-size:15px;color:var(--fg2)">Sugiro levar a trilha da manhã para a tarde. Quer ver a proposta?</span></span></button>`;
   if (S.overlay === "comprovante") over = sheetComprovante();
+  if (S.overlay === "chk") over = sheetItem();
+  if (S.avisoSeg) over += `<div class="aviso-seg fade" role="alert">${ic("lock", 20, 2.2)}<span><b>Medida de segurança</b>Este item é obrigatório antes da viagem e só é marcado com o comprovante (PDF ou foto). Não dá para marcar à mão.</span></div>`;
   if (S.overlay === "confirmar") over = sheetConfirmar();
   if (S.overlay === "dono") over = sheetDono();
   if (S.overlay === "busca") over = sheetBusca();
@@ -2068,7 +2256,8 @@ async function receberComprovante(file) {
   const dados = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.readAsDataURL(envio); });
   const bloco = file.type === "application/pdf" ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: dados } } : { type: "image", source: { type: "base64", media_type: envio.type, data: dados } };
   S.hist = []; S.tela = "conversa";
-  await enviarTexto(`Leia este comprovante (${c.cat}: ${file.name}) e proponha o que registrar.${c.id ? ` Ele corresponde à tarefa de id ${c.id} do checklist.` : ""}`, { anexo: { bloco, nome: file.name }, modo: "comprovante" });
+  const item = c.id && tarefasLista().find((x) => x.id === c.id);
+  await enviarTexto(`Leia este comprovante (${c.cat}: ${file.name}) e proponha o que registrar.${item ? ` Ele foi enviado para o item [${item.id}] "${textoTarefa(item)}" do checklist${obrigDe(item) ? " (obrigatório: só conclua se o documento comprovar este item)" : ""}: use propor_concluir_tarefa com os dados lidos.` : ""}`, { anexo: { bloco, nome: file.name }, modo: "comprovante" });
 }
 function sheetConfirmar() {
   const d = diaObj(S.lugar.d), p = paradasDo(d)[S.lugar.i];
@@ -2727,7 +2916,32 @@ const A = {
   },
   desfazerHist(ds) { if (desfazerHist(ds.id)) { render(); toast("Alteração desfeita."); } render(); },
   toast(ds) { toast(ds.m); render(); },
-  tarefa(ds) { if (ds.id === "conf") return; S.tarefas[ds.id] = !S.tarefas[ds.id]; render(); },
+  // checklist (fase 4): obrigatório abre o aviso de segurança e só oferece o comprovante; reserva ou item com custo
+  // pede comprovante ou dados; item simples do checklist geral é um toque (e outro toque desmarca)
+  tarefa(ds) {
+    if (ds.id === "conf") return;
+    const t = tarefasLista().find((x) => x.id === ds.id); if (!t) return;
+    const on = feitaTarefa(t);
+    if (!on && obrigDe(t)) avisoSeguranca();
+    if (on ? precisaDados(t) || obrigDe(t) || (t.prova && t.prova.via !== "toque") : obrigDe(t) || precisaDados(t)) { S.chk = { id: t.id }; S.overlay = "chk"; return render(); }
+    if (on) { S.tarefas[t.id] = false; t.prova = null; } else { S.tarefas[t.id] = true; t.prova = { via: "toque", quando: new Date().toISOString() }; }
+    render();
+  },
+  chkAba(ds) { S.chkAba = ds.v; render(); },
+  chkDados() { S.chk.modo = "dados"; render(); },
+  chkVer() { S.chk.modo = null; render(); },
+  chkDesmarcar() {
+    const t = tarefasLista().find((x) => x.id === S.chk.id); if (!t) return;
+    S.tarefas[t.id] = false; t.prova = null; S.overlay = null;
+    registrar(`Checklist: desmarcado "${textoTarefa(t)}"`, "desmarcar", { id: t.id });
+    toast(t.lanc ? "Desmarcado. O valor continua na Carteira; ajuste lá se precisar." : "Desmarcado."); render();
+  },
+  chkRemover() {
+    const t = tarefasLista().find((x) => x.id === S.chk.id); if (!t) return;
+    S.listas.tarefas = S.listas.tarefas.filter((x) => x.id !== t.id); S.overlay = null;
+    registrar(`Checklist: removido "${textoTarefa(t)}" (não se aplica)`, "removerItem", { item: t });
+    toast("Removido do checklist."); render();
+  },
   comprovante(ds) { S.comp = { id: ds.id || null, cat: ds.cat || "Outros", etapa: 0 }; S.overlay = "comprovante"; render(); },
   compCat(ds) { S.comp.cat = ds.v; render(); },
   async cofreAbrir(ds) { try { const x = await cofreOp("readonly", (st) => st.get(ds.id)); if (!x) return; const u = URL.createObjectURL(x.blob); const w = window.open(u, "_blank"); if (!w) { const a = document.createElement("a"); a.href = u; a.download = x.nome; a.click(); } } catch (e) { toast("Não foi possível abrir o documento."); render(); } },
@@ -2878,6 +3092,19 @@ document.addEventListener("submit", async (ev) => {
   ev.preventDefault();
   if (["entrar", "cadastro", "recuperar", "novasenha"].includes(fm.dataset.f)) return enviarConta(fm.dataset.f);
   if (fm.dataset.f === "marco") { const t = S.rascunho; S.rascunho = ""; await enviarTexto(t); }
+  if (fm.dataset.f === "chkDados") {
+    const t = tarefasLista().find((x) => x.id === (S.chk && S.chk.id)); if (!t) return;
+    if (obrigDe(t)) { avisoSeguranca(); S.chk.modo = null; render(); return; } // trava: obrigatório nunca por formulário
+    if (!$("#kResp").checked) { toast("Confirme que as informações são de sua responsabilidade."); render(); return; }
+    const sit = $("#kSit").value, valor = numBR($("#kValor").value);
+    if (sit === "pago" && !(valor > 0)) { toast("Informe o valor pago."); render(); return; }
+    try {
+      const extras = concluirItem(t, { situacao: sit, valor: valor > 0 ? valor : 0, moeda: $("#kMoeda").value, quem_pagou: $("#kQuem").value, pago_em: $("#kPago").value, data: $("#kData").value, hora: $("#kHora").value, codigo: $("#kCod").value.trim() }, "informado");
+      registrar(`Checklist: feito "${textoTarefa(t)}" (dados informados)`, "concluir", { id: t.id });
+      S.overlay = null; toast(extras.length ? "Feito: " + extras.join("; ") + "." : "Marcado como feito.");
+    } catch (e) { toast("Não foi possível salvar: " + e.message + "."); }
+    render();
+  }
   if (fm.dataset.f === "busca") {
     const b = S.busca; if (!b.q.trim()) return;
     if (!API) { b.res = { erro: "A busca de lugares usa o servidor do Marco, que ainda não está ligado neste endereço. Peça o lugar ao Marco no computador de testes." }; render(); return; }

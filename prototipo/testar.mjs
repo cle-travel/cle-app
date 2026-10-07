@@ -226,6 +226,27 @@ confere("sem viagem aberta o Marco não encaminha ao planejador (sem ciclo conve
   confere("comportamento: sem viagem não encaminha e orienta criar a viagem", !sem.encaminhar && /Criar viagem com o Marco/.test(sem.txt), true);
   confere("comportamento: com viagem encaminha ao planejador", com.encaminhar, "monte 5 dias");
 }
+// ---------- 19. fase 4: Checklist (reservas, prazos, geral) e a regra do comprovante (Wagner, 03/10/2026) ----------
+{
+  const pega = (ini) => { const i = app.indexOf(ini); return app.slice(i, app.indexOf("\n", i)); };
+  const ctx = { norm: (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim() };
+  vm.runInNewContext([pega("const OBRIG_RE ="), pega("const NAO_OBRIG_RE ="), pega("const obrigDe ="), "this.obrigDe = obrigDe;"].join("\n"), ctx);
+  const ob = (t, obrig) => ctx.obrigDe({ t, obrig });
+  confere("obrigatório pelo título (passagem, passaporte, PID, seguro, vacina, ESTA, visto)", ["Passagens aéreas emitidas", "Passaporte do Arthur", "PID (CNH Internacional) do Wagner", "Seguro viagem contratado", "Vacina de febre amarela", "ESTA do Arthur", "Visto americano"].every((t) => ob(t)), true);
+  confere("obrigatório pelo título vale mesmo se o Marco disser que não", ob("ESTA (autorização de entrada nos EUA)", false), true);
+  confere("não obrigatório: check-in, imprimir, baixar, itens comuns", ["Check-in online do voo de ida", "Apólices do seguro impressas", "Baixar mapas offline", "Protetor solar"].some((t) => ob(t)), false);
+  confere("obrigatório marcado pelo Marco (hotel concorrido)", ob("Disney's Contemporary Resort", true), true);
+}
+confere("obrigatório só conclui pela conversa do comprovante", /if \(obrigDe\(t\) && !doComprovante\) throw new Error/.test(app) && /const doComprovante = !!m && m\.fio === "comprovante"/.test(app) && /aplicarProposta\(k, v, m\)/.test(app), true);
+confere("obrigatório nunca mostra nem aceita o formulário de dados", /S\.chk\.modo === "dados" && !ob\)/.test(app) && /if \(obrigDe\(t\)\) \{ avisoSeguranca\(\); S\.chk\.modo = null; render\(\); return; \} \/\/ trava/.test(app), true);
+confere("aviso temporário da medida de segurança", /function avisoSeguranca\(\)/.test(app) && /Medida de segurança/.test(app) && /setTimeout\(\(\) => \{ S\.avisoSeg = false/.test(app), true);
+confere("dados informados exigem confirmar a responsabilidade", /id="kResp" type="checkbox" required/.test(app) && /if \(!\$\("#kResp"\)\.checked\)/.test(app), true);
+confere("valor real troca a estimativa no MESMO lançamento (sem contagem dupla)", /function lancDoItem\(t, c\)/.test(app) && /c\.atualizar\(alvo, campos\)/.test(app) && /atualizar\(id, campos\)\{/.test(carteira), true);
+confere("parada com onde reservar vira item de Reservas antecipadas", /function sincronizarReservas\(\)/.test(app) && /const id = "r-" \+ p\.id/.test(app) && /reserva_obrigatoria: \{ type: "boolean"/.test(nucleo), true);
+confere("Checklist no menu principal", /\["checklist", "check", "Checklist"\]/.test(app) && /checklist: "checklist"/.test(app), true);
+confere("viagens antigas migram para o checklist novo", /if \(S\.listas\.v !== 2\)/.test(app), true);
+confere("Marco: concluir com os dados lidos e sem lançamento duplicado", /NÃO proponha propor_lancamento para o mesmo valor/.test(nucleo) && /codigo: \{ type: "string", description: "Localizador/.test(nucleo) && /REGRA DE SEGURANÇA: item obrigatório só é marcado como feito com o comprovante/.test(nucleo), true);
+confere("abas de pessoas da Carteira sem sobreposição (primeiro nome + reticências)", /function nomeAba\(p\)/.test(carteira) && /\.seg button\{min-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\}/.test(carteira), true);
 // a data vira nome de arquivo: tem de ser validada ANTES de ler credenciais ou acessar a rede (teste só de leitura do
 // código, para nunca rodar o script de verdade e tocar a nuvem)
 confere("relatório valida a data AAAA-MM-DD antes de ler credenciais e acessar a rede", (() => {
